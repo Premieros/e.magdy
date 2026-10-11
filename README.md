@@ -1,3 +1,5 @@
+**تحديث الاستضافة:** تم إنشاء مشروع Vercel باسم `premieros-garments-mercato` ونشر الشيفرة الكاملة المُولّدة لـOpen Mercato في الفرع المنفصل [`deploy/garments-mercato`](https://github.com/Premieros/e.magdy/tree/deploy/garments-mercato/open-mercato). ما يزال ربط GitHub بـVercel وإعداد بيانات الاتصال الخاصة مطلوبين قبل ظهور رابط تشغيل فعلي. [خطوات استكمال النشر الآمن](pilot/open-mercato/DEPLOY_VERCEL.md).
+
 ## قاعدة البيانات الوحيدة المسموح بها — قرار ثابت للمشروع
 
 **ممنوع نهائيًا استخدام أي مشروع Supabase غير `yumeijsyiphzdsulsubf`.** ينطبق ذلك على المعاينة والتطوير والتشغيل النهائي وكل أدوات النشر والأتمتة. لا تُنشأ مشاريع Supabase بديلة ولا يُسمح باتصال احتياطي إلى مرجع آخر.
