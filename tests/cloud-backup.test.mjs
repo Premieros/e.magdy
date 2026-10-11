@@ -16,7 +16,7 @@ test('cloud validator accepts legacy offline snapshots and adds only optional ar
   assert.deepEqual(validated.workLogs, []);
   assert.deepEqual(validated.fabricRolls, []);
   assert.equal(Object.hasOwn(sample,'workers'),false);
-  assert.throws(() => validateCloudSnapshot({version:2,...sample}), /غير متوافق/);
+  assert.throws(() => validateCloudSnapshot({...sample,version:2}), /غير متوافق/);
   assert.throws(() => validateCloudSnapshot({...sample, materials:null}), /بيانات ناقصة/);
   assert.throws(() => validateCloudSnapshot({...sample,materials:[{stock:-1}]}), /رصيد/);
   assert.throws(() => validateCloudSnapshot({...sample,fabricRolls:[{received:2,remaining:3}]}), /رول/);
