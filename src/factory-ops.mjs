@@ -11,7 +11,7 @@ const money = n => Math.round((n + Number.EPSILON) * 100) / 100;
 const stamp = () => new Date().toISOString();
 
 export function ensureFactoryState(db) {
-  for (const key of ['workers', 'workLogs', 'fabricRolls', 'cuttingBundles']) {
+  for (const key of ['workers', 'workLogs', 'fabricRolls', 'cuttingBundles', 'wholesaleOrders', 'finishedDispatches']) {
     if (db[key] === undefined) db[key] = [];
     if (!Array.isArray(db[key])) throw Error('بيانات غير متوافقة: ' + key);
   }
