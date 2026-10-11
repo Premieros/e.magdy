@@ -315,7 +315,7 @@ if(kind==='view-cloud-intake'){
     +'<p><b>التواصل:</b> '+esc(o.customer_contact||'—')+'</p>'
     +'<p><b>وقت التسجيل:</b> '+esc(new Date(o.created_at).toLocaleString('ar-EG'))+'</p>'
     +'<p><b>الحالة:</b> <span class="pill gold">● طلب جديد — بانتظار الاعتماد</span></p>'
-    +'</div><h3>بنود الطلب</h3><div class="table-wrap">'+rows+'</div>'
+    +'</div><h3>بنود الطلب</h3>'+rows
     +'<div class="order-detail-summary order-detail-totals"><b>إجمالي الكمية: '+num(totals.quantity)+' قطعة</b>'
     +'<b>إجمالي القيمة: '+cur(totals.amount)+'</b></div>'
     +(o.notes?'<div class="notes"><b>ملاحظات العميل:</b> '+esc(o.notes)+'</div>':'')
