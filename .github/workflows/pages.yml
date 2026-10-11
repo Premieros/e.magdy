@@ -35,10 +35,14 @@ jobs:
       - name: Prepare static site only
         run: |
           mkdir -p site/src
-          cp index.html styles.css app.js site/
+          cp index.html styles.css app.js app-icon.svg site/
           cp src/factory-ops.mjs src/cloud-backup.mjs site/src/
           touch site/.nojekyll
           test -s site/index.html
+          test -s site/app-icon.svg
+          grep -q 'family=Cairo' site/index.html
+          grep -q 'family=Inter' site/index.html
+          grep -q 'PREMIEROS DESIGN LANGUAGE' site/styles.css
           test -s site/src/cloud-backup.mjs
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
