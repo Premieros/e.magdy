@@ -8,7 +8,7 @@ const PUBLISHABLE_KEY = 'sb_publishable_ktXP7ss_qK6hZFmKybHw8A_89guYEK9';
 let session = null; // Deliberately memory-only: credentials/tokens are not persisted in localStorage.
 
 const REQUIRED_ARRAYS = ['styles', 'materials', 'orders', 'ledger', 'finished', 'audit'];
-const OPTIONAL_ARRAYS = ['workers', 'workLogs', 'fabricRolls', 'cuttingBundles'];
+const OPTIONAL_ARRAYS = ['workers', 'workLogs', 'fabricRolls', 'cuttingBundles', 'wholesaleOrders', 'finishedDispatches'];
 
 export function validateCloudSnapshot(payload) {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload) || payload.version !== 1) {
