@@ -58,7 +58,7 @@ export function assertRuntimeConfig(env){
   if(env.SUPABASE_URL)assertAllowedSupabaseApiUrl(env.SUPABASE_URL);
   return assertAllowedDatabaseUrl(env.DATABASE_URL);
 }
-if(/(?:^|\/)\w*target-policy\.mjs$/.test(process.argv[1]||'')){
+if((process.argv[1]||'').endsWith('target-policy.mjs')){
   try{
     const result=assertRuntimeConfig(process.env);
     console.log('Garments DB target verified: '+result.projectRef+' / '+result.schema+' / '+result.connectionType);
