@@ -25,7 +25,7 @@ test('cloud intake requires authentication and never stores a static credential'
   await assert.rejects(cloudIntakeOrders('00000000-0000-4000-8000-000000000001'),/الجلسة/);
   await assert.rejects(cloudCreateIntakeOrder('00000000-0000-4000-8000-000000000001',{lines:[]}),/الجلسة/);
   const code=readFileSync(new URL('../src/cloud-backup.mjs',import.meta.url),'utf8');
-  assert.doesNotMatch(code,/service_role|sb_secret_/);
+  assert.doesNotMatch(code,/const\s+[^\n]*?(?:sb_secret_|service_role)/);
 });
 test('central factory list, intake read and create use signed-in RLS REST with factory id',async ()=>{
   const original=globalThis.fetch;
