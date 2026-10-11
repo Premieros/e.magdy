@@ -1,0 +1,20 @@
+name: Verify Garments Prototype
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check app.js
+      - name: Check entrypoint and static assets
+        run: |
+          test -s index.html
+          test -s styles.css
+          test -s README.md
+          grep -q 'src="./app.js"' index.html
