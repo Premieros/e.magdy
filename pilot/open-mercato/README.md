@@ -1,10 +1,13 @@
 # PremierOS Garments → Open Mercato: isolated operational pilot
 
+[Vercel handoff and deployment blockers](DEPLOY_VERCEL.md)
+
 ## Status
 
 **The WMS scaffold is generated successfully by GitHub Actions; the new framework is not yet installed, configured with a database, deployed, or populated with real factory data.**
 
 - Existing production preview remains **unchanged** at https://premieros.github.io/e.magdy/
+- Source publish branch: [`deploy/garments-mercato`](https://github.com/Premieros/e.magdy/tree/deploy/garments-mercato/open-mercato) contains the generated and guarded Open Mercato application.
 - Pilot branch: `feat/open-mercato-operational-pilot`
 - GitHub Actions workflow: `Open Mercato isolated WMS scaffold pilot`
 - Source: https://github.com/open-mercato/open-mercato
