@@ -12,6 +12,8 @@ jobs:
         with:
           node-version: '22'
       - run: node --check app.js
+      - name: Test inventory, production and quality
+        run: npm test
       - name: Check entrypoint and static assets
         run: |
           test -s index.html
