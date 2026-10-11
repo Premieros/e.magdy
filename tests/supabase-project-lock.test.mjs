@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import {
  ALLOWED_SUPABASE_PROJECT_REF, GARMENTS_DATABASE_SCHEMA,
  assertAllowedDatabaseUrl, assertAllowedProjectRef, assertRuntimeConfig
@@ -48,4 +49,23 @@ test('generated Open Mercato code is configured to fail closed on other projects
  assert.match(s,/Destructive reset disabled on shared Supabase project/);
  assert.match(s,/SUPABASE_PROJECT_REF=yumeijsyiphzdsulsubf/);
  assert.match(s,/search_path%3Dgarments_ops/);
+});
+
+test('command-line database policy refuses a foreign project and accepts only the approved one',()=>{
+ const script=new URL('../pilot/open-mercato/target-policy.mjs',import.meta.url);
+ const bad=spawnSync(process.execPath,[script],{encoding:'utf8',env:{
+   ...process.env,DATABASE_URL:direct,SUPABASE_PROJECT_REF:'wrong-project',GARMENTS_DB_SCHEMA:'garments_ops'
+ }});
+ assert.notEqual(bad.status,0);
+ assert.match(bad.stderr,/check failed/);
+ const good=spawnSync(process.execPath,[script],{encoding:'utf8',env:{
+   ...process.env,DATABASE_URL:direct,SUPABASE_PROJECT_REF:project,GARMENTS_DB_SCHEMA:'garments_ops'
+ }});
+ assert.equal(good.status,0,good.stderr);
+ assert.match(good.stdout,/Garments DB target verified/);
+ assert.doesNotMatch(good.stdout,/dummy/);
+});
+test('legacy client URL remains pinned to the same Supabase project',()=>{
+ const s=readFileSync(new URL('../src/cloud-backup.mjs',import.meta.url),'utf8');
+ assert.match(s,/const BASE_URL = 'https:\/\/yumeijsyiphzdsulsubf\.supabase\.co'/);
 });
