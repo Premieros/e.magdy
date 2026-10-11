@@ -254,3 +254,18 @@ tbody tr:hover{background:rgb(var(--ui-primary-soft) / .42)}
   .nav,.btn,.product{transition:none}
   .product:hover{transform:none}
 }
+
+
+/* Production lot matrices and cutting bundles */
+.matrix-scroll{max-height:320px;overflow:auto;border:1px solid rgb(var(--ui-border));margin:12px 0 18px}
+.matrix-scroll table{min-width:470px}
+.matrix-input{
+  width:95px;max-width:100%;min-height:36px;padding:7px 10px;
+  border:1px solid rgb(var(--ui-border));border-radius:9px;
+  background:rgb(var(--ui-surface));color:rgb(var(--ui-text));
+  font:700 13px 'Inter','Cairo',sans-serif;text-align:center;
+}
+.matrix-input:focus-visible{outline:2px solid rgb(var(--ui-primary));outline-offset:1px}
+.batch-tag{display:block;margin-top:5px;font-size:9px;white-space:nowrap;color:rgb(var(--ui-primary));font-family:'Inter','Cairo',sans-serif}
+.modal .matrix-scroll tr:hover{background:rgb(var(--ui-primary-soft)/.4)}
+@media (max-width:760px){.matrix-scroll{max-height:40vh}.matrix-scroll table{min-width:480px}}
