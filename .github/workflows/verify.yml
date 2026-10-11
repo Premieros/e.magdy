@@ -14,6 +14,7 @@ jobs:
       - run: node --check app.js
       - run: node --check src/factory-ops.mjs
       - run: node --check src/cloud-backup.mjs
+      - run: node --check src/production-planning.mjs
       - name: Test inventory, production and quality
         run: npm test
       - name: Check entrypoint and static assets
