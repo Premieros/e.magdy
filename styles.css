@@ -416,3 +416,30 @@ a:hover{text-decoration:underline}
   .btn,.rowbtn,.pill{border-width:2px}
   :focus-visible{outline-width:3px;outline-offset:3px}
 }
+
+
+
+/* Customer order details: visible values and comfortable table spacing. */
+.intake-detail{width:min(850px,100%)}
+.intake-detail .modal-b{padding:23px 25px}
+.intake-detail h3{font-size:17px;color:rgb(var(--ui-text));line-height:1.7}
+.order-detail-summary{
+  padding:13px 16px;margin-bottom:18px;
+  border:1px solid rgb(var(--ui-border));border-radius:12px;
+  background:rgb(var(--ui-surface-raised));
+  color:rgb(var(--ui-muted));font-size:14px;line-height:1.85;
+}
+.order-detail-summary p{margin:5px 0}
+.order-detail-summary b{color:rgb(var(--ui-text))}
+.order-detail-totals{
+  display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  margin:18px 0;font-size:15px;
+  background:#eff6ff;border-color:#bfdbfe;
+}
+.intake-detail .table-wrap{margin-top:10px}
+.intake-detail table{min-width:620px}
+@media(max-width:760px){
+  .intake-detail .modal-b{padding:16px}
+  .order-detail-summary{font-size:13px;padding:12px}
+  .order-detail-totals{font-size:14px}
+}
