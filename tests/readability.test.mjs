@@ -47,7 +47,7 @@ test('central cloud order list opens readable read-only SKU details',()=>{
   assert.match(app,/table\(\['العميل','التواصل','القطع','القيمة','التاريخ','الحالة',''\]/);
   assert.match(app,/data-act="view-cloud-intake"/);
   assert.match(app,/if\(kind==='view-cloud-intake'\)/);
-  assert.match(app,/o\.factory_id===cloudFactorySelected/);
+  assert.match(app,/x\.factory_id===cloudFactorySelected/);
   assert.match(app,/const totals=intakeOrderTotal\(o\)/);
   assert.match(app,/esc\(l\.sku\)/);
   assert.match(app,/esc\(l\.color\|\|'—'\)/);
