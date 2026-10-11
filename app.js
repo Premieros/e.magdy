@@ -386,6 +386,7 @@ function handleCloudAction(action){
       if(!snapshot) {toast('لا توجد نسخة سحابية لهذا الحساب');return;}
       if(!confirm('سيتم استبدال بيانات هذا الجهاز بالنسخة السحابية. سيتم تنزيل ملف احتياطي من بيانات الجهاز قبل الاستبدال. متابعة؟'))return;
       const next=validateCloudSnapshot(snapshot.data);
+      validateWholesaleLedger(next);
       downloadSnapshot(db,'garments-before-cloud-restore.json');
       localStorage.setItem(KEY,JSON.stringify(next));
       db=next;render();toast('تم استرجاع النسخة السحابية');
