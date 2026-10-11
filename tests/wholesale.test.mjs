@@ -153,3 +153,30 @@ test('prices are snapshotted when order is created',()=>{
   assert.equal(g.wholesaleProgress(db,order).amount,480);
   assert.equal(g.wholesaleOverview(db).value,480);
 });
+
+
+test('import validation catches impossible wholesale shipments and duplicate references',()=>{
+  const db=base();
+  produce(db,0,10);
+  const o=sale(db,[[0,5]]);
+  dispatch(db,o,[[0,4]],'DO-V1');
+  assert.equal(g.validateWholesaleLedger(db),db);
+  const tampered=structuredClone(db);
+  tampered.finishedDispatches[0].lines[0].qty=11;
+  assert.throws(()=>g.validateWholesaleLedger(tampered),/تجاوز|يتجاوز/);
+  const copied=structuredClone(db);
+  copied.finishedDispatches.push(structuredClone(copied.finishedDispatches[0]));
+  assert.throws(()=>g.validateWholesaleLedger(copied),/مكرر/);
+});
+test('import validation rejects deliveries without matching sales or completed goods',()=>{
+  const db=base();
+  produce(db,0,4);
+  const o=sale(db,[[0,4]]);
+  dispatch(db,o,[[0,3]],'DO-V2');
+  const noSale=structuredClone(db);
+  noSale.wholesaleOrders=[];
+  assert.throws(()=>g.validateWholesaleLedger(noSale),/دون طلب/);
+  const noStock=structuredClone(db);
+  noStock.finished=[];
+  assert.throws(()=>g.validateWholesaleLedger(noStock),/مخزون/);
+});
