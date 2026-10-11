@@ -92,7 +92,7 @@ function settingsPage(){
     +btn('إعادة ضبط النظام','reset','','danger')+'</section></div>'
     +'<div class="tips">هذه النسخة ليست مزامنة متعددة المستخدمين؛ التغييرات على جهاز آخر لن تظهر تلقائيًا. لا تستخدم بيانات حساسة أو حقيقية قبل اكتمال الصلاحيات والمعاملات الخادمية والتدقيق.</div>';
 }
-function styleDetail(){let s=style(detail);if(!s)return empty('موديل غير موجود','');let req=s.bom.map(b=>{let m=mat(b.materialId);return '<tr>'+td(esc(m?.name))+td(num(b.qty)+' '+esc(m?.unit))+td(num(m?.stock))+td(cur((m?.avgCost||0)*b.qty))+'</tr>';}).join('');return heading('موديل '+esc(s.code),esc(s.name),btn('تعديل BOM','bom',s.id,'primary')+btn('رجوع','nav','styles'))+'<div class="stats">'+metric('المقاسات',s.sizes.length,s.sizes.map(esc).join(' · '))+metric('الألوان',s.colors.length,s.colors.map(esc).join(' · '))+metric('عدد SKU',s.variants.length,'متغير مستقل')+metric('تكلفة مواد/قطعة',cur(s.bom.reduce((n,b)=>n+b.qty*(mat(b.materialId)?.avgCost||0),0)),'تقديرية')+'</div><section class="card"><h3>قائمة المكونات BOM</h3>'+table(['الخامة','الاستهلاك/قطعة','الرصيد','التكلفة'],req||'<tr><td colspan="4">لا توجد مكونات بعد</td></tr>')+'</section><section class="card"><h3>أكواد المقاسات والألوان</h3>'+table(['SKU','المقاس','اللون','الرصيد التام'],s.variants.map(v=>'<tr>'+td('<span class="mono">'+esc(v.sku)+'</span>')+td(esc(v.size))+td(esc(v.color))+td(num(ready(v.id)))+'</tr>').join(''))+'</section>';}
+function styleDetail(){let s=style(detail);if(!s)return empty('موديل غير موجود','');let req=s.bom.map(b=>{let m=mat(b.materialId);return '<tr>'+td(esc(m?.name))+td(num(b.qty)+' '+esc(m?.unit))+td(num(m?.stock))+td(cur((m?.avgCost||0)*b.qty))+'</tr>';}).join('');return heading('موديل '+esc(s.code),esc(s.name),btn('＋ دفعة مقاسات وألوان','matrix-order',s.id,'primary')+btn('تعديل BOM','bom',s.id)+btn('رجوع','nav','styles'))+'<div class="stats">'+metric('المقاسات',s.sizes.length,s.sizes.map(esc).join(' · '))+metric('الألوان',s.colors.length,s.colors.map(esc).join(' · '))+metric('عدد SKU',s.variants.length,'متغير مستقل')+metric('تكلفة مواد/قطعة',cur(s.bom.reduce((n,b)=>n+b.qty*(mat(b.materialId)?.avgCost||0),0)),'تقديرية')+'</div><section class="card"><h3>قائمة المكونات BOM</h3>'+table(['الخامة','الاستهلاك/قطعة','الرصيد','التكلفة'],req||'<tr><td colspan="4">لا توجد مكونات بعد</td></tr>')+'</section><section class="card"><h3>أكواد المقاسات والألوان</h3>'+table(['SKU','المقاس','اللون','الرصيد التام'],s.variants.map(v=>'<tr>'+td('<span class="mono">'+esc(v.sku)+'</span>')+td(esc(v.size))+td(esc(v.color))+td(num(ready(v.id)))+'</tr>').join(''))+'</section>';}
 
 function workersPage() {
   const total = db.workLogs.reduce((sum, row) => sum + row.cost, 0);
@@ -127,7 +127,7 @@ function orderDetail() {
   const next = ['بدء القص وصرف الخامات', 'تحويل للخياطة', 'تحويل للتشطيب', 'تحويل للجودة', 'إتمام وترحيل التام'][current];
   const labor = pieceworkCost(db, o.id);
   const progress = stageProgress(db, o.id, o.status);
-  let output = heading('أمر ' + esc(o.ref), esc(style(o.styleId)?.name) + ' · ' + esc(variant(o)?.sku), btn('رجوع', 'nav', 'orders'))
+  let output = heading('أمر ' + esc(o.ref), esc(style(o.styleId)?.name) + ' · ' + esc(variant(o)?.sku), (o.batchId ? btn('فتح الدفعة','show-batch',o.batchId) : '') + btn('رجوع', 'nav', 'orders'))
     + '<div class="steps">' + stages.map((s, i) => '<div class="step ' + (i <= current ? 'done' : '') + '">' + esc(labels[s]) + '</div>').join('') + '</div>'
     + '<div class="stats">' + metric('كمية الأمر', num(o.qty), 'قطعة')
     + metric('تكلفة الخامات', cur(o.materialCost), 'بعد بدء القص')
@@ -151,6 +151,17 @@ function orderDetail() {
       + '<p class="sub">المسجل ' + num(progress.quantity) + ' من ' + num(o.qty)
       + ' قطعة. إذا بدأت التسجيل، يجب إتمام كمية المرحلة قبل الانتقال.</p>'
       + btn('＋ تسجيل دفعة', 'stage-work', o.id, 'primary') + '</section>';
+  }
+  const cut = cuttingBundleStats(db, o.id);
+  if (o.status === 'planned' || cut.rows.length) {
+    output += '<section class="card"><h3>حزم القص</h3><p class="sub">حزم مخططة: '+num(cut.total)+' من '+num(o.qty)+' قطعة.'
+      +(cut.rows.length && cut.total !== o.qty ? ' يجب استكمال حزم القص قبل صرف الخامات.' : '')
+      +'</p>'+(o.status === 'planned' ? btn('＋ حزمة قص','new-bundle',o.id,'primary') : '')
+      +(cut.rows.length ? table(['رقم الحزمة','SKU','الكمية','ملاحظات'],cut.rows.map(r=>'<tr>'
+        +td('<span class="mono">'+esc(r.bundleNo)+'</span>')+td(esc(variant(o)?.sku))
+        +td(num(r.qty))+td(esc(r.notes||'—'))+'</tr>').join(''))
+        : '<p class="notes">اختياري: يمكنك بدء القص مباشرة دون تسجيل حزم، أو تسجيل حزم يجب أن يساوي مجموعها كمية الأمر.</p>')
+      +'</section>';
   }
   if (o.rollAllocations?.length) {
     output += '<section class="card"><h3>رولات القماش المصروفة</h3>'
