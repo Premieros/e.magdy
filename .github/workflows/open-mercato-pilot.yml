@@ -2,7 +2,7 @@ name: Open Mercato isolated WMS scaffold pilot
 
 on:
   push:
-    branches: ['feat/open-mercato-operational-pilot']
+    branches: ['feat/open-mercato-operational-pilot', 'feature/only-yume-supabase-isolated-schema']
     paths:
       - 'pilot/open-mercato/**'
       - '.github/workflows/open-mercato-pilot.yml'
