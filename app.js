@@ -209,6 +209,62 @@ function batchDetail(){
         +td(status(o.status))+td('<button class="rowbtn" data-act="show-order" data-id="'+esc(o.id)+'">فتح الأمر</button>')+'</tr>').join(''))
     +'</section><p class="tips">كل أمر له صرف خامات وتكلفة وفحص جودة مستقل. الدفعة رابط للتخطيط والتجميع فقط، وليست حركة مخزنية إضافية.</p>';
 }
+
+function wholesalePage(){
+  const stats=wholesaleOverview(db);
+  return heading('طلبات بيع الجملة','طلبات العملاء وتسليمات مخزون الملابس التامة.',btn('＋ طلب جملة','new-wholesale','','primary'))
+    +'<div class="stats">'+metric('طلبات الجملة',num(stats.orders),'طلب')
+    +metric('طلبات بانتظار التسليم',num(stats.open),'جزئي أو لم يبدأ')
+    +metric('قطع تم تسليمها',num(stats.delivered),'من مخزون التام')
+    +metric('قيمة التسليمات',cur(stats.value),'قيمة بيع تقديرية')+'</div>'
+    +'<section class="card"><h3>طلبات العملاء</h3><p class="sub">يمكن تسليم الطلب على عدة أذون تسليم جزئية، ويتم خصم مخزون التام عند تأكيد الإذن فقط.</p>'
+    +(db.wholesaleOrders.length
+      ?table(['رقم الطلب','العميل','الموديل','المطلوب','المسلم','المتبقي','الحالة',''],
+        db.wholesaleOrders.map(o=>{const p=wholesaleProgress(db,o);
+          const state=p.status==='fulfilled'?'مكتمل':p.status==='partial'?'جزئي':'مفتوح';
+          return '<tr>'+td('<span class="mono">'+esc(o.ref)+'</span>')
+            +td(esc(o.customer))+td(esc(style(o.styleId)?.name))+td(num(p.ordered))
+            +td(num(p.shipped))+td(num(p.remaining))
+            +td('<span class="pill '+(p.status==='fulfilled'?'green':p.status==='partial'?'gold':'')+'">'+state+'</span>')
+            +td('<button class="rowbtn" data-act="show-wholesale" data-id="'+esc(o.id)+'">التفاصيل</button>')+'</tr>';}).join(''))
+      :empty('لا توجد طلبات جملة','أنشئ طلبًا بمقاسات وألوان ثم سلّم المنتجات من مخزون التام.'))
+    +'</section><section class="card"><h3>آخر أذون التسليم</h3>'
+    +(db.finishedDispatches.length
+      ?table(['رقم الإذن','العميل','التاريخ','القطع','القيمة'],
+        db.finishedDispatches.slice(0,25).map(x=>'<tr>'+td('<span class="mono">'+esc(x.reference)+'</span>')
+          +td(esc(x.customer))+td(new Date(x.at).toLocaleDateString('ar-EG'))
+          +td(num(x.lines.reduce((s,l)=>s+l.qty,0)))
+          +td(cur(x.lines.reduce((s,l)=>s+l.qty*l.unitPrice,0)))+'</tr>').join(''))
+      :empty('لا توجد أذون تسليم','سجّل التسليم بعد اكتمال الإنتاج واستلام مخزون التام.'))+'</section>';
+}
+function wholesaleDetail(){
+  const o=db.wholesaleOrders.find(x=>x.id===detail);
+  if(!o)return empty('طلب الجملة غير موجود','');
+  const progress=wholesaleProgress(db,o);
+  const state=progress.status==='fulfilled'?'مكتمل':progress.status==='partial'?'تم التسليم جزئيًا':'لم يبدأ التسليم';
+  const history=db.finishedDispatches.filter(x=>x.orderId===o.id);
+  return heading('طلب جملة '+esc(o.ref),esc(o.customer)+' · '+esc(style(o.styleId)?.name),
+    (progress.remaining>0?btn('＋ إذن تسليم','ship-wholesale',o.id,'primary'):'')+btn('رجوع','nav','wholesale'))
+    +'<div class="stats">'+metric('المطلوب',num(progress.ordered),'قطعة')
+    +metric('الذي تم تسليمه',num(progress.shipped),'قطعة')
+    +metric('المتبقي',num(progress.remaining),state)
+    +metric('قيمة الطلب',cur(progress.amount),'إجمالي الكميات المطلوبة')+'</div>'
+    +'<section class="card"><h3>المقاسات والألوان</h3>'
+    +table(['SKU','المقاس','اللون','الطلب','تم التسليم','المتبقي','مخزون التام'],
+      progress.lines.map(l=>'<tr>'+td('<span class="mono">'+esc(l.sku)+'</span>')
+        +td(esc(l.size))+td(esc(l.color))+td(num(l.qty))+td(num(l.shipped))
+        +td('<b>'+num(l.remaining)+'</b>')
+        +td(num(availableFinishedStock(db,l.variantId)))+'</tr>').join(''))
+    +'<p class="tips">حفظ الطلب لا يحجز المخزون. عند إنشاء إذن تسليم يتم التحقق من رصيد كل SKU ومن الكمية المتبقية في الطلب.</p></section>'
+    +'<section class="card"><h3>أذون التسليم الخاصة بالطلب</h3>'
+    +(history.length?table(['المرجع','التاريخ','القطع','القيمة'],
+      history.map(d=>'<tr>'+td('<span class="mono">'+esc(d.reference)+'</span>')
+        +td(new Date(d.at).toLocaleDateString('ar-EG'))
+        +td(num(d.lines.reduce((s,l)=>s+l.qty,0)))
+        +td(cur(d.lines.reduce((s,l)=>s+l.qty*l.unitPrice,0)))+'</tr>').join(''))
+      :empty('لم يتم التسليم بعد','يمكنك تسجيل إذن جزئي عند توفر المنتج التام.'))+'</section>';
+}
+
 const views={dashboard,styles:stylesPage,materials:materialsPage,rolls:rollsPage,workers:workersPage,orders:ordersPage,batches:batchesPage,'batch-detail':batchDetail,quality:qualityPage,wholesale:wholesalePage,'wholesale-detail':wholesaleDetail,reports:reportsPage,settings:settingsPage,'style-detail':styleDetail,'order-detail':orderDetail};
 function render(){const menus=[['dashboard','⌂','الرئيسية'],['styles','◈','الموديلات والمنتجات'],['materials','▤','الأقمشة والخامات'],['rolls','◧','رولات الأقمشة'],['workers','♙','العمال والإنتاجية'],['orders','▣','أوامر الإنتاج'],['batches','◈','دفعات المقاسات'],['quality','◉','مراقبة الجودة'],['wholesale','▧','بيع الجملة والتسليم'],['reports','▥','التقارير'],['settings','⚙','النسخ الاحتياطي']];document.getElementById('app').innerHTML='<div class="layout"><aside class="side"><div class="logo"><img src="./app-icon.svg" class="logo-icon" alt=""><span class="logo-name">PremierOS<small>GARMENTS EDITION</small></span></div>'+menus.map(v=>'<button class="nav '+(page===v[0]?'on':'')+'" data-act="nav" data-id="'+v[0]+'"><span class="nav-icon">'+navIcon(v[1])+'</span><span class="nav-label">'+v[2]+'</span></button>').join('')+'<div class="side-note">● وضع محلي<br>نسخ سحابي يدوي اختياري<br>لا يوجد تزامن فوري</div></aside><main class="main"><header class="top"><span class="top-crumb">PremierOS <span class="top-separator">/</span> <strong>مصنع الملابس</strong></span><span class="status"><span class="status-dot"></span> نسخة تجريبية · نسخ سحابي يدوي</span></header><div class="content">'+(views[page]||dashboard)()+'<p class="foot">PremierOS Garments — نسخة تأسيسية مستقلة عن النظام الأصلي</p></div></main></div>'+renderModal()+'<div id="toast" class="toast hidden"></div>';}
 const inp=(label,name,type='text',value='',attrs='')=>'<label class="field">'+label+'<input name="'+name+'" type="'+type+'" value="'+esc(value)+'" '+attrs+'></label>';
