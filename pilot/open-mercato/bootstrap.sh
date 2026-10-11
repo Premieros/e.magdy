@@ -33,6 +33,38 @@ if [[ -f garments-ops/.env || -f garments-ops/.env.local ]]; then
   echo 'Scaffold unexpectedly contained live .env credentials.' >&2
   exit 1
 fi
+# Keep the generated app on the ONE approved Supabase project; never use its local DB defaults.
+cp "$ROOT/pilot/open-mercato/target-policy.mjs" garments-ops/scripts/garments-target-policy.mjs
+node --input-type=module - "$TARGET/garments-ops" <<'JS'
+import { readFileSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+const base=resolve(process.argv[2]);
+const pkgFile=resolve(base,'package.json');
+const p=JSON.parse(readFileSync(pkgFile,'utf8'));
+const guard='node ./scripts/garments-target-policy.mjs && ';
+for (const key of ['setup','setup:classic','dev','dev:classic','dev:verbose','start',
+  'mercato','db:generate','db:migrate','db:greenfield','initialize','build']){
+  if(p.scripts[key] && !p.scripts[key].startsWith(guard))p.scripts[key]=guard+p.scripts[key];
+}
+for (const key of ['setup:reinstall','setup:reinstall:classic','reinstall','dev:reset']){
+  p.scripts[key]='node -e "console.error(\'Destructive reset disabled on shared Supabase project\');process.exit(2)"';
+}
+p.scripts['garments:db-check']='node ./scripts/garments-target-policy.mjs';
+writeFileSync(pkgFile,JSON.stringify(p,null,2)+'\n');
+const example=resolve(base,'.env.example');
+const lines=readFileSync(example,'utf8').split('\n');
+const header=[
+  '# PremierOS Garments locked Supabase project. Replace PASSWORD only in private .env.',
+  '# Never put actual credentials into Git or a browser bundle.',
+  'SUPABASE_PROJECT_REF=yumeijsyiphzdsulsubf',
+  'GARMENTS_DB_SCHEMA=garments_ops',
+  '# DB role is NOLOGIN until deployment credentials are securely provisioned.',
+  'DATABASE_URL=postgres://garments_ops_login:PASSWORD@db.yumeijsyiphzdsulsubf.supabase.co:5432/postgres?options=-c%20search_path%3Dgarments_ops',
+  ''
+];
+const filtered=lines.filter(x=>!/^DATABASE_URL=/.test(x) && !/^SUPABASE_PROJECT_REF=/.test(x) && !/^GARMENTS_DB_SCHEMA=/.test(x));
+writeFileSync(example,header.join('\n')+filtered.join('\n'));
+JS
 mkdir -p garments-ops/THIRD_PARTY_NOTICES
 cp "$ROOT/pilot/open-mercato/THIRD_PARTY_LICENSE.txt" garments-ops/THIRD_PARTY_NOTICES/Open-Mercato-MIT.txt
 cp "$ROOT/pilot/open-mercato/ATTRIBUTION.md" garments-ops/THIRD_PARTY_NOTICES/ATTRIBUTION.md

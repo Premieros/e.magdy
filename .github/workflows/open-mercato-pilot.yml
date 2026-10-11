@@ -2,7 +2,7 @@ name: Open Mercato isolated WMS scaffold pilot
 
 on:
   push:
-    branches: ['feat/open-mercato-operational-pilot']
+    branches: ['feat/open-mercato-operational-pilot', 'feature/only-yume-supabase-isolated-schema']
     paths:
       - 'pilot/open-mercato/**'
       - '.github/workflows/open-mercato-pilot.yml'
@@ -31,6 +31,14 @@ jobs:
           node -e "const p=require('./package.json'); if(!p.name||!p.scripts) process.exit(1); console.log('Generated package:',p.name)"
           test -s THIRD_PARTY_NOTICES/Open-Mercato-MIT.txt
           test -s THIRD_PARTY_NOTICES/ATTRIBUTION.md
+          test -s scripts/garments-target-policy.mjs
+          grep -q 'SUPABASE_PROJECT_REF=yumeijsyiphzdsulsubf' .env.example
+          grep -q 'GARMENTS_DB_SCHEMA=garments_ops' .env.example
+          node --input-type=module -e "import pkg from './package.json' with { type: 'json' }; for (const key of ['start','dev','mercato','db:migrate','initialize']) { if (!pkg.scripts[key].startsWith('node ./scripts/garments-target-policy.mjs &&')) process.exit(2); }"
+          if node ./scripts/garments-target-policy.mjs; then
+            echo 'Unsafe scaffold: connected without DB project configuration' >&2
+            exit 1
+          fi
           test ! -f .env
           test ! -f .env.local
           tar --exclude=.git --exclude=node_modules --exclude=.env --exclude=.env.local -czf "$GITHUB_WORKSPACE/open-mercato-wms-pilot.tar.gz" -C "$RUNNER_TEMP/mercato-pilot" garments-ops
