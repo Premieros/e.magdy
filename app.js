@@ -1,4 +1,5 @@
 /* PremierOS Garments | independent, browser-local prototype | no remote database */
+import { cloudIdentity, cloudLogin, cloudLogout, cloudSave, cloudLoad, validateCloudSnapshot } from './src/cloud-backup.mjs';
 import { ensureFactoryState, addWorker, registerStageWork, pieceworkCost, stageProgress,
   checkStageBeforeAdvance, receiveFabricRoll, allocateFabricRolls } from './src/factory-ops.mjs';
 const KEY='premieros-garments-local-v1';
@@ -50,7 +51,32 @@ function materialsPage(){return heading('الأقمشة والخامات','تت�
 function ordersPage(){return heading('أوامر الإنتاج','تابع مراحل القص والخياطة والتشطيب والجودة.',btn('＋ أمر جديد','new-order','','primary'))+'<section class="card">'+(db.orders.length?table(['المرجع','الموديل','المقاس/اللون','الكمية','العميل','المرحلة',''],db.orders.map(o=>'<tr>'+td('<span class="mono">'+esc(o.ref)+'</span>')+td(esc(style(o.styleId)?.name))+td(esc(variant(o)?.size)+' / '+esc(variant(o)?.color))+td(num(o.qty))+td(esc(o.customer||'—'))+td(status(o.status))+td('<button class="rowbtn" data-act="show-order" data-id="'+o.id+'">عرض</button>')+'</tr>').join('')):empty('لا توجد أوامر تصنيع','أضف موديلًا ومكونات ثم أنشئ أمر تصنيع.'))+'</section>';}
 function qualityPage(){let arr=db.orders.filter(o=>o.status==='quality');return heading('فحص الجودة','تسجيل المقبول والمرفوض وتكاليف التشغيل.')+'<section class="card"><h3>بانتظار الجودة</h3><p class="sub">استكمال الفحص وترحيل المقبول إلى مخزن التام</p>'+(arr.length?arr.map(o=>'<div class="data-line"><b>'+esc(o.ref)+' · '+esc(style(o.styleId)?.name)+'</b>'+btn('فحص','quality',o.id,'primary')+'</div>').join(''):empty('لا توجد أوامر تنتظر الفحص','تابع مراحل أمر الإنتاج حتى مرحلة الجودة.'))+'</section>';}
 function reportsPage(){let data=db.styles.flatMap(s=>s.variants.map(v=>({...v,name:s.name,qty:ready(v.id)}))).filter(x=>x.qty);return heading('التقارير وحركة المخزون','حركة الخامات ومخزون الملابس الجاهزة وسجل العمليات.')+'<div class="stats">'+metric('أوامر مكتملة',num(db.orders.filter(x=>x.status==='completed').length),'من جميع الأوامر')+metric('قطع سليمة',num(db.finished.reduce((n,x)=>n+x.qty,0)),'في مخزون التام')+metric('قطع مرفوضة',num(db.orders.reduce((n,x)=>n+x.reject,0)),'في فحص الجودة')+metric('حركة مخزون',num(db.ledger.length),'صرف واستلام خامات')+'</div><section class="card"><h3>المخزون التام حسب SKU</h3><p class="sub">كل لون ومقاس مستقل</p>'+ (data.length?table(['كود SKU','الموديل','المقاس','اللون','المتوفر'],data.map(v=>'<tr>'+td('<span class="mono">'+esc(v.sku)+'</span>')+td(esc(v.name))+td(esc(v.size))+td(esc(v.color))+td(num(v.qty))+'</tr>').join('')):empty('مخزن التام فارغ','سيظهر المخزون بعد اكتمال الجودة.'))+'</section><section class="card"><h3>حركة الأقمشة والخامات</h3><p class="sub">آخر 100 حركة</p>'+ (db.ledger.length?table(['الخامة','العملية','الكمية','التكلفة','المرجع'],db.ledger.slice(0,100).map(x=>'<tr>'+td(esc(mat(x.materialId)?.name))+td('<span class="'+(x.qty>0?'receipt':'issue')+'">'+(x.qty>0?'استلام':'صرف')+'</span>')+td(num(x.qty))+td(cur(x.cost))+td(esc(x.reference))+'</tr>').join('')):empty('لا توجد حركات مخزون','ستسجل كل عملية استلام أو صرف هنا.'))+'</section><section class="card"><h3>سجل العمليات</h3>'+db.audit.slice(0,30).map(x=>'<div class="data-line"><span>'+esc(x.message)+'</span><small>'+new Date(x.at).toLocaleDateString('ar-EG')+'</small></div>').join('')+'</section>';}
-function settingsPage(){return heading('إدارة البيانات','نسخة محلية: البيانات على هذا المتصفح فقط.')+'<div class="two"><section class="card"><h3>نسخ احتياطي</h3><p class="notes">صدّر بياناتك إلى JSON أو استورد نسخة من جهازك. الاستيراد يستبدل جميع البيانات.</p>'+btn('↓ تنزيل نسخة JSON','export','','primary')+'<p><input id="import" type="file" accept=".json,application/json"></p></section><section class="card"><h3>بيانات تجريبية</h3><p class="notes">إضافة موديل قميص، خامات، أرصدة، وأمر إنتاج للتجربة. متاحة حين تكون النسخة فارغة فقط.</p>'+btn('تحميل بيانات تجربة','seed')+'</section><section class="card"><h3>حذف البيانات</h3><p class="notes">يحذف البيانات المحلية نهائيًا دون إمكانية استرجاعها إلا من نسخة احتياطية.</p>'+btn('إعادة ضبط النظام','reset','','danger')+'</section></div><div class="tips">هذه النسخة لا تملك قاعدة بيانات أو صلاحيات مستخدمين أو تزامن أجهزة. لا تدخل بيانات مالية أو شخصية حساسة، ولا تعتمد عليها في العمل الفعلي قبل إضافة قاعدة سحابية آمنة ونسخ احتياطي.</div>';}
+function settingsPage(){
+  const account=cloudIdentity();
+  const cloud=account
+    ? '<p class="notes">مسجّل بحساب <b>'+esc(account.email)+'</b>. النسخ السحابي يدوي وليس مزامنة فورية بين الأجهزة.</p>'
+      +'<div class="actions">'+btn('رفع نسخة الجهاز إلى السحابة','cloud-save','','primary')
+      +btn('استرجاع نسخة السحابة','cloud-restore')+btn('تسجيل الخروج','cloud-logout')+'</div>'
+    : '<p class="notes">يمكن استخدام بريد وكلمة مرور لحساب موجود في Supabase الخاص بمشروع AMMCO. لا يُنشئ هذا النظام حسابات جديدة، ولا يقرأ بيانات AMMCO.</p>'
+      +'<div class="form-grid"><label class="field">البريد الإلكتروني<input id="cloud-email" type="email" autocomplete="username" required></label>'
+      +'<label class="field">كلمة المرور<input id="cloud-password" type="password" autocomplete="current-password" required></label></div>'
+      +btn('تسجيل الدخول للسحابة','cloud-login','','primary');
+  return heading('إدارة البيانات','بيانات العمل تبقى محليًا، مع نسخ احتياطي سحابي اختياري.')
+    +'<div class="two"><section class="card"><h3>نسخ احتياطي على الجهاز</h3>'
+    +'<p class="notes">صدّر بياناتك إلى JSON أو استورد نسخة من جهازك. الاستيراد يستبدل جميع البيانات.</p>'
+    +btn('↓ تنزيل نسخة JSON','export','','primary')
+    +'<p><input id="import" type="file" accept=".json,application/json"></p></section>'
+    +'<section class="card"><h3>النسخ الاحتياطي السحابي — Supabase</h3>'
+    +'<p class="notes">نسخة مستقلة لكل مستخدم داخل جدول خاص بالملابس. الحفظ والاسترجاع يتمان يدويًا فقط.</p>'
+    +cloud+'</section>'
+    +'<section class="card"><h3>بيانات تجريبية</h3>'
+    +'<p class="notes">إضافة موديل قميص، خامات، أرصدة، وأمر إنتاج للتجربة. متاحة حين تكون النسخة فارغة فقط.</p>'
+    +btn('تحميل بيانات تجربة','seed')+'</section>'
+    +'<section class="card"><h3>حذف البيانات</h3>'
+    +'<p class="notes">يحذف البيانات المحلية دون حذف النسخ السحابية. يمكن الاستعادة فقط إن كانت لديك نسخة محفوظة.</p>'
+    +btn('إعادة ضبط النظام','reset','','danger')+'</section></div>'
+    +'<div class="tips">هذه النسخة ليست مزامنة متعددة المستخدمين؛ التغييرات على جهاز آخر لن تظهر تلقائيًا. لا تستخدم بيانات حساسة أو حقيقية قبل اكتمال الصلاحيات والمعاملات الخادمية والتدقيق.</div>';
+}
 function styleDetail(){let s=style(detail);if(!s)return empty('موديل غير موجود','');let req=s.bom.map(b=>{let m=mat(b.materialId);return '<tr>'+td(esc(m?.name))+td(num(b.qty)+' '+esc(m?.unit))+td(num(m?.stock))+td(cur((m?.avgCost||0)*b.qty))+'</tr>';}).join('');return heading('موديل '+esc(s.code),esc(s.name),btn('تعديل BOM','bom',s.id,'primary')+btn('رجوع','nav','styles'))+'<div class="stats">'+metric('المقاسات',s.sizes.length,s.sizes.map(esc).join(' · '))+metric('الألوان',s.colors.length,s.colors.map(esc).join(' · '))+metric('عدد SKU',s.variants.length,'متغير مستقل')+metric('تكلفة مواد/قطعة',cur(s.bom.reduce((n,b)=>n+b.qty*(mat(b.materialId)?.avgCost||0),0)),'تقديرية')+'</div><section class="card"><h3>قائمة المكونات BOM</h3>'+table(['الخامة','الاستهلاك/قطعة','الرصيد','التكلفة'],req||'<tr><td colspan="4">لا توجد مكونات بعد</td></tr>')+'</section><section class="card"><h3>أكواد المقاسات والألوان</h3>'+table(['SKU','المقاس','اللون','الرصيد التام'],s.variants.map(v=>'<tr>'+td('<span class="mono">'+esc(v.sku)+'</span>')+td(esc(v.size))+td(esc(v.color))+td(num(ready(v.id)))+'</tr>').join(''))+'</section>';}
 
 function workersPage() {
@@ -119,7 +145,7 @@ function orderDetail() {
   return output;
 }
 const views={dashboard,styles:stylesPage,materials:materialsPage,rolls:rollsPage,workers:workersPage,orders:ordersPage,quality:qualityPage,reports:reportsPage,settings:settingsPage,'style-detail':styleDetail,'order-detail':orderDetail};
-function render(){const menus=[['dashboard','⌂','الرئيسية'],['styles','◈','الموديلات والمنتجات'],['materials','▤','الأقمشة والخامات'],['rolls','◧','رولات الأقمشة'],['workers','♙','العمال والإنتاجية'],['orders','▣','أوامر الإنتاج'],['quality','◉','مراقبة الجودة'],['reports','▥','التقارير'],['settings','⚙','النسخ الاحتياطي']];document.getElementById('app').innerHTML='<div class="layout"><aside class="side"><div class="logo">PremierOS<small>GARMENTS EDITION</small></div>'+menus.map(v=>'<button class="nav '+(page===v[0]?'on':'')+'" data-act="nav" data-id="'+v[0]+'"><span>'+v[1]+'</span>'+v[2]+'</button>').join('')+'<div class="side-note">● وضع محلي<br>لا توجد قاعدة بيانات سحابية<br>البيانات على جهازك فقط</div></aside><main class="main"><header class="top"><span>PremierOS / <strong>مصنع الملابس</strong></span><span class="status">● تخزين محلي</span></header><div class="content">'+(views[page]||dashboard)()+'<p class="foot">PremierOS Garments — نسخة تأسيسية مستقلة عن النظام الأصلي</p></div></main></div>'+renderModal()+'<div id="toast" class="toast hidden"></div>';}
+function render(){const menus=[['dashboard','⌂','الرئيسية'],['styles','◈','الموديلات والمنتجات'],['materials','▤','الأقمشة والخامات'],['rolls','◧','رولات الأقمشة'],['workers','♙','العمال والإنتاجية'],['orders','▣','أوامر الإنتاج'],['quality','◉','مراقبة الجودة'],['reports','▥','التقارير'],['settings','⚙','النسخ الاحتياطي']];document.getElementById('app').innerHTML='<div class="layout"><aside class="side"><div class="logo">PremierOS<small>GARMENTS EDITION</small></div>'+menus.map(v=>'<button class="nav '+(page===v[0]?'on':'')+'" data-act="nav" data-id="'+v[0]+'"><span>'+v[1]+'</span>'+v[2]+'</button>').join('')+'<div class="side-note">● وضع محلي<br>نسخ سحابي يدوي اختياري<br>لا يوجد تزامن فوري</div></aside><main class="main"><header class="top"><span>PremierOS / <strong>مصنع الملابس</strong></span><span class="status">● محلي + نسخ سحابي اختياري</span></header><div class="content">'+(views[page]||dashboard)()+'<p class="foot">PremierOS Garments — نسخة تأسيسية مستقلة عن النظام الأصلي</p></div></main></div>'+renderModal()+'<div id="toast" class="toast hidden"></div>';}
 const inp=(label,name,type='text',value='',attrs='')=>'<label class="field">'+label+'<input name="'+name+'" type="'+type+'" value="'+esc(value)+'" '+attrs+'></label>';
 const sel=(label,name,options)=>'<label class="field">'+label+'<select name="'+name+'" required><option value="">اختر...</option>'+options.map(x=>'<option value="'+esc(x[0])+'">'+esc(x[1])+'</option>').join('')+'</select></label>';
 function renderModal(){if(!modal)return '';let kind=modal.type,t='',form='';if(kind==='new-style'){t='موديل ملابس جديد';form='<div class="form-grid">'+inp('كود الموديل','code','text','','required placeholder="SH-101"')+inp('اسم الموديل','name','text','','required')+inp('التصنيف','category')+inp('الموسم','season')+inp('المقاسات بفاصلة','sizes','text','S, M, L, XL','required')+inp('الألوان بفاصلة','colors','text','أسود, أبيض','required')+inp('سعر البيع','price','number',0,'step="0.01" min="0"')+'</div>';}
@@ -150,7 +176,44 @@ function open(type,oid=''){modal={type,id:oid};render();if(type==='new-order')se
 function setVariants(){let sid=document.querySelector('[name=styleId]')?.value;let e=document.querySelector('[name=variantId]');if(e)e.innerHTML='<option value="">اختر المقاس واللون...</option>'+(style(sid)?.variants||[]).map(v=>'<option value="'+v.id+'">'+esc(v.size)+' / '+esc(v.color)+'</option>').join('');}
 function seed(){mutator(d=>{if(d.styles.length||d.materials.length||d.orders.length)throw Error('حمّل بيانات التجربة فقط في نسخة فارغة');const makeM=(code,name,unit,stock,cost)=>{let m={id:id(),code,name,unit,category:'خامات',stock,avgCost:cost};d.materials.push(m);d.ledger.push({id:id(),at:new Date().toISOString(),materialId:m.id,qty:stock,cost,kind:'receive',reference:'بيانات تجريبية'});return m;};let fabric=makeM('FAB-01','قماش قطن','متر',600,55),buttons=makeM('BTN-01','أزرار','قطعة',2000,1);let sizes=['S','M','L','XL'],colors=['أبيض','أسود'];let st={id:id(),code:'SH-100',name:'قميص رجالي',category:'قمصان',season:'صيف 2026',sellingPrice:350,sizes,colors,variants:sizes.flatMap(size=>colors.map(color=>({id:id(),size,color,sku:'SH-100-'+size+'-'+color}))),bom:[{materialId:fabric.id,qty:1.8},{materialId:buttons.id,qty:7}]};d.styles.push(st);let oid=id();d.orders.push({id:oid,ref:'WO-DEMO-001',styleId:st.id,variantId:st.variants[0].id,qty:25,customer:'عميل تجريبي',due:'',status:'planned',materialCost:0,labor:0,overhead:0,good:0,reject:0,history:[{at:new Date().toISOString(),stage:'planned'}],used:[]});log(d,'تجهيز بيانات العرض');},'تم تجهيز بيانات تجريبية');}
 if(typeof document!=='undefined') {
-document.addEventListener('click',e=>{let b=e.target.closest('[data-act]');if(!b){if(e.target.id==='backdrop'){modal=null;render();}return;}let a=b.dataset.act,oid=b.dataset.id;if(a==='nav')navigate(oid);else if(['new-style','new-material','new-receipt','new-roll','new-worker','stage-work','new-order','bom','quality'].includes(a))open(a,oid);else if(a==='receipt-for')open('new-receipt',oid);else if(a==='close'){modal=null;render();}else if(a==='show-style'){detail=oid;page='style-detail';render();}else if(a==='show-order'){detail=oid;page='order-detail';render();}else if(a==='advance'){if(confirm(order(oid).status==='planned'?'سيتم خصم الخامات الآن، هل تؤكد؟':'تأكيد الانتقال للمرحلة التالية؟'))mutator(d=>advance(d,oid),'تم تحديث مرحلة الإنتاج');}else if(a==='seed')seed();else if(a==='reset'){if(confirm('سيتم حذف كل البيانات المحلية، هل تؤكد؟')&&confirm('تأكيد نهائي لحذف كل البيانات؟'))mutator(d=>{Object.assign(d,fresh());},'تم مسح البيانات');}else if(a==='export'){const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'}),u=URL.createObjectURL(blob),x=document.createElement('a');x.href=u;x.download='premieros-garments-backup.json';x.click();URL.revokeObjectURL(u);toast('تم تنزيل نسخة البيانات');}});
+function downloadSnapshot(data, fileName){
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob),anchor=document.createElement('a');
+  anchor.href=url;anchor.download=fileName;anchor.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function handleCloudAction(action){
+  if(action==='cloud-logout'){
+    cloudLogout();render();toast('تم تسجيل الخروج من النسخ السحابي');return;
+  }
+  if(action==='cloud-login'){
+    const email=document.getElementById('cloud-email')?.value;
+    const password=document.getElementById('cloud-password')?.value;
+    cloudLogin(email,password)
+      .then(()=>{render();toast('تم تسجيل الدخول للحساب السحابي');})
+      .catch(err=>toast(err.message||'تعذر تسجيل الدخول',true));
+    return;
+  }
+  if(action==='cloud-save'){
+    if(!confirm('سيتم استبدال النسخة السحابية الخاصة بحسابك ببيانات هذا الجهاز. هل تريد المتابعة؟'))return;
+    const snapshot=structuredClone(db);
+    cloudSave(snapshot)
+      .then(()=>toast('تم تأكيد حفظ النسخة السحابية'))
+      .catch(err=>toast(err.message||'فشل النسخ السحابي',true));
+    return;
+  }
+  if(action==='cloud-restore'){
+    cloudLoad().then(snapshot=>{
+      if(!snapshot) {toast('لا توجد نسخة سحابية لهذا الحساب');return;}
+      if(!confirm('سيتم استبدال بيانات هذا الجهاز بالنسخة السحابية. سيتم تنزيل ملف احتياطي من بيانات الجهاز قبل الاستبدال. متابعة؟'))return;
+      const next=validateCloudSnapshot(snapshot.data);
+      downloadSnapshot(db,'garments-before-cloud-restore.json');
+      localStorage.setItem(KEY,JSON.stringify(next));
+      db=next;render();toast('تم استرجاع النسخة السحابية');
+    }).catch(err=>toast(err.message||'تعذر استرجاع النسخة',true));
+  }
+}
+document.addEventListener('click',e=>{let b=e.target.closest('[data-act]');if(!b){if(e.target.id==='backdrop'){modal=null;render();}return;}let a=b.dataset.act,oid=b.dataset.id;if(a==='nav')navigate(oid);else if(['new-style','new-material','new-receipt','new-roll','new-worker','stage-work','new-order','bom','quality'].includes(a))open(a,oid);else if(a==='receipt-for')open('new-receipt',oid);else if(a==='close'){modal=null;render();}else if(a==='show-style'){detail=oid;page='style-detail';render();}else if(a==='show-order'){detail=oid;page='order-detail';render();}else if(a==='advance'){if(confirm(order(oid).status==='planned'?'سيتم خصم الخامات الآن، هل تؤكد؟':'تأكيد الانتقال للمرحلة التالية؟'))mutator(d=>advance(d,oid),'تم تحديث مرحلة الإنتاج');}else if(['cloud-login','cloud-logout','cloud-save','cloud-restore'].includes(a))handleCloudAction(a);else if(a==='seed')seed();else if(a==='reset'){if(confirm('سيتم حذف كل البيانات المحلية، هل تؤكد؟')&&confirm('تأكيد نهائي لحذف كل البيانات؟'))mutator(d=>{Object.assign(d,fresh());},'تم مسح البيانات');}else if(a==='export'){downloadSnapshot(db,'premieros-garments-backup.json');toast('تم بدء تنزيل نسخة البيانات');}});
 document.addEventListener('change',async e=>{if(e.target.matches('[name=styleId]'))setVariants();if(e.target.id==='import'&&e.target.files[0]){try{let value=JSON.parse(await e.target.files[0].text());if(value.version!==1||!['styles','materials','orders','ledger','finished','audit'].every(k=>Array.isArray(value[k])))throw Error('ملف غير متوافق');ensureFactoryState(value);if(value.materials.some(m=>!Number.isFinite(m.stock)||m.stock<0)||value.fabricRolls.some(r=>!Number.isFinite(r.remaining)||r.remaining<0||r.remaining>r.received))throw Error('النسخة تحتوي على أرصدة غير صحيحة');if(confirm('استبدال جميع البيانات الحالية من النسخة الاحتياطية؟')){localStorage.setItem(KEY,JSON.stringify(value));db=value;render();toast('تم الاستيراد');}}catch(err){toast(err.message,true);}}});
 document.addEventListener('submit',e=>{if(e.target.id!=='entry')return;e.preventDefault();let f=new FormData(e.target),type=modal.type,oid=modal.id;if(type==='new-style')mutator(d=>newStyle(d,f),'تم إنشاء الموديل');else if(type==='new-material')mutator(d=>newMaterial(d,f),'تم تعريف الخامة');else if(type==='new-receipt')mutator(d=>receive(d,f),'تم استلام الخامات');else if(type==='new-order')mutator(d=>newOrder(d,f),'تم إنشاء أمر التصنيع');else if(type==='bom')mutator(d=>setBom(d,oid,f),'تم حفظ قائمة المكونات');else if(type==='quality')mutator(d=>quality(d,oid,f),'تم تسجيل الجودة');else if(type==='new-worker')mutator(d=>addWorker(d,f),'تم تسجيل العامل');else if(type==='new-roll')mutator(d=>receiveFabricRoll(d,f),'تم استلام الرول');else if(type==='stage-work')mutator(d=>registerStageWork(d,f),'تم تسجيل إنتاج العامل');});
 document.addEventListener('input',e=>{if(e.target.id==='search'){let pos=e.target.selectionStart;search=e.target.value;render();let input=document.getElementById('search');input.focus();input.setSelectionRange(pos,pos);}});
