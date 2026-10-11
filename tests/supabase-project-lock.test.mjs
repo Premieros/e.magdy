@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import {
  ALLOWED_SUPABASE_PROJECT_REF, GARMENTS_DATABASE_SCHEMA,
  assertAllowedDatabaseUrl, assertAllowedProjectRef, assertRuntimeConfig
@@ -52,7 +53,7 @@ test('generated Open Mercato code is configured to fail closed on other projects
 });
 
 test('command-line database policy refuses a foreign project and accepts only the approved one',()=>{
- const script=new URL('../pilot/open-mercato/target-policy.mjs',import.meta.url);
+ const script=fileURLToPath(new URL('../pilot/open-mercato/target-policy.mjs',import.meta.url));
  const bad=spawnSync(process.execPath,[script],{encoding:'utf8',env:{
    ...process.env,DATABASE_URL:direct,SUPABASE_PROJECT_REF:'wrong-project',GARMENTS_DB_SCHEMA:'garments_ops'
  }});
