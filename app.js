@@ -313,6 +313,39 @@ if(kind==='new-bundle'){
     +inp('عدد القطع','quantity','number','','required min="1" step="1"')
     +inp('ملاحظات','notes')+'</div>';
 }
+
+if(kind==='new-wholesale'){
+  const chosen=db.styles.find(s=>s.id===(modal.id||db.styles[0]?.id))||db.styles[0];
+  t='إنشاء طلب بيع جملة';
+  form='<label class="field">الموديل<select name="styleId" required><option value="">اختر...</option>'
+    +db.styles.map(s=>'<option value="'+esc(s.id)+'" '+(s.id===chosen?.id?'selected':'')+'>'+esc(s.code+' — '+s.name)+'</option>').join('')
+    +'</select></label>'
+    +'<p class="tips">حدد الكمية المطلوبة من كل مقاس ولون. لا يتم حجز مخزون التام عند إنشاء الطلب، بل عند إصدار إذن التسليم.</p>'
+    +(chosen
+      ?'<div class="table-wrap matrix-scroll"><table><thead><tr><th>SKU</th><th>المقاس</th><th>اللون</th><th>الكمية</th><th>المتاح الآن</th></tr></thead><tbody>'
+        +chosen.variants.map(v=>'<tr>'+td('<span class="mono">'+esc(v.sku)+'</span>')
+          +td(esc(v.size))+td(esc(v.color))+td('<input class="matrix-input" type="number" name="sell_'+esc(v.id)+'" min="0" max="1000000" step="1" placeholder="0" aria-label="كمية '+esc(v.size+' '+v.color)+'">')
+          +td(num(availableFinishedStock(db,v.id)))+'</tr>').join('')+'</tbody></table></div>'
+      :'<p class="alert">عرّف موديلًا أولًا.</p>')
+    +'<div class="form-grid">'+inp('اسم العميل','customer','text','','required maxlength="120"')
+    +inp('موعد التسليم','due','date')+'</div>';
+}
+if(kind==='ship-wholesale'){
+  const o=db.wholesaleOrders.find(x=>x.id===modal.id);
+  if(!o)return '';
+  const p=wholesaleProgress(db,o);
+  t='إذن تسليم — '+esc(o.ref);
+  form='<input type="hidden" name="orderId" value="'+esc(o.id)+'">'
+    +'<p class="tips">كل كمية تُخصم من مخزون التام بعد الحفظ. لا تتجاوز المتبقي من الطلب أو المتاح من الصنف.</p>'
+    +inp('مرجع إذن التسليم','reference','text','','required maxlength="60"')
+    +'<div class="table-wrap matrix-scroll"><table><thead><tr><th>SKU</th><th>المتبقي من الطلب</th><th>المتاح بالمخزن</th><th>الكمية المسلمة</th></tr></thead><tbody>'
+    +p.lines.filter(l=>l.remaining>0).map(l=>'<tr>'
+      +td('<span class="mono">'+esc(l.sku)+'</span>')
+      +td(num(l.remaining))+td(num(availableFinishedStock(db,l.variantId)))
+      +td('<input class="matrix-input" type="number" name="ship_'+esc(l.variantId)+'" min="0" max="'+Math.min(l.remaining,Math.max(0,availableFinishedStock(db,l.variantId)))+'" step="1" placeholder="0" aria-label="تسليم '+esc(l.sku)+'">')+'</tr>').join('')
+    +'</tbody></table></div>';
+}
+
 if(kind==='new-order'){t='أمر إنتاج جديد';form='<div class="form-grid">'+sel('الموديل','styleId',db.styles.map(s=>[s.id,s.code+' - '+s.name]))+sel('المقاس واللون','variantId',[])+inp('عدد القطع','quantity','number','','required min="1" step="1"')+inp('العميل','customer')+inp('موعد التسليم','due','date')+'</div><p class="tips">لا يتم صرف الخامات إلا عند بدء القص.</p>';}
 if(kind==='bom'){let s=style(modal.id);t='مكونات BOM - '+s.code;form='<p class="notes">أدخل الاستهلاك المطلوب لكل قطعة</p>'+db.materials.map(m=>'<label class="bom-line"><span>'+esc(m.name)+' · '+esc(m.unit)+'</span><input type="number" name="bom_'+m.id+'" step="0.0001" min="0" value="'+(s.bom.find(b=>b.materialId===m.id)?.qty||'')+'"></label>').join('');}
 if(kind==='quality'){let o=order(modal.id);t='فحص جودة - '+o.ref;form='<p class="tips">كمية الأمر '+num(o.qty)+' قطعة. لا يكتمل إلا بمساواة المقبول + المرفوض للكمية.</p><div class="form-grid">'+inp('مقبول','good','number',o.good,'min="0" step="1" required')+inp('مرفوض','reject','number',o.reject,'min="0" step="1" required')+inp('أجور تشغيل إضافية','labor','number',o.labor,'min="0" step="0.01"')+inp('تكاليف إضافية','overhead','number',o.overhead,'min="0" step="0.01"')+'</div>';}
