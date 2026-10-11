@@ -5,6 +5,20 @@ import { ensureFactoryState, addWorker, registerStageWork, pieceworkCost, stageP
 const KEY='premieros-garments-local-v1';
 const stages=['planned','cutting','sewing','finishing','quality','completed'];
 const labels={planned:'مخطط',cutting:'القص',sewing:'الخياطة',finishing:'التشطيب',quality:'فحص الجودة',completed:'مكتمل',cancelled:'ملغي'};
+
+const NAV_ICONS={
+'⌂':'<rect x="3" y="3" width="7" height="8" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="15" width="7" height="6" rx="1.5"/>',
+'◈':'<path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/>',
+'▤':'<path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5v-9Z"/><path d="m3 7.5 9 5 9-5"/><path d="M12 12.5V21"/>',
+'◧':'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M8 4v16M14 10v10"/>',
+'♙':'<circle cx="12" cy="6.5" r="3.5"/><path d="M16 20H8a4 4 0 0 1-4-4c0-3.1 2.4-5 5.5-5h5c3.1 0 5.5 1.9 5.5 5a4 4 0 0 1-4 4Z"/>',
+'▣':'<rect x="4" y="4" width="16" height="17" rx="2"/><path d="M8 4.5h8M8 10h8M8 14h8M8 18h5"/>',
+'◉':'<path d="m5 12 4 4L19 6"/><circle cx="12" cy="12" r="10"/>',
+'▥':'<path d="M4 21V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16"/><path d="M8 17v-5M12 17V8M16 17v-8M3 21h18"/>',
+'⚙':'<circle cx="12" cy="12" r="3"/><path d="M19 13v-2l-2-1-1-2 1-2-2-2-2 1h-2l-1-2H8L7 5H5L3 7l1 2-1 2-2 1v2l2 1 1 2-1 2 2 2 2-1h2l1 2h2l1-2h2l2 1 2-2-1-2 1-2Z"/>'
+};
+const navIcon=token=>'<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+(NAV_ICONS[token]||'')+'</svg>';
+
 const fresh=()=>({version:1,styles:[],materials:[],orders:[],ledger:[],finished:[],audit:[],workers:[],workLogs:[],fabricRolls:[]});
 let db;
 try{db=JSON.parse(localStorage.getItem(KEY)||'null')||fresh();if(db.version!==1)throw Error('نسخة غير متوافقة');ensureFactoryState(db);}
@@ -145,7 +159,7 @@ function orderDetail() {
   return output;
 }
 const views={dashboard,styles:stylesPage,materials:materialsPage,rolls:rollsPage,workers:workersPage,orders:ordersPage,quality:qualityPage,reports:reportsPage,settings:settingsPage,'style-detail':styleDetail,'order-detail':orderDetail};
-function render(){const menus=[['dashboard','⌂','الرئيسية'],['styles','◈','الموديلات والمنتجات'],['materials','▤','الأقمشة والخامات'],['rolls','◧','رولات الأقمشة'],['workers','♙','العمال والإنتاجية'],['orders','▣','أوامر الإنتاج'],['quality','◉','مراقبة الجودة'],['reports','▥','التقارير'],['settings','⚙','النسخ الاحتياطي']];document.getElementById('app').innerHTML='<div class="layout"><aside class="side"><div class="logo">PremierOS<small>GARMENTS EDITION</small></div>'+menus.map(v=>'<button class="nav '+(page===v[0]?'on':'')+'" data-act="nav" data-id="'+v[0]+'"><span>'+v[1]+'</span>'+v[2]+'</button>').join('')+'<div class="side-note">● وضع محلي<br>نسخ سحابي يدوي اختياري<br>لا يوجد تزامن فوري</div></aside><main class="main"><header class="top"><span>PremierOS / <strong>مصنع الملابس</strong></span><span class="status">● محلي + نسخ سحابي اختياري</span></header><div class="content">'+(views[page]||dashboard)()+'<p class="foot">PremierOS Garments — نسخة تأسيسية مستقلة عن النظام الأصلي</p></div></main></div>'+renderModal()+'<div id="toast" class="toast hidden"></div>';}
+function render(){const menus=[['dashboard','⌂','الرئيسية'],['styles','◈','الموديلات والمنتجات'],['materials','▤','الأقمشة والخامات'],['rolls','◧','رولات الأقمشة'],['workers','♙','العمال والإنتاجية'],['orders','▣','أوامر الإنتاج'],['quality','◉','مراقبة الجودة'],['reports','▥','التقارير'],['settings','⚙','النسخ الاحتياطي']];document.getElementById('app').innerHTML='<div class="layout"><aside class="side"><div class="logo"><img src="./app-icon.svg" class="logo-icon" alt=""><span class="logo-name">PremierOS<small>GARMENTS EDITION</small></span></div>'+menus.map(v=>'<button class="nav '+(page===v[0]?'on':'')+'" data-act="nav" data-id="'+v[0]+'"><span class="nav-icon">'+navIcon(v[1])+'</span><span class="nav-label">'+v[2]+'</span></button>').join('')+'<div class="side-note">● وضع محلي<br>نسخ سحابي يدوي اختياري<br>لا يوجد تزامن فوري</div></aside><main class="main"><header class="top"><span class="top-crumb">PremierOS <span class="top-separator">/</span> <strong>مصنع الملابس</strong></span><span class="status"><span class="status-dot"></span> نسخة تجريبية · نسخ سحابي يدوي</span></header><div class="content">'+(views[page]||dashboard)()+'<p class="foot">PremierOS Garments — نسخة تأسيسية مستقلة عن النظام الأصلي</p></div></main></div>'+renderModal()+'<div id="toast" class="toast hidden"></div>';}
 const inp=(label,name,type='text',value='',attrs='')=>'<label class="field">'+label+'<input name="'+name+'" type="'+type+'" value="'+esc(value)+'" '+attrs+'></label>';
 const sel=(label,name,options)=>'<label class="field">'+label+'<select name="'+name+'" required><option value="">اختر...</option>'+options.map(x=>'<option value="'+esc(x[0])+'">'+esc(x[1])+'</option>').join('')+'</select></label>';
 function renderModal(){if(!modal)return '';let kind=modal.type,t='',form='';if(kind==='new-style'){t='موديل ملابس جديد';form='<div class="form-grid">'+inp('كود الموديل','code','text','','required placeholder="SH-101"')+inp('اسم الموديل','name','text','','required')+inp('التصنيف','category')+inp('الموسم','season')+inp('المقاسات بفاصلة','sizes','text','S, M, L, XL','required')+inp('الألوان بفاصلة','colors','text','أسود, أبيض','required')+inp('سعر البيع','price','number',0,'step="0.01" min="0"')+'</div>';}
