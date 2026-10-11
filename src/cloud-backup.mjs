@@ -103,3 +103,43 @@ export async function cloudLoad() {
   if (!rows.length) return null;
   return { data: validateCloudSnapshot(rows[0].payload), updatedAt: rows[0].updated_at };
 }
+
+
+/* Separate central customer-order intake. Browser may read/write ONLY through RLS. */
+export async function cloudFactoryList() {
+  const identity=requireIdentity();
+  const [factories, memberships]=await Promise.all([
+    callApi('/rest/v1/garment_factories?select=id,code,name&order=name.asc', {token:identity.token}),
+    callApi('/rest/v1/garment_staff?select=factory_id,role,active&user_id=eq.'
+      +encodeURIComponent(identity.userId), {token:identity.token}),
+  ]);
+  if(!Array.isArray(factories)||!Array.isArray(memberships))throw Error('تعذر تحميل صلاحيات المصنع');
+  return factories.map(f=>({...f,role:memberships.find(m=>m.factory_id===f.id&&m.active)?.role||'viewer'}));
+}
+export async function cloudIntakeOrders(factoryId) {
+  const identity=requireIdentity();
+  if(!/^[0-9a-f-]{36}$/i.test(String(factoryId)))throw Error('معرّف المصنع غير صالح');
+  const rows=await callApi('/rest/v1/garment_intake_orders?factory_id=eq.'
+    +encodeURIComponent(factoryId)+'&select=id,factory_id,customer_name,customer_contact,notes,lines,status,created_at,created_by&order=created_at.desc&limit=100',
+    {token:identity.token});
+  if(!Array.isArray(rows))throw Error('تعذر قراءة الطلبات');
+  return rows;
+}
+export async function cloudCreateIntakeOrder(factoryId,data) {
+  const identity=requireIdentity();
+  if(!/^[0-9a-f-]{36}$/i.test(String(factoryId)))throw Error('معرّف المصنع غير صالح');
+  if(!data||!Array.isArray(data.lines)||!data.lines.length)throw Error('بنود طلب غير صحيحة');
+  const rows=await callApi('/rest/v1/garment_intake_orders', {
+    method:'POST',token:identity.token,prefer:'return=representation',
+    body:[{
+      factory_id:factoryId,created_by:identity.userId,
+      customer_name:data.customer_name,customer_contact:data.customer_contact,
+      notes:data.notes,lines:data.lines,status:'new',
+    }],
+  });
+  if(!Array.isArray(rows)||rows.length!==1||rows[0].factory_id!==factoryId
+    ||rows[0].created_by!==identity.userId){
+    throw Error('لم يتم تأكيد حفظ الطلب في قاعدة البيانات');
+  }
+  return rows[0];
+}
