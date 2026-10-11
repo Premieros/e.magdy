@@ -230,6 +230,31 @@ if(kind==='stage-work'){let o=order(modal.id);t='تسجيل دفعة: '+esc(labe
   +inp('مرجع دفعة القص/الخياطة','batchRef')+'</div>'
   +'<p class="tips">تم تسجيل '+num(stageProgress(db,o.id,o.status).quantity)+' من '+num(o.qty)
   +' قطعة، والتكلفة تحسب من أجر القطعة المحدد للعامل.</p>';}
+if(kind==='matrix-order'){
+  const chosen=db.styles.find(s=>s.id===(modal.id||db.styles[0]?.id))||db.styles[0];
+  t='دفعة إنتاج للمقاسات والألوان';
+  form='<label class="field">الموديل<select name="styleId" required><option value="">اختر...</option>'
+    +db.styles.map(s=>'<option value="'+esc(s.id)+'" '+(s.id===chosen?.id?'selected':'')+'>'+esc(s.code+' — '+s.name)+'</option>').join('')
+    +'</select></label>'
+    +'<p class="tips">حدد كمية كل مقاس ولون. الخانات الفارغة أو الصفرية لا تنشئ أوامر. تُنشأ أوامر مستقلة مرتبطة بدفعة واحدة.</p>'
+    +(chosen
+      ?'<div class="table-wrap matrix-scroll"><table><thead><tr><th>SKU</th><th>المقاس</th><th>اللون</th><th>الكمية</th></tr></thead><tbody>'
+        +chosen.variants.map(v=>'<tr>'+td('<span class="mono">'+esc(v.sku)+'</span>')
+          +td(esc(v.size))+td(esc(v.color))+td('<input class="matrix-input" type="number" name="matrix_'+esc(v.id)+'" min="0" max="100000" step="1" value="" placeholder="0" aria-label="كمية '+esc(v.size+' '+v.color)+'">')+'</tr>').join('')
+        +'</tbody></table></div>'
+      :'<p class="alert">يجب إضافة موديل أولًا</p>')
+    +'<div class="form-grid">'+inp('العميل','customer')+inp('موعد التسليم','due','date')+'</div>';
+}
+if(kind==='new-bundle'){
+  const o=order(modal.id);
+  const progress=o?cuttingBundleStats(db,o.id):{total:0};
+  t='إضافة حزمة قص — '+esc(o?.ref);
+  form='<input type="hidden" name="orderId" value="'+esc(o?.id)+'">'
+    +'<p class="tips">الإجمالي '+num(progress.total)+' من '+num(o?.qty)+' قطعة. يجب استكمال حزم القص قبل بدء صرف الخامات.</p>'
+    +'<div class="form-grid">'+inp('رقم الحزمة','bundleNo','text','','required maxlength="50"')
+    +inp('عدد القطع','quantity','number','','required min="1" step="1"')
+    +inp('ملاحظات','notes')+'</div>';
+}
 if(kind==='new-order'){t='أمر إنتاج جديد';form='<div class="form-grid">'+sel('الموديل','styleId',db.styles.map(s=>[s.id,s.code+' - '+s.name]))+sel('المقاس واللون','variantId',[])+inp('عدد القطع','quantity','number','','required min="1" step="1"')+inp('العميل','customer')+inp('موعد التسليم','due','date')+'</div><p class="tips">لا يتم صرف الخامات إلا عند بدء القص.</p>';}
 if(kind==='bom'){let s=style(modal.id);t='مكونات BOM - '+s.code;form='<p class="notes">أدخل الاستهلاك المطلوب لكل قطعة</p>'+db.materials.map(m=>'<label class="bom-line"><span>'+esc(m.name)+' · '+esc(m.unit)+'</span><input type="number" name="bom_'+m.id+'" step="0.0001" min="0" value="'+(s.bom.find(b=>b.materialId===m.id)?.qty||'')+'"></label>').join('');}
 if(kind==='quality'){let o=order(modal.id);t='فحص جودة - '+o.ref;form='<p class="tips">كمية الأمر '+num(o.qty)+' قطعة. لا يكتمل إلا بمساواة المقبول + المرفوض للكمية.</p><div class="form-grid">'+inp('مقبول','good','number',o.good,'min="0" step="1" required')+inp('مرفوض','reject','number',o.reject,'min="0" step="1" required')+inp('أجور تشغيل إضافية','labor','number',o.labor,'min="0" step="0.01"')+inp('تكاليف إضافية','overhead','number',o.overhead,'min="0" step="0.01"')+'</div>';}
