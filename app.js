@@ -1,5 +1,6 @@
 /* PremierOS Garments | independent, browser-local prototype | no remote database */
-import { cloudIdentity, cloudLogin, cloudLogout, cloudSave, cloudLoad, validateCloudSnapshot } from './src/cloud-backup.mjs';
+import { cloudIdentity, cloudLogin, cloudLogout, cloudSave, cloudLoad, validateCloudSnapshot, cloudFactoryList, cloudIntakeOrders, cloudCreateIntakeOrder } from './src/cloud-backup.mjs';
+import { buildIntakeOrder, intakeOrderTotal } from './src/cloud-intake.mjs';
 import { createProductionMatrix, productionBatches, addCuttingBundle, cuttingBundleStats, requireCuttingBundleBalance } from './src/production-planning.mjs';
 import { ensureWholesaleState, createWholesaleOrder, dispatchWholesaleOrder, availableFinishedStock, wholesaleProgress, wholesaleOverview, validateWholesaleLedger } from './src/wholesale.mjs';
 import { populateDemoData, isDemoEligible, demoCoverage } from './src/demo-data.mjs';
@@ -27,6 +28,7 @@ const fresh=()=>({version:1,styles:[],materials:[],orders:[],ledger:[],finished:
 let db;
 try{db=JSON.parse(localStorage.getItem(KEY)||'null')||fresh();if(db.version!==1)throw Error('نسخة غير متوافقة');ensureFactoryState(db);ensureWholesaleState(db);}
 catch(e){db=fresh();}
+let cloudFactoriesState=[],cloudIntakeState=[],cloudFactorySelected='',cloudIntakeMessage='';
 let page=(typeof location!=='undefined'?location.hash:'#/dashboard'||'#/dashboard').replace('#/','')||'dashboard',detail=null,modal=null,search='';
 const esc=x=>String(x??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
 const id=()=>crypto.randomUUID();
@@ -266,8 +268,35 @@ function wholesaleDetail(){
       :empty('لم يتم التسليم بعد','يمكنك تسجيل إذن جزئي عند توفر المنتج التام.'))+'</section>';
 }
 
-const views={dashboard,styles:stylesPage,materials:materialsPage,rolls:rollsPage,workers:workersPage,orders:ordersPage,batches:batchesPage,'batch-detail':batchDetail,quality:qualityPage,wholesale:wholesalePage,'wholesale-detail':wholesaleDetail,reports:reportsPage,settings:settingsPage,'style-detail':styleDetail,'order-detail':orderDetail};
-function render(){const menus=[['dashboard','⌂','الرئيسية'],['styles','◈','الموديلات والمنتجات'],['materials','▤','الأقمشة والخامات'],['rolls','◧','رولات الأقمشة'],['workers','♙','العمال والإنتاجية'],['orders','▣','أوامر الإنتاج'],['batches','◈','دفعات المقاسات'],['quality','◉','مراقبة الجودة'],['wholesale','▧','بيع الجملة والتسليم'],['reports','▥','التقارير'],['settings','⚙','النسخ الاحتياطي']];document.getElementById('app').innerHTML='<div class="layout"><aside class="side"><div class="logo"><img src="./app-icon.svg" class="logo-icon" alt=""><span class="logo-name">PremierOS<small>GARMENTS EDITION</small></span></div>'+menus.map(v=>'<button class="nav '+(page===v[0]?'on':'')+'" data-act="nav" data-id="'+v[0]+'"><span class="nav-icon">'+navIcon(v[1])+'</span><span class="nav-label">'+v[2]+'</span></button>').join('')+'<div class="side-note">● وضع محلي<br>نسخ سحابي يدوي اختياري<br>لا يوجد تزامن فوري</div></aside><main class="main"><header class="top"><span class="top-crumb">PremierOS <span class="top-separator">/</span> <strong>مصنع الملابس</strong></span><span class="status"><span class="status-dot"></span> '+(db.demoMode?'وضع عرض تجريبي':'نسخة تجريبية · نسخ سحابي يدوي')+'</span></header><div class="content">'+(db.demoMode?'<div class="demo-banner"><strong>بيانات افتراضية للعرض</strong> — جميع الموديلات والعملاء والعمال والطلبات المعروضة أمثلة غير حقيقية. لتجهيز عميل فعلي، احفظ النسخة المحلية ثم امسح بيانات العرض وأنشئ بياناته منفصلة.</div>':'')+(views[page]||dashboard)()+'<p class="foot">PremierOS Garments — نسخة تأسيسية مستقلة عن النظام الأصلي</p></div></main></div>'+renderModal()+'<div id="toast" class="toast hidden"></div>';}
+
+function cloudIntakePage(){
+  const account=cloudIdentity();
+  if(!account)return heading('طلبات العملاء المركزية','نسخة أولية مستقلة عن طلبات الجملة المحلية. لا بد من تسجيل الدخول بحساب له عضوية في المصنع.')
+    +'<section class="card"><h3>دخول الموظف أو المدير</h3><p class="notes">استخدم بريدك وكلمة مرور حساب Supabase الموجود. لا ترسل كلمة المرور في المحادثة.</p>'
+    +'<div class="form-grid"><label class="field">البريد الإلكتروني<input id="cloud-email" type="email" autocomplete="username" required></label>'
+    +'<label class="field">كلمة المرور<input id="cloud-password" type="password" autocomplete="current-password" required></label></div>'
+    +btn('تسجيل الدخول','cloud-login','','primary')+'</section>';
+  const factory=cloudFactoriesState.find(x=>x.id===cloudFactorySelected);
+  const canCreate=['owner','manager','sales'].includes(factory?.role);
+  return heading('طلبات العملاء المركزية','حفظ طلبات جديدة مباشرة في Supabase بصلاحيات المصنع، منفصلة عن بيانات التشغيل المحلية.',
+    btn('تحديث من السحابة','cloud-intake-refresh')+(canCreate&&!db.demoMode?btn('＋ طلب عميل جديد','new-cloud-intake','','primary'):''))
+    +'<div class="tips">هذه شاشة استقبال الطلبات السحابية الأولية فقط. تعديل الطلب أو اعتماده أو حجز المخزون وإرساله للإنتاج لم يكتمل بعد.</div>'
+    +(db.demoMode?'<div class="demo-banner">وضع العرض التجريبي مفعل؛ تم تعطيل إرسال الطلبات الحقيقية من هذا المتصفح. احفظ بيانات العرض وامسحها أولًا.</div>':'')
+    +'<section class="card"><h3>الحساب وصلاحية الوصول</h3><div class="data-line"><b>'+esc(account.email)+'</b>'+btn('تسجيل الخروج','cloud-logout')+'</div>'
+    +(factory?'<div class="data-line">المصنع <b>'+esc(factory.name)+'</b> — الدور <b>'+esc(factory.role)+'</b></div>':'<p class="notes">اضغط «تحديث من السحابة» لجلب المصانع المسندة لهذا الحساب.</p>')
+    +(cloudIntakeMessage?'<p class="notes">'+esc(cloudIntakeMessage)+'</p>':'')
+    +'</section><section class="card"><h3>طلبات العملاء — آخر 100 طلب</h3>'
+    +(cloudIntakeState.length?table(['العميل','التواصل','القطع','القيمة','التاريخ','الحالة'],
+      cloudIntakeState.map(o=>{const t=intakeOrderTotal(o);return '<tr>'
+        +td('<b>'+esc(o.customer_name)+'</b><small class="batch-tag">'+esc(o.lines.map(l=>l.sku).join(' · '))+'</small>')
+        +td(esc(o.customer_contact||'—'))+td(num(t.quantity))+td(cur(t.amount))
+        +td(new Date(o.created_at).toLocaleString('ar-EG'))+td('<span class="pill gold">طلب جديد</span>')+'</tr>';}).join(''))
+      :empty('لا توجد طلبات محمّلة','بعد تسجيل الدخول اضغط تحديث، أو أنشئ أول طلب عميل.'))
+    +'</section>';
+}
+
+const views={dashboard,styles:stylesPage,materials:materialsPage,rolls:rollsPage,workers:workersPage,orders:ordersPage,batches:batchesPage,'batch-detail':batchDetail,quality:qualityPage,wholesale:wholesalePage,'wholesale-detail':wholesaleDetail,'cloud-intake':cloudIntakePage,reports:reportsPage,settings:settingsPage,'style-detail':styleDetail,'order-detail':orderDetail};
+function render(){const menus=[['dashboard','⌂','الرئيسية'],['styles','◈','الموديلات والمنتجات'],['materials','▤','الأقمشة والخامات'],['rolls','◧','رولات الأقمشة'],['workers','♙','العمال والإنتاجية'],['orders','▣','أوامر الإنتاج'],['batches','◈','دفعات المقاسات'],['quality','◉','مراقبة الجودة'],['wholesale','▧','بيع الجملة والتسليم'],['cloud-intake','▣','طلبات العملاء السحابية'],['reports','▥','التقارير'],['settings','⚙','النسخ الاحتياطي']];document.getElementById('app').innerHTML='<div class="layout"><aside class="side"><div class="logo"><img src="./app-icon.svg" class="logo-icon" alt=""><span class="logo-name">PremierOS<small>GARMENTS EDITION</small></span></div>'+menus.map(v=>'<button class="nav '+(page===v[0]?'on':'')+'" data-act="nav" data-id="'+v[0]+'"><span class="nav-icon">'+navIcon(v[1])+'</span><span class="nav-label">'+v[2]+'</span></button>').join('')+'<div class="side-note">● وضع محلي<br>نسخ سحابي يدوي اختياري<br>لا يوجد تزامن فوري</div></aside><main class="main"><header class="top"><span class="top-crumb">PremierOS <span class="top-separator">/</span> <strong>مصنع الملابس</strong></span><span class="status"><span class="status-dot"></span> '+(db.demoMode?'وضع عرض تجريبي':'نسخة تجريبية · نسخ سحابي يدوي')+'</span></header><div class="content">'+(db.demoMode?'<div class="demo-banner"><strong>بيانات افتراضية للعرض</strong> — جميع الموديلات والعملاء والعمال والطلبات المعروضة أمثلة غير حقيقية. لتجهيز عميل فعلي، احفظ النسخة المحلية ثم امسح بيانات العرض وأنشئ بياناته منفصلة.</div>':'')+(views[page]||dashboard)()+'<p class="foot">PremierOS Garments — نسخة تأسيسية مستقلة عن النظام الأصلي</p></div></main></div>'+renderModal()+'<div id="toast" class="toast hidden"></div>';}
 const inp=(label,name,type='text',value='',attrs='')=>'<label class="field">'+label+'<input name="'+name+'" type="'+type+'" value="'+esc(value)+'" '+attrs+'></label>';
 const sel=(label,name,options)=>'<label class="field">'+label+'<select name="'+name+'" required><option value="">اختر...</option>'+options.map(x=>'<option value="'+esc(x[0])+'">'+esc(x[1])+'</option>').join('')+'</select></label>';
 function renderModal(){if(!modal)return '';let kind=modal.type,t='',form='';if(kind==='new-style'){t='موديل ملابس جديد';form='<div class="form-grid">'+inp('كود الموديل','code','text','','required placeholder="SH-101"')+inp('اسم الموديل','name','text','','required')+inp('التصنيف','category')+inp('الموسم','season')+inp('المقاسات بفاصلة','sizes','text','S, M, L, XL','required')+inp('الألوان بفاصلة','colors','text','أسود, أبيض','required')+inp('سعر البيع','price','number',0,'step="0.01" min="0"')+'</div>';}
@@ -347,6 +376,15 @@ if(kind==='ship-wholesale'){
     +'</tbody></table></div>';
 }
 
+if(kind==='new-cloud-intake'){
+  t='طلب عميل سحابي جديد';
+  form='<p class="tips">سيرسل هذا الطلب إلى قاعدة المصنع مباشرة، ولا يغيّر مخزون المتصفح. أدخل بندًا في كل سطر بالترتيب التالي:</p>'
+    +'<p class="notes"><code>SKU | المقاس | اللون | الكمية | السعر</code></p>'
+    +'<div class="form-grid">'+inp('اسم العميل','customerName','text','','required maxlength="120"')
+    +inp('الهاتف أو وسيلة التواصل','customerContact','text','','maxlength="160"')+'</div>'
+    +'<label class="field">بنود الطلب<textarea name="linesRaw" rows="6" class="intake-lines" required placeholder="SH-100-M-BLACK | M | أسود | 12 | 350\nSH-100-L-BLACK | L | أسود | 8 | 350"></textarea></label>'
+    +'<label class="field">ملاحظات<textarea name="notes" rows="3" class="intake-lines" maxlength="1000"></textarea></label>';
+}
 if(kind==='new-order'){t='أمر إنتاج جديد';form='<div class="form-grid">'+sel('الموديل','styleId',db.styles.map(s=>[s.id,s.code+' - '+s.name]))+sel('المقاس واللون','variantId',[])+inp('عدد القطع','quantity','number','','required min="1" step="1"')+inp('العميل','customer')+inp('موعد التسليم','due','date')+'</div><p class="tips">لا يتم صرف الخامات إلا عند بدء القص.</p>';}
 if(kind==='bom'){let s=style(modal.id);t='مكونات BOM - '+s.code;form='<p class="notes">أدخل الاستهلاك المطلوب لكل قطعة</p>'+db.materials.map(m=>'<label class="bom-line"><span>'+esc(m.name)+' · '+esc(m.unit)+'</span><input type="number" name="bom_'+m.id+'" step="0.0001" min="0" value="'+(s.bom.find(b=>b.materialId===m.id)?.qty||'')+'"></label>').join('');}
 if(kind==='quality'){let o=order(modal.id);t='فحص جودة - '+o.ref;form='<p class="tips">كمية الأمر '+num(o.qty)+' قطعة. لا يكتمل إلا بمساواة المقبول + المرفوض للكمية.</p><div class="form-grid">'+inp('مقبول','good','number',o.good,'min="0" step="1" required')+inp('مرفوض','reject','number',o.reject,'min="0" step="1" required')+inp('أجور تشغيل إضافية','labor','number',o.labor,'min="0" step="0.01"')+inp('تكاليف إضافية','overhead','number',o.overhead,'min="0" step="0.01"')+'</div>';}
@@ -368,15 +406,26 @@ function downloadSnapshot(data, fileName){
   anchor.href=url;anchor.download=fileName;anchor.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
+async function refreshCloudIntake(){
+  cloudIntakeMessage='جارٍ تحميل بيانات المصنع والطلبات...';render();
+  try{
+    const factories=await cloudFactoryList();
+    cloudFactoriesState=factories;
+    cloudFactorySelected=factories[0]?.id||'';
+    cloudIntakeState=cloudFactorySelected?await cloudIntakeOrders(cloudFactorySelected):[];
+    cloudIntakeMessage=factories.length?'تم تحميل الطلبات من قاعدة البيانات.':'لا توجد عضوية مصنع مرتبطة بهذا الحساب.';
+  }catch(err){cloudIntakeMessage=err.message||'تعذر قراءة بيانات المصنع';cloudIntakeState=[];}
+  render();
+}
 function handleCloudAction(action){
   if(action==='cloud-logout'){
-    cloudLogout();render();toast('تم تسجيل الخروج من النسخ السحابي');return;
+    cloudLogout();cloudFactoriesState=[];cloudIntakeState=[];cloudFactorySelected='';cloudIntakeMessage='';render();toast('تم تسجيل الخروج من النسخ السحابي');return;
   }
   if(action==='cloud-login'){
     const email=document.getElementById('cloud-email')?.value;
     const password=document.getElementById('cloud-password')?.value;
     cloudLogin(email,password)
-      .then(()=>{render();toast('تم تسجيل الدخول للحساب السحابي');})
+      .then(()=>{render();toast('تم تسجيل الدخول للحساب السحابي');if(page==='cloud-intake')refreshCloudIntake();})
       .catch(err=>toast(err.message||'تعذر تسجيل الدخول',true));
     return;
   }
@@ -401,9 +450,18 @@ function handleCloudAction(action){
     }).catch(err=>toast(err.message||'تعذر استرجاع النسخة',true));
   }
 }
-document.addEventListener('click',e=>{let b=e.target.closest('[data-act]');if(!b){if(e.target.id==='backdrop'){modal=null;render();}return;}let a=b.dataset.act,oid=b.dataset.id;if(a==='nav')navigate(oid);else if(['new-style','new-material','new-receipt','new-roll','new-worker','stage-work','new-order','matrix-order','new-bundle','new-wholesale','ship-wholesale','bom','quality'].includes(a))open(a,oid);else if(a==='receipt-for')open('new-receipt',oid);else if(a==='close'){modal=null;render();}else if(a==='show-style'){detail=oid;page='style-detail';render();}else if(a==='show-order'){detail=oid;page='order-detail';render();}else if(a==='show-batch'){detail=oid;page='batch-detail';render();}else if(a==='show-wholesale'){detail=oid;page='wholesale-detail';render();}else if(a==='advance'){if(confirm(order(oid).status==='planned'?'سيتم خصم الخامات الآن، هل تؤكد؟':'تأكيد الانتقال للمرحلة التالية؟'))mutator(d=>advance(d,oid),'تم تحديث مرحلة الإنتاج');}else if(['cloud-login','cloud-logout','cloud-save','cloud-restore'].includes(a))handleCloudAction(a);else if(a==='seed')seed();else if(a==='reset'){if(confirm('سيتم حذف كل البيانات المحلية، هل تؤكد؟')&&confirm('تأكيد نهائي لحذف كل البيانات؟'))mutator(d=>{Object.assign(d,fresh());},'تم مسح البيانات');}else if(a==='export'){downloadSnapshot(db,'premieros-garments-backup.json');toast('تم بدء تنزيل نسخة البيانات');}});
+document.addEventListener('click',e=>{let b=e.target.closest('[data-act]');if(!b){if(e.target.id==='backdrop'){modal=null;render();}return;}let a=b.dataset.act,oid=b.dataset.id;if(a==='nav'){navigate(oid);if(oid==='cloud-intake'&&cloudIdentity())refreshCloudIntake();}else if(a==='cloud-intake-refresh')refreshCloudIntake();else if(['new-style','new-material','new-receipt','new-roll','new-worker','stage-work','new-order','matrix-order','new-bundle','new-wholesale','ship-wholesale','new-cloud-intake','bom','quality'].includes(a))open(a,oid);else if(a==='receipt-for')open('new-receipt',oid);else if(a==='close'){modal=null;render();}else if(a==='show-style'){detail=oid;page='style-detail';render();}else if(a==='show-order'){detail=oid;page='order-detail';render();}else if(a==='show-batch'){detail=oid;page='batch-detail';render();}else if(a==='show-wholesale'){detail=oid;page='wholesale-detail';render();}else if(a==='advance'){if(confirm(order(oid).status==='planned'?'سيتم خصم الخامات الآن، هل تؤكد؟':'تأكيد الانتقال للمرحلة التالية؟'))mutator(d=>advance(d,oid),'تم تحديث مرحلة الإنتاج');}else if(['cloud-login','cloud-logout','cloud-save','cloud-restore'].includes(a))handleCloudAction(a);else if(a==='seed')seed();else if(a==='reset'){if(confirm('سيتم حذف كل البيانات المحلية، هل تؤكد؟')&&confirm('تأكيد نهائي لحذف كل البيانات؟'))mutator(d=>{Object.assign(d,fresh());},'تم مسح البيانات');}else if(a==='export'){downloadSnapshot(db,'premieros-garments-backup.json');toast('تم بدء تنزيل نسخة البيانات');}});
 document.addEventListener('change',async e=>{if(e.target.matches('[name=styleId]')&&modal?.type==='new-order')setVariants();if(e.target.matches('[name=styleId]')&&['matrix-order','new-wholesale'].includes(modal?.type)){modal.id=e.target.value;render();}if(e.target.id==='import'&&e.target.files[0]){try{let value=JSON.parse(await e.target.files[0].text());if(value.version!==1||!['styles','materials','orders','ledger','finished','audit'].every(k=>Array.isArray(value[k])))throw Error('ملف غير متوافق');ensureFactoryState(value);ensureWholesaleState(value);validateWholesaleLedger(value);if(value.materials.some(m=>!Number.isFinite(m.stock)||m.stock<0)||value.fabricRolls.some(r=>!Number.isFinite(r.remaining)||r.remaining<0||r.remaining>r.received))throw Error('النسخة تحتوي على أرصدة غير صحيحة');if(confirm('استبدال جميع البيانات الحالية من النسخة الاحتياطية؟')){localStorage.setItem(KEY,JSON.stringify(value));db=value;render();toast('تم الاستيراد');}}catch(err){toast(err.message,true);}}});
-document.addEventListener('submit',e=>{if(e.target.id!=='entry')return;e.preventDefault();let f=new FormData(e.target),type=modal.type,oid=modal.id;if(type==='new-style')mutator(d=>newStyle(d,f),'تم إنشاء الموديل');else if(type==='new-material')mutator(d=>newMaterial(d,f),'تم تعريف الخامة');else if(type==='new-receipt')mutator(d=>receive(d,f),'تم استلام الخامات');else if(type==='new-order')mutator(d=>newOrder(d,f),'تم إنشاء أمر التصنيع');else if(type==='matrix-order')mutator(d=>createProductionMatrix(d,f),'تم إنشاء دفعة المقاسات والألوان');else if(type==='new-bundle')mutator(d=>addCuttingBundle(d,f),'تم تسجيل حزمة القص');else if(type==='new-wholesale')mutator(d=>createWholesaleOrder(d,f),'تم إنشاء طلب الجملة');else if(type==='ship-wholesale')mutator(d=>dispatchWholesaleOrder(d,f),'تم تسجيل إذن التسليم وخصم مخزون التام');else if(type==='bom')mutator(d=>setBom(d,oid,f),'تم حفظ قائمة المكونات');else if(type==='quality')mutator(d=>quality(d,oid,f),'تم تسجيل الجودة');else if(type==='new-worker')mutator(d=>addWorker(d,f),'تم تسجيل العامل');else if(type==='new-roll')mutator(d=>receiveFabricRoll(d,f),'تم استلام الرول');else if(type==='stage-work')mutator(d=>registerStageWork(d,f),'تم تسجيل إنتاج العامل');});
+document.addEventListener('submit',e=>{if(e.target.id!=='entry')return;e.preventDefault();let f=new FormData(e.target),type=modal.type,oid=modal.id;if(type==='new-cloud-intake'){
+  try{
+    if(db.demoMode)throw Error('عطّل بيانات العرض المحلية قبل إدخال طلبات فعلية');
+    if(!cloudFactorySelected)throw Error('يجب تحميل عضوية المصنع أولًا');
+    const payload=buildIntakeOrder(f);
+    cloudCreateIntakeOrder(cloudFactorySelected,payload).then(()=>{
+      modal=null;toast('تم حفظ طلب العميل في قاعدة المصنع');refreshCloudIntake();
+    }).catch(err=>toast(err.message||'فشل حفظ الطلب',true));
+  }catch(err){toast(err.message||'بيانات طلب غير صحيحة',true);}
+}else if(type==='new-style')mutator(d=>newStyle(d,f),'تم إنشاء الموديل');else if(type==='new-material')mutator(d=>newMaterial(d,f),'تم تعريف الخامة');else if(type==='new-receipt')mutator(d=>receive(d,f),'تم استلام الخامات');else if(type==='new-order')mutator(d=>newOrder(d,f),'تم إنشاء أمر التصنيع');else if(type==='matrix-order')mutator(d=>createProductionMatrix(d,f),'تم إنشاء دفعة المقاسات والألوان');else if(type==='new-bundle')mutator(d=>addCuttingBundle(d,f),'تم تسجيل حزمة القص');else if(type==='new-wholesale')mutator(d=>createWholesaleOrder(d,f),'تم إنشاء طلب الجملة');else if(type==='ship-wholesale')mutator(d=>dispatchWholesaleOrder(d,f),'تم تسجيل إذن التسليم وخصم مخزون التام');else if(type==='bom')mutator(d=>setBom(d,oid,f),'تم حفظ قائمة المكونات');else if(type==='quality')mutator(d=>quality(d,oid,f),'تم تسجيل الجودة');else if(type==='new-worker')mutator(d=>addWorker(d,f),'تم تسجيل العامل');else if(type==='new-roll')mutator(d=>receiveFabricRoll(d,f),'تم استلام الرول');else if(type==='stage-work')mutator(d=>registerStageWork(d,f),'تم تسجيل إنتاج العامل');});
 document.addEventListener('input',e=>{if(e.target.id==='search'){let pos=e.target.selectionStart;search=e.target.value;render();let input=document.getElementById('search');input.focus();input.setSelectionRange(pos,pos);}});
 window.addEventListener('hashchange',()=>{let newPage=location.hash.replace('#/','');if(newPage!==page&&views[newPage]){page=newPage;detail=null;render();}});
 render();

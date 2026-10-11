@@ -280,3 +280,10 @@ tbody tr:hover{background:rgb(var(--ui-primary-soft) / .42)}
 }
 .demo-banner strong{font-weight:800;color:rgb(120 53 15)}
 @media(max-width:760px){.demo-banner{font-size:11px;padding:12px;margin-bottom:15px}}
+
+
+/* Central intake form: bounded multiline SKU entry */
+.intake-lines{display:block;width:100%;min-height:90px;margin:8px 0 18px;padding:12px;border-radius:10px;
+ border:1px solid rgb(var(--ui-border));background:rgb(var(--ui-surface));color:rgb(var(--ui-text));
+ font-family:'Cairo','Inter',sans-serif;font-size:13px;line-height:1.8;resize:vertical}
+.intake-lines:focus-visible{outline:2px solid rgb(var(--ui-primary));outline-offset:1px}
