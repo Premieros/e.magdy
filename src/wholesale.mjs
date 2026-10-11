@@ -107,3 +107,55 @@ export function wholesaleOverview(db){
   return {orders:orders.length,open,delivered:delivered.reduce((s,x)=>s+x.qty,0),
     value:cents(delivered.reduce((s,x)=>s+x.qty*x.unitPrice,0))};
 }
+
+
+/* Validate imported/manual cloud snapshots before replacing local stock ledgers. */
+export function validateWholesaleLedger(db){
+  ensureWholesaleState(db);
+  const received=new Map();
+  for(const r of db.finished||[]){
+    if(!r||!r.variantId||!Number.isSafeInteger(r.qty)||r.qty<=0)
+      throw Error('إيصال إنتاج تام غير صالح في النسخة الاحتياطية');
+    received.set(r.variantId,(received.get(r.variantId)||0)+r.qty);
+  }
+  const sales=new Map();
+  for(const order of db.wholesaleOrders){
+    if(!order||!order.id||!Array.isArray(order.lines)||!order.lines.length||sales.has(order.id))
+      throw Error('طلب جملة غير صالح في النسخة الاحتياطية');
+    const variants=new Set();
+    for(const line of order.lines){
+      if(!line||!line.variantId||variants.has(line.variantId)||!Number.isSafeInteger(line.qty)||line.qty<=0
+        ||!Number.isFinite(line.unitPrice)||line.unitPrice<0)
+        throw Error('سطر طلب جملة غير صالح في النسخة الاحتياطية');
+      variants.add(line.variantId);
+    }
+    sales.set(order.id,order);
+  }
+  const references=new Set(),totalDelivered=new Map(),orderDelivered=new Map();
+  for(const dispatch of db.finishedDispatches){
+    if(!dispatch||!dispatch.id||!dispatch.orderId||!dispatch.reference
+      ||references.has(dispatch.reference)||!Array.isArray(dispatch.lines)||!dispatch.lines.length)
+      throw Error('إذن تسليم مكرر أو غير صالح في النسخة الاحتياطية');
+    references.add(dispatch.reference);
+    const order=sales.get(dispatch.orderId);
+    if(!order)throw Error('إذن تسليم دون طلب جملة');
+    const inDispatch=new Set();
+    for(const line of dispatch.lines){
+      if(!line||!line.variantId||inDispatch.has(line.variantId)
+        ||!Number.isSafeInteger(line.qty)||line.qty<=0)
+        throw Error('سطر تسليم غير صالح في النسخة الاحتياطية');
+      inDispatch.add(line.variantId);
+      const saleLine=order.lines.find(x=>x.variantId===line.variantId);
+      if(!saleLine)throw Error('صنف غير موجود في طلب الجملة');
+      const key=order.id+'|'+line.variantId;
+      const shipped=(orderDelivered.get(key)||0)+line.qty;
+      if(shipped>saleLine.qty)throw Error('تسليم يتجاوز طلب الجملة');
+      orderDelivered.set(key,shipped);
+      const total=(totalDelivered.get(line.variantId)||0)+line.qty;
+      if(total>(received.get(line.variantId)||0))
+        throw Error('إجمالي تسليمات الصنف يتجاوز مخزون التام');
+      totalDelivered.set(line.variantId,total);
+    }
+  }
+  return db;
+}
