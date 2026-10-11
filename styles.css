@@ -269,3 +269,14 @@ tbody tr:hover{background:rgb(var(--ui-primary-soft) / .42)}
 .batch-tag{display:block;margin-top:5px;font-size:9px;white-space:nowrap;color:rgb(var(--ui-primary));font-family:'Inter','Cairo',sans-serif}
 .modal .matrix-scroll tr:hover{background:rgb(var(--ui-primary-soft)/.4)}
 @media (max-width:760px){.matrix-scroll{max-height:40vh}.matrix-scroll table{min-width:480px}}
+
+
+/* Clear, permanent watermark for browser-only sample data. */
+.demo-banner{
+  position:relative;margin:0 0 22px;padding:14px 18px;
+  border:1px solid rgb(251 191 36);border-radius:12px;
+  background:rgb(255 251 235);color:rgb(146 64 14);
+  font-size:12px;line-height:1.9;font-weight:600;
+}
+.demo-banner strong{font-weight:800;color:rgb(120 53 15)}
+@media(max-width:760px){.demo-banner{font-size:11px;padding:12px;margin-bottom:15px}}
