@@ -17,6 +17,7 @@ jobs:
       - run: node --check src/production-planning.mjs
       - run: node --check src/wholesale.mjs
       - run: node --check src/demo-data.mjs
+      - run: node --check src/cloud-intake.mjs
       - name: Test inventory, production and quality
         run: npm test
       - name: Check entrypoint and static assets
