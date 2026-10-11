@@ -1,0 +1,42 @@
+name: Open Mercato isolated WMS scaffold pilot
+
+on:
+  push:
+    branches: ['feat/open-mercato-operational-pilot']
+    paths:
+      - 'pilot/open-mercato/**'
+      - '.github/workflows/open-mercato-pilot.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scaffold:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Create pinned standalone WMS app without secrets
+        run: bash pilot/open-mercato/bootstrap.sh "$RUNNER_TEMP/mercato-pilot"
+      - name: Check starter modules and record artifact
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/mercato-pilot/garments-ops"
+          node -e "const p=require('./package.json'); if(!p.name||!p.scripts) process.exit(1); console.log('Generated package:',p.name)"
+          test -s THIRD_PARTY_NOTICES/Open-Mercato-MIT.txt
+          test -s THIRD_PARTY_NOTICES/ATTRIBUTION.md
+          test ! -f .env
+          test ! -f .env.local
+          tar --exclude=.git --exclude=node_modules --exclude=.env --exclude=.env.local -czf "$GITHUB_WORKSPACE/open-mercato-wms-pilot.tar.gz" -C "$RUNNER_TEMP/mercato-pilot" garments-ops
+      - uses: actions/upload-artifact@v4
+        with:
+          name: premieros-open-mercato-wms-scaffold
+          path: open-mercato-wms-pilot.tar.gz
+          retention-days: 14
+          if-no-files-found: error

@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "framework": {
+    "repository": "https://github.com/open-mercato/open-mercato",
+    "cli": "create-mercato-app@0.9.0",
+    "preset": "wms",
+    "license": "MIT"
+  },
+  "migration_mode": "dry_run_only",
+  "records": [
+    {
+      "legacy": "styles",
+      "target": "catalog.products",
+      "strategy": "map_sku_as_variant",
+      "status": "mapping_required",
+      "notes": "size/color each as unique SKU; preserve original immutable legacy IDs"
+    },
+    {
+      "legacy": "materials",
+      "target": "catalog.products + wms.stock_movements",
+      "strategy": "new_material_type",
+      "status": "mapping_required",
+      "notes": "material physical units and opening balances require reconciliation; never simply insert stock field"
+    },
+    {
+      "legacy": "styles[].bom",
+      "target": "garments.bom_headers + garments.bom_lines",
+      "strategy": "build_custom_manufacturing_module",
+      "status": "not_implemented"
+    },
+    {
+      "legacy": "fabricRolls",
+      "target": "garments.fabric_rolls + garments.roll_movements",
+      "strategy": "build_custom_lot_tracking_module",
+      "status": "not_implemented"
+    },
+    {
+      "legacy": "workers",
+      "target": "garments.production_workers",
+      "strategy": "build_custom_piecework_module",
+      "status": "not_implemented"
+    },
+    {
+      "legacy": "orders",
+      "target": "garments.work_orders",
+      "strategy": "build_custom_manufacturing_module",
+      "status": "not_implemented"
+    },
+    {
+      "legacy": "workLogs",
+      "target": "garments.stage_work_logs",
+      "strategy": "build_custom_piecework_module",
+      "status": "not_implemented"
+    },
+    {
+      "legacy": "cuttingBundles",
+      "target": "garments.cutting_bundles",
+      "strategy": "build_custom_manufacturing_module",
+      "status": "not_implemented"
+    },
+    {
+      "legacy": "finished",
+      "target": "wms.stock_movements",
+      "strategy": "finished_goods_receipt",
+      "status": "mapping_required",
+      "notes": "link to corresponding work order and quality acceptance"
+    },
+    {
+      "legacy": "wholesaleOrders",
+      "target": "sales.orders + sales.order_lines",
+      "strategy": "sales_order_import",
+      "status": "mapping_required",
+      "notes": "orders without delivery history must not reserve stock retrospectively"
+    },
+    {
+      "legacy": "finishedDispatches",
+      "target": "sales.shipments + wms.stock_movements",
+      "strategy": "shipment_import",
+      "status": "mapping_required",
+      "notes": "idempotent per dispatch id+reference; reconcile finished balances"
+    },
+    {
+      "legacy": "central_intake_orders",
+      "target": "sales.quotes (pending approval)",
+      "strategy": "separate_authenticated_api_import",
+      "status": "not_implemented",
+      "notes": "not in local export; needs own tenant authorization and deduplication"
+    }
+  ],
+  "operational_prerequisites": [
+    "dedicated_isolated_postgres_database",
+    "independent_production_authentication",
+    "garment_manufacturing_module",
+    "test_restore",
+    "staff_RBAC_scope_tests",
+    "order_to_shipment_end_to_end"
+  ]
+}
