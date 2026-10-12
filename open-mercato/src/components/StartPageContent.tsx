@@ -3,7 +3,7 @@
 import React, { useState, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Shield, Users, Briefcase, Info, Rocket, ArrowRight, BookOpen } from 'lucide-react'
+import { Shield, Users, Briefcase, Rocket, ArrowRight, BookOpen } from 'lucide-react'
 import { getApiDocsResources } from '@open-mercato/core/modules/api_docs/lib/resources'
 import Link from 'next/link'
 import { useT } from '@open-mercato/shared/lib/i18n/context'
@@ -143,22 +143,6 @@ export function StartPageContent({ showStartPage: initialShowStartPage, showOnbo
           </div>
         </section>
       ) : null}
-
-      <section className="rounded-lg border border-status-info-border bg-status-info-bg p-4">
-        <div className="flex items-start gap-3">
-          <Info className="size-5 text-status-info-icon shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <h3 className="text-sm font-semibold text-status-info-text mb-1">{t('startPage.defaultPassword.title', 'Default Password')}</h3>
-            <p className="text-sm text-status-info-text">
-              {t('startPage.defaultPassword.description1', 'The default password for all demo accounts is')}{' '}
-              <code className="px-1.5 py-0.5 rounded border border-status-info-border/70 bg-background/70 font-mono text-xs text-foreground">secret</code>.
-              {' '}{t('startPage.defaultPassword.description2', 'To change passwords, use the CLI command:')}{' '}
-              <code className="px-1.5 py-0.5 rounded border border-status-info-border/70 bg-background/70 font-mono text-xs text-foreground">yarn mercato auth set-password --email &lt;email&gt; --password &lt;newPassword&gt;</code>
-              <span className="mt-2 block">{t('startPage.defaultPassword.description3', 'Demo account emails are printed in the terminal output during yarn initialize.')}</span>
-            </p>
-          </div>
-        </div>
-      </section>
 
       <section>
         <h2 className="text-xl font-semibold mb-4">{t('startPage.chooseRole.title', 'Choose Your Role')}</h2>
