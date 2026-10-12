@@ -17,6 +17,55 @@
 - Normal upstream password-policy checks remain enabled; no demo accounts, seed examples, schema reset, or migrations.
 - The initial user receives the `superadmin` role. The `admin` and `employee` roles are also created, but demo users are **not** created. Do not confuse available roles with user-role assignments.
 
+## Cloud-only alternative (no local computer required)
+
+**Do not publish an unauthenticated first-admin web form.** The first account must
+be created only by an operator who is already authorized for the Vercel project.
+GitHub Codespaces runs a private cloud terminal in your GitHub account, so the
+local Windows computer is **not** required. This still requires a browser
+session when you are ready to choose your own password.
+
+1. Open [the deployment branch](https://github.com/Premieros/e.magdy/tree/deploy/garments-mercato), select **Code → Codespaces → Create codespace on deploy/garments-mercato**. Confirm the selected branch before opening the terminal.
+2. In the Codespaces **terminal** (not the chat), run:
+
+```bash
+cd open-mercato
+nvm install 24
+nvm use 24
+corepack enable
+yarn install --immutable
+npm install --global vercel
+vercel login
+vercel link --yes --project premieros-garments-mercato --scope sayedalaa82285-7634
+```
+
+3. Pull only the approved project's production environment, run the official
+   initializer with private password prompts, then remove the temporary local
+   copy **even if the initializer fails**:
+
+```bash
+set -e
+umask 077
+trap 'unset NODE_OPTIONS DOTENV_CONFIG_PATH; rm -f .env.local' EXIT
+vercel env pull .env.local --environment=production --yes
+export DOTENV_CONFIG_PATH=.env.local
+export NODE_OPTIONS="--require=dotenv/config"
+yarn generate
+yarn garments:bootstrap-admin
+```
+
+4. Confirm the bootstrap completed successfully, sign in at
+   `https://premieros-garments-mercato.vercel.app/login?role=superadmin`,
+   and **delete the Codespace** after closing its terminal to remove the
+   temporary workspace. Codespaces requires the authenticated account to have
+   access to this repo and the exact Vercel team/project; if authorization is
+   missing, stop instead of using any other Supabase project.
+
+Never send the password, `.env.local`, database URLs, or session credentials in
+GitHub issues, commit messages, screenshots, support requests, or ChatGPT.
+If you currently cannot use any browser or device, this step safely waits:
+**do not create a default-password administrator instead.**
+
 ## Prerequisites
 
 Operator needs: Windows PowerShell, Node.js >=24, Corepack/Yarn 4, Git, Vercel CLI logged in as an authorized member of project `premieros-garments-mercato`. Work from a **fresh clone**, so there is no unrelated `.env.local` to overwrite.
