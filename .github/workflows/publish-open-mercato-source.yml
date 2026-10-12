@@ -50,6 +50,7 @@ jobs:
           test -s "$source/scripts/garments-target-policy.mjs"
           test -s "$source/scripts/garments-db-preflight.mjs"
           test -s "$source/src/app/api/garments-health/route.js"
+          test -s "$source/src/app/global-error.jsx"
           grep -Fq "distDir: process.env.VERCEL === '1' ? '.next' : '.mercato/next'" "$source/next.config.ts"
           test -s "$source/THIRD_PARTY_NOTICES/Open-Mercato-MIT.txt"
           test ! -f "$source/.env"
