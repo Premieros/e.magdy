@@ -40,7 +40,8 @@
     "initialize": "node ./scripts/garments-target-policy.mjs && yarn mercato init",
     "reinstall": "node -e \"console.error('Destructive reset disabled on shared Supabase project');process.exit(2)\"",
     "preinstall": "node -e \"const v = process.versions.node.split('.').map(Number); if (v[0] < 24) { console.error('Node >= 24 required'); process.exit(1); }\"",
-    "garments:db-check": "node ./scripts/garments-target-policy.mjs"
+    "garments:db-check": "node ./scripts/garments-target-policy.mjs",
+    "garments:bootstrap-admin": "node ./scripts/garments-first-admin.mjs"
   },
   "dependencies": {
     "@ai-sdk/amazon-bedrock": "^5.0.2",
