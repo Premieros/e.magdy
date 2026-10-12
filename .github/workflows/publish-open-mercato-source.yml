@@ -2,7 +2,7 @@ name: Publish isolated Open Mercato source branch
 
 on:
   push:
-    branches: ['feature/publish-open-mercato-app', 'fix/open-mercato-*']
+    branches: ['feature/publish-open-mercato-app', 'fix/open-mercato-*', 'fix/garments-runtime-bootstrap']
     paths:
       - '.github/workflows/publish-open-mercato-source.yml'
       - 'pilot/open-mercato/**'
@@ -48,6 +48,8 @@ jobs:
           set -euo pipefail
           source="$RUNNER_TEMP/garments-source/garments-ops"
           test -s "$source/scripts/garments-target-policy.mjs"
+          test -s "$source/scripts/garments-db-preflight.mjs"
+          test -s "$source/src/app/api/garments-health/route.js"
           grep -Fq "distDir: process.env.VERCEL === '1' ? '.next' : '.mercato/next'" "$source/next.config.ts"
           test -s "$source/THIRD_PARTY_NOTICES/Open-Mercato-MIT.txt"
           test ! -f "$source/.env"
