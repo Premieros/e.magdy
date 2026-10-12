@@ -85,18 +85,15 @@ const nextConfig: NextConfig & { agentRules?: boolean } = {
     '@open-mercato/onboarding',
     '@open-mercato/ai-assistant',
   ],
-  // pdfjs-dist is resolved via createRequire(process.cwd()/package.json) by the
-  // upstream attachments module at *module evaluation time*. Next/Vercel's
-  // static file tracer cannot reliably follow that dynamic require.resolve.
-  // Include only the package metadata and required PDF runtime/assets in
-  // server functions. Keep certificate verification and DB policy unchanged.
+  // @open-mercato/core attachments resolves pdfjs-dist/package.json from
+  // createRequire(process.cwd() + '/package.json') during server module loading.
+  // That computed package lookup is invisible to static output-file tracing.
+  // Match BOTH /start and nested App Router routes (the former /* only matched
+  // a single pathname segment) and ship the complete package: package.json,
+  // worker, wasm, CMaps, and fonts must stay together for PDF code to resolve.
+  // These are Node server function assets, not public browser assets.
   outputFileTracingIncludes: {
-    '/*': [
-      './node_modules/pdfjs-dist/package.json',
-      './node_modules/pdfjs-dist/legacy/build/**/*',
-      './node_modules/pdfjs-dist/cmaps/**/*',
-      './node_modules/pdfjs-dist/standard_fonts/**/*',
-    ],
+    '/**': ['./node_modules/pdfjs-dist/**/*'],
   },
   serverExternalPackages: [
     'esbuild',
