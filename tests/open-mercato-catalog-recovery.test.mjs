@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs'
 test('catalog recovery is restricted to the only approved DB role and schema', () => {
   const src=readFileSync(new URL('../pilot/open-mercato/garments-catalog-recovery.mjs',import.meta.url),'utf8')
   assert.match(src,/assertRuntimeConfig\(process\.env\)/)
-  assert.match(src,/DB_SSL_REJECT_UNAUTHORIZED !== 'true'/)
+  assert.match(src,/DB_SSL_REJECT_UNAUTHORIZED\s*!==\s*'true'/)
   assert.match(src,/row\.db_role!=='garments_ops_login'/)
   assert.match(src,/row\.active_schema!=='garments_ops'/)
   assert.match(src,/row\.can_create_public/)
