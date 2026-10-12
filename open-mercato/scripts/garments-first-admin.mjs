@@ -149,6 +149,10 @@ async function main() {
     } finally {
       process.argv = originalArgv
     }
+    // Open Mercato 0.9.0 encrypts auth:user.email at rest. Resolve its
+    // official deterministic lookup hashes; comparing u.email to plaintext
+    // would falsely reject an otherwise successful first administrator.
+    const { emailHashLookupValues } = await import('@open-mercato/core/modules/auth/lib/emailHash')
     const verified = await client.query(`
       SELECT (SELECT count(*)::int FROM garments_ops.tenants) AS tenants,
              (SELECT count(*)::int FROM garments_ops.organizations) AS organizations,
@@ -157,9 +161,13 @@ async function main() {
                 FROM garments_ops.users u
                 JOIN garments_ops.user_roles ur ON ur.user_id = u.id
                 JOIN garments_ops.roles r ON r.id = ur.role_id
-               WHERE lower(u.email) = lower($1) AND r.name = 'superadmin'
+               WHERE (u.email_hash = ANY($1::text[]) OR lower(u.email) = lower($2))
+                 AND r.name = 'superadmin'
+                 AND r.tenant_id = u.tenant_id
+                 AND u.deleted_at IS NULL
+                 AND r.deleted_at IS NULL
               ) AS superadmin_memberships
-    `, [email])
+    `, [emailHashLookupValues(email), email])
     const result = verified.rows[0]
     if (result?.tenants !== 1 || result.organizations !== 1
         || result.users !== 1 || result.superadmin_memberships < 1) {
