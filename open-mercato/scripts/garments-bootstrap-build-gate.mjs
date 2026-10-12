@@ -38,9 +38,14 @@ function validateBootstrapContext(env) {
   if ((env.GARMENTS_SETUP_ADMIN_EMAIL ?? '').trim().toLowerCase() !== expectedEmail) {
     throw new Error('Garments bootstrap admin email is not the approved owner')
   }
+  // Distinguish missing build environment injection from insufficient
+  // password strength without ever logging or revealing the secret.
   if (typeof env.GARMENTS_SETUP_ADMIN_PASSWORD !== 'string'
-      || env.GARMENTS_SETUP_ADMIN_PASSWORD.length < 16) {
-    throw new Error('Temporary bootstrap password missing or shorter than 16 characters')
+      || env.GARMENTS_SETUP_ADMIN_PASSWORD.length === 0) {
+    throw new Error('Temporary bootstrap password not available in the production build environment')
+  }
+  if (env.GARMENTS_SETUP_ADMIN_PASSWORD.length < 16) {
+    throw new Error('Temporary bootstrap password fails the minimum 16-character requirement')
   }
   if (env.MIKRO_ORM_SCHEMA !== 'garments_ops' || env.GARMENTS_DB_SCHEMA !== 'garments_ops'
       || env.SUPABASE_PROJECT_REF !== 'yumeijsyiphzdsulsubf') {
