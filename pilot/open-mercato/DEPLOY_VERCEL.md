@@ -20,6 +20,22 @@
 
 من دون موافقة مالك حساب GitHub/Vercel على الربط، لا تستطيع الاتصالات الحالية إكمال هذه الخطوة. لا تُنشئ مشروع Supabase ثانيًا.
 
+## Supabase root CA — حل شهادة SSL بدون تعطيل التحقق
+
+إذا أظهر مسار `/api/garments-health` الخطأ `SELF_SIGNED_CERT_IN_CHAIN`، فهذا يعني أن شهادة مصدر الثقة غير متاحة للعملية في Node.
+
+1. افتح لوحة مشروع Supabase **الوحيد**: https://supabase.com/dashboard/project/yumeijsyiphzdsulsubf/settings/database
+2. ابحث عن **SSL Configuration** ثم **Download certificate / Server root certificate**. وفقًا لتوثيق Supabase الرسمي: https://supabase.com/docs/guides/database/psql#connecting-with-ssl
+3. تأكد أن الملف شهادة CA *عامة* بصيغة PEM تبدأ بـ `-----BEGIN CERTIFICATE-----` وتنتهي بـ `-----END CERTIFICATE-----`. لا تستخدم كلمات مرور أو مفاتيح خاصة.
+4. في مشروع Vercel `premieros-garments-mercato` أضف متغير **Production** بالاسم `GARMENTS_DB_CA_PEM`، وقيمته كامل نص شهادة CA التي نزّلتها رسميًا (يمكن الاحتفاظ بأسطر PEM أو تمثيلها بـ `\\n`). يمكن حفظها Sensitive.
+5. اترك `DB_SSL=true` و`DB_SSL_REJECT_UNAUTHORIZED=true`، ويفضل إبقاء `NODE_USE_SYSTEM_CA=1` أيضًا. **ممنوع استخدام `NODE_TLS_REJECT_UNAUTHORIZED=0` أو `rejectUnauthorized:false`**.
+6. أعد نشر فرع `deploy/garments-mercato`، ثم افتح `/api/garments-health`. إذا ظهرت `initialization_required` فهذا نجاح لفحص الاتصال فقط، وليس تهيئة ERP.
+7. إذا ظهر `CERT_HAS_EXPIRED` أو `UNABLE_TO_VERIFY_LEAF_SIGNATURE` بعد ذلك، راجع سلسلة شهادة CA للـSession pooler ولا تُعطّل التحقق.
+
+يستخدم Open Mercato شهادة CA من `GARMENTS_DB_CA_PEM` على خادم Next.js وCLI فقط، ويضيفها إلى شهادات Node الموثوقة بدل استبدالها. وفحص الاتصال يعرض رمز الخطأ فقط دون معلومات حساسة.
+
+**ملاحظة:** لا يمكن لاتصال أدوات المشروع تنزيل شهادة الجذر الخاصة بالمشروع مباشرةً من لوحة Supabase؛ يلزم تنزيلها من حساب المالك لتحديد مصدرها الموثوق.
+
 ## أسرار التشغيل: أدخلها في لوحات الحسابات فقط
 
 Vercel Project Settings → Environment Variables:
