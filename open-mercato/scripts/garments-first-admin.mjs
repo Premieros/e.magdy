@@ -21,7 +21,7 @@ import { dirname, resolve } from 'node:path'
 // Environment values come from a local, ignored copy of Vercel's production
 // settings. Do not fetch/decrypt project secrets within the app runtime.
 loadEnv({
-  path: resolve(dirname(fileURLToPath(import.meta.url)), '../.env.production.local'),
+  path: resolve(dirname(fileURLToPath(import.meta.url)), '../.env.local'),
   override: false,
   quiet: true,
 })
@@ -139,7 +139,7 @@ async function main() {
         '--orgSlug', 'premieros-garments',
         '--email', email,
         '--password', password,
-        '--roles', 'superadmin,admin',
+        '--roles', 'superadmin,admin,employee',
       ]
       console.log('Starting official Open Mercato first-tenant setup in garments_ops.')
       await import('./mercato-cli.mjs')
@@ -157,12 +157,12 @@ async function main() {
                 FROM garments_ops.users u
                 JOIN garments_ops.user_roles ur ON ur.user_id = u.id
                 JOIN garments_ops.roles r ON r.id = ur.role_id
-               WHERE lower(u.email) = lower($1) AND r.name = 'admin'
-              ) AS admin_memberships
+               WHERE lower(u.email) = lower($1) AND r.name = 'superadmin'
+              ) AS superadmin_memberships
     `, [email])
     const result = verified.rows[0]
     if (result?.tenants !== 1 || result.organizations !== 1
-        || result.users !== 1 || result.admin_memberships < 1) {
+        || result.users !== 1 || result.superadmin_memberships < 1) {
       throw new Error('Post-setup verification failed; inspect garments_ops before retrying')
     }
     console.log('First administrator and organization created and verified in garments_ops.')
