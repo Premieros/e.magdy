@@ -56,5 +56,19 @@ test('approved build rejects missing password before any DB access', () => {
     GARMENTS_SETUP_ADMIN_EMAIL: 'sayed3la2@gmail.com',
   })
   assert.notEqual(result.status, 0)
-  assert.match(result.text, /Temporary bootstrap password missing/)
+  assert.match(result.text, /Temporary bootstrap password not available/)
+})
+
+test('short password is rejected distinctly without printing its value', () => {
+  const result = run({
+    GARMENTS_BOOTSTRAP_BUILD_APPROVAL: approval,
+    VERCEL: '1',
+    VERCEL_ENV: 'production',
+    VERCEL_GIT_COMMIT_REF: 'deploy/garments-mercato',
+    GARMENTS_SETUP_ADMIN_EMAIL: 'sayed3la2@gmail.com',
+    GARMENTS_SETUP_ADMIN_PASSWORD: 'too-short',
+  })
+  assert.notEqual(result.status, 0)
+  assert.match(result.text, /fails the minimum 16-character requirement/)
+  assert.doesNotMatch(result.text, /too-short/)
 })
