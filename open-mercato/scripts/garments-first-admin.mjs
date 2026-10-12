@@ -26,8 +26,11 @@ async function main() {
   }
   const email = (process.env.GARMENTS_SETUP_ADMIN_EMAIL ?? '').trim()
   const password = process.env.GARMENTS_SETUP_ADMIN_PASSWORD ?? ''
-  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || email.length > 254) {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
     throw new Error('Valid GARMENTS_SETUP_ADMIN_EMAIL is required')
+  }
+  if (email.toLowerCase() !== 'sayed3la2@gmail.com') {
+    throw new Error('Admin email does not match the approved PremierOS Garments owner')
   }
   if (password.length < 16) {
     throw new Error('GARMENTS_SETUP_ADMIN_PASSWORD must be at least 16 characters')
