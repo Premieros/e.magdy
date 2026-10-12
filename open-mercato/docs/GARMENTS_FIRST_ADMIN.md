@@ -19,54 +19,57 @@
 
 ## Cloud-only alternative (no local computer required)
 
-**Do not publish an unauthenticated first-admin web form.** The first account must
-be created only by an operator who is already authorized for the Vercel project.
-GitHub Codespaces runs a private cloud terminal in your GitHub account, so the
-local Windows computer is **not** required. This still requires a browser
-session when you are ready to choose your own password.
+The project owner can use **GitHub Codespaces** to authenticate to the
+approved Vercel project, without a local computer. Authentication alone
+does **not** grant access to the database connection string.
 
-1. Open [the deployment branch](https://github.com/Premieros/e.magdy/tree/deploy/garments-mercato), select **Code → Codespaces → Create codespace on deploy/garments-mercato**. Confirm the selected branch before opening the terminal.
-2. In the Codespaces **terminal** (not the chat), run:
+### Step 1 — Link the existing project
+
+Open the `deploy/garments-mercato` branch in a private GitHub Codespace,
+then in its terminal run:
 
 ```bash
 cd open-mercato
 nvm install 24
 nvm use 24
 corepack enable
-yarn install --immutable
 npm install --global vercel
 vercel login
 vercel link --yes --project premieros-garments-mercato --scope sayedalaa82285-7634
+vercel project inspect --non-interactive
 ```
 
-3. Pull only the approved project's production environment, run the official
-   initializer with private password prompts, then remove the temporary local
-   copy **even if the initializer fails**:
+Inspect that the linked Vercel project is **premieros-garments-mercato**,
+not a new project. Complete device verification within Vercel/GitHub;
+do not disclose login tokens or verification codes.
 
-```bash
-set -e
-umask 077
-trap 'unset NODE_OPTIONS DOTENV_CONFIG_PATH; rm -f .env.local' EXIT
-vercel env pull .env.local --environment=production --yes
-export DOTENV_CONFIG_PATH=.env.local
-export NODE_OPTIONS="--require=dotenv/config"
-yarn generate
-yarn garments:bootstrap-admin
-```
+### Step 2 — Secure execution gate (NOT YET ENABLED)
 
-4. Confirm the bootstrap completed successfully, sign in at
-   `https://premieros-garments-mercato.vercel.app/login?role=superadmin`,
-   and **delete the Codespace** after closing its terminal to remove the
-   temporary workspace. Codespaces requires the authenticated account to have
-   access to this repo and the exact Vercel team/project; if authorization is
-   missing, stop instead of using any other Supabase project.
+**Important correction:** Vercel Production `Secret` / legacy
+`Sensitive` environment variables **cannot be read back** by
+`vercel env pull --environment=production`. In this deployment,
+`DATABASE_URL`, `AUTH_SECRET`, `JWT_SECRET` and
+`GARMENTS_DB_CA_PEM` are protected secrets. Consequently, the old
+Codespaces instructions that blindly pull `.env.local` and immediately
+run `yarn garments:bootstrap-admin` are not a working or approved path.
+**Do not run setup on missing or fabricated connection credentials.**
 
-Never send the password, `.env.local`, database URLs, or session credentials in
-GitHub issues, commit messages, screenshots, support requests, or ChatGPT.
-If you currently cannot use any browser or device, this step safely waits:
-**do not create a default-password administrator instead.**
+A secure one-time execution path must first be configured, with the
+official Open Mercato `auth setup` routine running **inside the
+authorized Vercel execution environment**, or via an operator-managed
+trusted secret manager that can legitimately provide the production
+credentials without ChatGPT. It must require proof of control over the
+Vercel project and private password entry, be one-use, and be disabled
+after verification. No public or default-password bootstrap form is
+permitted.
+
+The approved new administrator remains `sayed3la2@gmail.com`;
+tenant/organization and user currently remain uninitialized. Do not
+copy project secrets into a chat, GitHub commit, issue, or screenshot.
 
 ## Prerequisites
+
+**The following local-operator recipe requires independently authorized access to the protected production secrets; linking Vercel and pulling its production environment is not sufficient by itself.** Stop at this gate if protected values are missing. Do not invent or rotate credentials.
 
 Operator needs: Windows PowerShell, Node.js >=24, Corepack/Yarn 4, Git, Vercel CLI logged in as an authorized member of project `premieros-garments-mercato`. Work from a **fresh clone**, so there is no unrelated `.env.local` to overwrite.
 
