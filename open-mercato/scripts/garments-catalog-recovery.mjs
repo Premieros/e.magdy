@@ -28,7 +28,7 @@ try {
   await client.query('BEGIN')
   await client.query("SET LOCAL statement_timeout TO '120s'")
   const query=[
-    'SELECT current_database() db, current_user role, current_schema() schema,',
+    'SELECT current_database() AS db, current_user AS db_role, current_schema() AS active_schema,',
     "has_schema_privilege(current_user,'public','CREATE') can_create_public,",
     '(SELECT project_ref FROM garments_ops.project_binding WHERE singleton) project_ref,',
     "to_regprocedure('public.om_immutable_unaccent(text)') IS NOT NULL has_function,",
@@ -39,8 +39,8 @@ try {
     "WHERE name='Migration20260914120100') migration_recorded"
   ].join(' ')
   const row=(await client.query(query)).rows[0]
-  if(row.db!=='postgres'||row.role!=='garments_ops_login'
-    ||row.schema!=='garments_ops'||row.project_ref!==target.projectRef
+  if(row.db!=='postgres'||row.db_role!=='garments_ops_login'
+    ||row.active_schema!=='garments_ops'||row.project_ref!==target.projectRef
     ||row.can_create_public||!row.has_function)throw Error('Recovery target not isolated or public function missing')
   if(row.has_index&&row.migration_recorded){
     await client.query('COMMIT')
