@@ -20,6 +20,12 @@
 
 من دون موافقة مالك حساب GitHub/Vercel على الربط، لا تستطيع الاتصالات الحالية إكمال هذه الخطوة. لا تُنشئ مشروع Supabase ثانيًا.
 
+## إصلاح تكرار سجل الترحيلات أثناء الاستئناف
+
+إذا ظهر `relation "mikro_orm_migrations_attachments" already exists` بعد نجاح أول دفعة ترحيلات، لا تحذف جدول السجل. **MikroORM v7** يحدد مخطط سجله افتراضيًا وفق خيار `schema`، حتى عندما يحدد اتصال PostgreSQL `search_path` مختلفًا. في هذا المشروع يجب ضبط المتغير `MIKRO_ORM_SCHEMA=garments_ops` مع `GARMENTS_DB_SCHEMA=garments_ops`. يرفض فحص التشغيل الآن أي مخطط مختلف أو غياب هذا الإعداد.
+
+الترحيلات لا تُشغّل عند استقبال طلبات المستخدمين ولا عند كل بناء اعتيادي؛ استخدم أمر تهيئة صريحًا ومراجعًا يعمل بحساب `garments_ops_login` المقيد فقط، وتجنب عمليات تهيئة متزامنة. يمكن أن تتوقف إضافات WMS عند ترحيلات تخص وحدات اختيارية ليست ضمن الـpreset؛ عندها افحص السجلات وجداول المخطط أولًا، ولا تعطل فحوص العزل أو تُفرغ سجلات الترحيلات.
+
 ## Supabase root CA — حل شهادة SSL بدون تعطيل التحقق
 
 إذا أظهر مسار `/api/garments-health` الخطأ `SELF_SIGNED_CERT_IN_CHAIN`، فهذا يعني أن شهادة مصدر الثقة غير متاحة للعملية في Node.
@@ -44,6 +50,7 @@ Vercel Project Settings → Environment Variables:
 |---|---|
 | `SUPABASE_PROJECT_REF` | `yumeijsyiphzdsulsubf` **(موجود)** |
 | `GARMENTS_DB_SCHEMA` | `garments_ops` **(موجود)** |
+| `MIKRO_ORM_SCHEMA` | `garments_ops` — إلزامي؛ يوجّه سجلات ترحيلات MikroORM إلى المخطط المعزول |
 | `DATABASE_URL` | رابط PostgreSQL باستخدام دور `garments_ops_login` وكلمة مروره الخاصة |
 | `DB_SSL` | `true` |
 | `DB_SSL_REJECT_UNAUTHORIZED` | `true` |
