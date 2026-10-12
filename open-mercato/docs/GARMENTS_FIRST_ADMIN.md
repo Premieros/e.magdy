@@ -17,6 +17,67 @@
 - Normal upstream password-policy checks remain enabled; no demo accounts, seed examples, schema reset, or migrations.
 - The initial user receives the `superadmin` role. The `admin` and `employee` roles are also created, but demo users are **not** created. Do not confuse available roles with user-role assignments.
 
+## One-time Vercel production-build bootstrap (operator-approved)
+
+**Prefer this path when Codespaces is linked but Production Secrets cannot be
+exported.** It does not open any signup URL, copy the database password into
+Codespaces, or alter AMMCO. The guarded build hook is otherwise a no-op.
+
+1. First ensure the safe build hook from branch
+   \`ops/garments-first-admin-vercel-build\` has been reviewed and deployed
+   to the approved \`deploy/garments-mercato\` branch with
+   \`GARMENTS_BOOTSTRAP_BUILD_APPROVAL\` **absent**.
+2. In your already-linked Codespace terminal (directory \`open-mercato\`),
+   run \`vercel project inspect --non-interactive\`. Confirm the existing
+   project, owner and scope exactly.
+3. Choose a **new temporary** high-entropy password (at least 16 characters),
+   not used for any other account. Enter it privately into the Vercel
+   Production **Secret** prompt via:
+
+   \`\`\`bash
+   vercel env add GARMENTS_SETUP_ADMIN_PASSWORD production --type secret
+   \`\`\`
+
+   Never enter it in chat, GitHub code, screenshots or CLI command arguments.
+   This temporary secret is for first-account initialization only, **not**
+   a recommended long-term stored admin password.
+4. Once the operator confirms that the Production Secret exists (name and
+   type ONLY), set \`GARMENTS_BOOTSTRAP_BUILD_APPROVAL\` to
+   \`PREMIEROS_GARMENTS_INITIAL_ADMIN_2026_10\` **for Production only** and
+   trigger a *new Production build of the approved exact Git branch*.
+   Do not run a preview deployment, \`setup:reinstall\`, \`db:migrate\`,
+   \`db:greenfield\`, \`init\`, or sample seeding.
+5. A production build invokes the existing guarded
+   \`scripts/garments-first-admin.mjs\` after \`yarn generate\` and before
+   Next.js compilation. It requires the exact Supabase ref/schema,
+   target branch and approved admin email; refuses existing tenants,
+   users, organizations or roles; takes an advisory lock; runs official
+   Open Mercato \`auth setup\`; and verifies the \`superadmin\` assignment.
+   A failed gate makes the deployment fail **closed**; do not rerun blindly
+   after any partial failure.
+6. Verify the database records: one tenant, one organization, one user,
+   the approved email and \`superadmin\` membership. Then **immediately**
+   remove BOTH one-time Production environment variables using Vercel's
+   Dashboard, or (from the linked Codespace):
+
+   \`\`\`bash
+   vercel env rm GARMENTS_BOOTSTRAP_BUILD_APPROVAL production
+   vercel env rm GARMENTS_SETUP_ADMIN_PASSWORD production
+   \`\`\`
+
+   Redeploy the ordinary production build **with neither variable present**,
+   and confirm \`READY\`. Older deployment snapshots may retain secret
+   references; after first sign-in, **change the temporary admin password
+   to a different new, strong permanent one** in the application's approved
+   password-change workflow. Sign out and verify login with the new password.
+7. Delete the Codespace and any temporary workspace after completion. The
+   production database credentials were never exported to it.
+
+The administrator's first sign-in is at
+\`https://premieros-garments-mercato.vercel.app/login?role=superadmin\`.
+If password change, production build, or verified user assignment fails,
+do not claim the account is ready for live operation.
+
 ## Cloud-only alternative (no local computer required)
 
 The project owner can use **GitHub Codespaces** to authenticate to the
