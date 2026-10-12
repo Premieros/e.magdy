@@ -49,6 +49,8 @@ export function assertAllowedDatabaseUrl(raw){
     connectionType:direct?'direct':'pooler'};
 }
 export function assertRuntimeConfig(env){
+  if(env.DB_SSL === 'false' || env.DB_SSL_REJECT_UNAUTHORIZED === 'false')
+    throw Error('Garments requires SSL and certificate verification');
   if(env.SUPABASE_PROJECT_REF!==ALLOWED_SUPABASE_PROJECT_REF)
     throw Error('Set SUPABASE_PROJECT_REF to the only permitted project');
   if(env.GARMENTS_DB_SCHEMA!==GARMENTS_DATABASE_SCHEMA)

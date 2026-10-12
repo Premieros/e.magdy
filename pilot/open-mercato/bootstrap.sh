@@ -78,10 +78,12 @@ writeFileSync(config,original.replace(from,to));
 JS
 # Include a read-only connection/isolation diagnostic before ERP migrations.
 mkdir -p garments-ops/src/app/api/garments-health
+cp "$ROOT/pilot/open-mercato/garments-db-ca.mjs" garments-ops/scripts/garments-db-ca.mjs
 cp "$ROOT/pilot/open-mercato/garments-db-preflight.mjs" garments-ops/scripts/garments-db-preflight.mjs
 cp "$ROOT/pilot/open-mercato/garments-health-route.js" garments-ops/src/app/api/garments-health/route.js
 test -s garments-ops/scripts/garments-db-preflight.mjs
 test -s garments-ops/src/app/api/garments-health/route.js
+node "$ROOT/pilot/open-mercato/apply-db-ca.mjs" "$TARGET/garments-ops"
 # Replace opaque Next.js server errors with a safe human-readable fallback.
 cp "$ROOT/pilot/open-mercato/garments-global-error.jsx" garments-ops/src/app/global-error.jsx
 test -s garments-ops/src/app/global-error.jsx

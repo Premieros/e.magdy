@@ -1,12 +1,15 @@
 // One-project / one-schema PostgreSQL preflight. Never writes, logs or exposes credentials.
 import { Client } from 'pg'
 import { assertRuntimeConfig } from './garments-target-policy.mjs'
+import { databaseCaFromEnv } from './garments-db-ca.mjs'
 
 export async function checkGarmentsConnection({ revealCounts = false } = {}) {
   const target = assertRuntimeConfig(process.env)
-  const ssl = process.env.DB_SSL === 'true'
-    ? { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false' }
-    : undefined
+  if (process.env.DB_SSL !== 'true' || process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'true') {
+    throw Object.assign(new Error('TLS certificate verification required'), {code:'GARMENTS_SSL_POLICY'})
+  }
+  const ca = databaseCaFromEnv(process.env)
+  const ssl = { rejectUnauthorized: true, ...(ca ? { ca } : {}) }
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
     ssl,
