@@ -14,6 +14,17 @@
 import { assertRuntimeConfig } from './garments-target-policy.mjs'
 import { installGarmentsDbCa } from './garments-db-ca.mjs'
 import { emitKeypressEvents } from 'node:readline'
+import { config as loadEnv } from 'dotenv'
+import { fileURLToPath } from 'node:url'
+import { dirname, resolve } from 'node:path'
+
+// Environment values come from a local, ignored copy of Vercel's production
+// settings. Do not fetch/decrypt project secrets within the app runtime.
+loadEnv({
+  path: resolve(dirname(fileURLToPath(import.meta.url)), '../.env.production.local'),
+  override: false,
+  quiet: true,
+})
 
 function fail(message) {
   console.error('Garments first-admin bootstrap refused:', message)
@@ -70,19 +81,11 @@ async function main() {
     throw new Error('MIKRO_ORM_SCHEMA must equal garments_ops')
   }
   const email = (process.env.GARMENTS_SETUP_ADMIN_EMAIL ?? '').trim()
-  const password = process.env.GARMENTS_SETUP_ADMIN_PASSWORD || await readHiddenPassword('New administrator password (hidden): ')
-  if (!process.env.GARMENTS_SETUP_ADMIN_PASSWORD) {
-    const repeat = await readHiddenPassword('Confirm password (hidden): ')
-    if (repeat !== password) throw new Error('Password confirmation mismatch')
-  }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
     throw new Error('Valid GARMENTS_SETUP_ADMIN_EMAIL is required')
   }
   if (email.toLowerCase() !== 'sayed3la2@gmail.com') {
     throw new Error('Admin email does not match the approved PremierOS Garments owner')
-  }
-  if (password.length < 16) {
-    throw new Error('GARMENTS_SETUP_ADMIN_PASSWORD must be at least 16 characters')
   }
 
   installGarmentsDbCa()
@@ -95,6 +98,14 @@ async function main() {
   })
   try {
     await client.connect()
+    // Keep this connection open until setup completes to serialize
+    // concurrent executions of this operator-only bootstrap command.
+    const lock = await client.query(
+      'SELECT pg_try_advisory_lock(875314, 171009) AS acquired',
+    )
+    if (lock.rows[0]?.acquired !== true) {
+      throw new Error('Another PremierOS Garments bootstrap is already running')
+    }
     const { rows } = await client.query(`
       SELECT (SELECT count(*)::int FROM garments_ops.tenants) AS tenants,
              (SELECT count(*)::int FROM garments_ops.organizations) AS organizations,
@@ -105,25 +116,59 @@ async function main() {
     if (!counts || Object.values(counts).some((n) => n !== 0)) {
       throw new Error('Database is not an empty installation; refuse to create a second initial admin')
     }
+
+  const password = process.env.GARMENTS_SETUP_ADMIN_PASSWORD || await readHiddenPassword('New administrator password (hidden): ')
+  if (!process.env.GARMENTS_SETUP_ADMIN_PASSWORD) {
+    const repeat = await readHiddenPassword('Confirm password (hidden): ')
+    if (repeat !== password) throw new Error('Password confirmation mismatch')
+  }
+  if (password.length < 16) {
+    throw new Error('GARMENTS_SETUP_ADMIN_PASSWORD must be at least 16 characters')
+  }
+
+    // Run the version-pinned upstream CLI inside this same Node process.
+    // No demo accounts, demo sample data, migrations or skip-policy flags.
+    // The password is never part of the parent shell command.
+    const originalArgv = process.argv
+    try {
+      process.argv = [
+        process.argv[0],
+        process.argv[1],
+        'auth', 'setup',
+        '--orgName', 'PremierOS Garments',
+        '--orgSlug', 'premieros-garments',
+        '--email', email,
+        '--password', password,
+        '--roles', 'superadmin,admin',
+      ]
+      console.log('Starting official Open Mercato first-tenant setup in garments_ops.')
+      await import('./mercato-cli.mjs')
+      if (process.exitCode && process.exitCode !== 0) {
+        throw new Error('Open Mercato setup reported an unsuccessful exit code')
+      }
+    } finally {
+      process.argv = originalArgv
+    }
+    const verified = await client.query(`
+      SELECT (SELECT count(*)::int FROM garments_ops.tenants) AS tenants,
+             (SELECT count(*)::int FROM garments_ops.organizations) AS organizations,
+             (SELECT count(*)::int FROM garments_ops.users) AS users,
+             (SELECT count(*)::int
+                FROM garments_ops.users u
+                JOIN garments_ops.user_roles ur ON ur.user_id = u.id
+                JOIN garments_ops.roles r ON r.id = ur.role_id
+               WHERE lower(u.email) = lower($1) AND r.name = 'admin'
+              ) AS admin_memberships
+    `, [email])
+    const result = verified.rows[0]
+    if (result?.tenants !== 1 || result.organizations !== 1
+        || result.users !== 1 || result.admin_memberships < 1) {
+      throw new Error('Post-setup verification failed; inspect garments_ops before retrying')
+    }
+    console.log('First administrator and organization created and verified in garments_ops.')
   } finally {
     await client.end()
   }
-
-  // Run the version-pinned upstream CLI inside this same Node process. This
-  // avoids exposing the password as a *shell* command-line argument.
-  // No demo accounts, demo sample data, destructive migrations, or skip-policy flags.
-  process.argv = [
-    process.argv[0],
-    process.argv[1],
-    'auth', 'setup',
-    '--orgName', 'PremierOS Garments',
-    '--orgSlug', 'premieros-garments',
-    '--email', email,
-    '--password', password,
-    '--roles', 'superadmin,admin',
-  ]
-  console.log('Starting official Open Mercato first-tenant setup in garments_ops.')
-  await import('./mercato-cli.mjs')
 }
 
 main().catch((err) => {
