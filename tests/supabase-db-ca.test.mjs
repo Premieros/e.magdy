@@ -52,7 +52,7 @@ test('scaffold installs CA into Next instrumentation and CLI, not browser source
 })
 
 test('project policy refuses explicitly disabled TLS',()=>{
-  const good={SUPABASE_PROJECT_REF:'yumeijsyiphzdsulsubf',GARMENTS_DB_SCHEMA:'garments_ops',
+  const good={SUPABASE_PROJECT_REF:'yumeijsyiphzdsulsubf',GARMENTS_DB_SCHEMA:'garments_ops',MIKRO_ORM_SCHEMA:'garments_ops',
     DATABASE_URL:'postgresql://garments_ops_login:sample@db.yumeijsyiphzdsulsubf.supabase.co:5432/postgres?options=-c%20search_path%3Dgarments_ops'}
   assert.throws(()=>assertRuntimeConfig({...good, DB_SSL_REJECT_UNAUTHORIZED:'false'}),/certificate verification/)
   assert.throws(()=>assertRuntimeConfig({...good, DB_SSL:'false'}),/certificate verification/)
