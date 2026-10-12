@@ -25,7 +25,7 @@ persistent catalog owner. No separate garment SKU master or stock ledger.
 Build `src/modules/garments_catalog/lib/sku-matrix.ts`:
 1. Accept one **trusted server-resolved** canonical catalog style and its
    variant option mappings, authenticated tenant/org scope, and proposed
-   nonnegative/integer quantities for requested combinations. Raw browser data
+   strictly positive integer quantities for requested combinations. Raw browser data
    may supply requested cells ONLY; the trusted variant metadata must come
    from catalog authorization-checked server commands.
 2. Require all catalog variants from the same `tenantId`,
