@@ -76,6 +76,12 @@ const to="distDir: process.env.VERCEL === '1' ? '.next' : '.mercato/next',";
 if(original.split(from).length!==2)throw Error('Unexpected upstream next.config distDir: cannot patch safely');
 writeFileSync(config,original.replace(from,to));
 JS
+# Include a read-only connection/isolation diagnostic before ERP migrations.
+mkdir -p garments-ops/src/app/api/garments-health
+cp "$ROOT/pilot/open-mercato/garments-db-preflight.mjs" garments-ops/scripts/garments-db-preflight.mjs
+cp "$ROOT/pilot/open-mercato/garments-health-route.js" garments-ops/src/app/api/garments-health/route.js
+test -s garments-ops/scripts/garments-db-preflight.mjs
+test -s garments-ops/src/app/api/garments-health/route.js
 mkdir -p garments-ops/THIRD_PARTY_NOTICES
 cp "$ROOT/pilot/open-mercato/THIRD_PARTY_LICENSE.txt" garments-ops/THIRD_PARTY_NOTICES/Open-Mercato-MIT.txt
 cp "$ROOT/pilot/open-mercato/ATTRIBUTION.md" garments-ops/THIRD_PARTY_NOTICES/ATTRIBUTION.md
