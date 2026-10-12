@@ -65,6 +65,17 @@ const header=[
 const filtered=lines.filter(x=>!/^DATABASE_URL=/.test(x) && !/^SUPABASE_PROJECT_REF=/.test(x) && !/^GARMENTS_DB_SCHEMA=/.test(x));
 writeFileSync(example,header.join('\n')+filtered.join('\n'));
 JS
+# Open Mercato defaults to .mercato/next, but the Vercel Next.js builder
+# expects the conventional .next output. Keep local behavior untouched.
+node --input-type=module - "$TARGET/garments-ops/next.config.ts" <<'JS'
+import { readFileSync, writeFileSync } from 'node:fs';
+const config=process.argv[2];
+const original=readFileSync(config,'utf8');
+const from="distDir: '.mercato/next',";
+const to="distDir: process.env.VERCEL === '1' ? '.next' : '.mercato/next',";
+if(original.split(from).length!==2)throw Error('Unexpected upstream next.config distDir: cannot patch safely');
+writeFileSync(config,original.replace(from,to));
+JS
 mkdir -p garments-ops/THIRD_PARTY_NOTICES
 cp "$ROOT/pilot/open-mercato/THIRD_PARTY_LICENSE.txt" garments-ops/THIRD_PARTY_NOTICES/Open-Mercato-MIT.txt
 cp "$ROOT/pilot/open-mercato/ATTRIBUTION.md" garments-ops/THIRD_PARTY_NOTICES/ATTRIBUTION.md
