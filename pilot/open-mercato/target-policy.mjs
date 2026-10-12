@@ -55,6 +55,8 @@ export function assertRuntimeConfig(env){
     throw Error('Set SUPABASE_PROJECT_REF to the only permitted project');
   if(env.GARMENTS_DB_SCHEMA!==GARMENTS_DATABASE_SCHEMA)
     throw Error('Set GARMENTS_DB_SCHEMA to garments_ops');
+  if(env.MIKRO_ORM_SCHEMA!==GARMENTS_DATABASE_SCHEMA)
+    throw Error('Set MIKRO_ORM_SCHEMA to garments_ops for all ORM and migrations');
   if(env.NEXT_PUBLIC_SUPABASE_URL)
     assertAllowedSupabaseApiUrl(env.NEXT_PUBLIC_SUPABASE_URL);
   if(env.SUPABASE_URL)assertAllowedSupabaseApiUrl(env.SUPABASE_URL);

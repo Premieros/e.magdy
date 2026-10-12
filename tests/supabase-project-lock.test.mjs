@@ -31,10 +31,12 @@ test('DB URLs accept only restricted garments login on approved project and sche
  ])assert.throws(()=>assertAllowedDatabaseUrl(value));
 });
 test('runtime environment must explicitly match project and schema',()=>{
- const good={DATABASE_URL:direct,SUPABASE_PROJECT_REF:project,GARMENTS_DB_SCHEMA:'garments_ops'};
+ const good={DATABASE_URL:direct,SUPABASE_PROJECT_REF:project,GARMENTS_DB_SCHEMA:'garments_ops',MIKRO_ORM_SCHEMA:'garments_ops'};
  assert.equal(assertRuntimeConfig(good).schema,'garments_ops');
  assert.throws(()=>assertRuntimeConfig({...good,SUPABASE_PROJECT_REF:'wrong'}));
  assert.throws(()=>assertRuntimeConfig({...good,GARMENTS_DB_SCHEMA:'public'}));
+ assert.throws(()=>assertRuntimeConfig({...good,MIKRO_ORM_SCHEMA:'public'}));
+ assert.throws(()=>assertRuntimeConfig({...good,MIKRO_ORM_SCHEMA:undefined}));
 });
 test('isolated schema and NOLOGIN role migration are additive only',()=>{
  const sql=readFileSync(new URL('../database/garments_ops_project_lock.sql',import.meta.url),'utf8');
@@ -49,18 +51,19 @@ test('generated Open Mercato code is configured to fail closed on other projects
  assert.match(s,/garments-target-policy\.mjs/);
  assert.match(s,/Destructive reset disabled on shared Supabase project/);
  assert.match(s,/SUPABASE_PROJECT_REF=yumeijsyiphzdsulsubf/);
+ assert.match(s,/MIKRO_ORM_SCHEMA=garments_ops/);
  assert.match(s,/search_path%3Dgarments_ops/);
 });
 
 test('command-line database policy refuses a foreign project and accepts only the approved one',()=>{
  const script=fileURLToPath(new URL('../pilot/open-mercato/target-policy.mjs',import.meta.url));
  const bad=spawnSync(process.execPath,[script],{encoding:'utf8',env:{
-   ...process.env,DATABASE_URL:direct,SUPABASE_PROJECT_REF:'wrong-project',GARMENTS_DB_SCHEMA:'garments_ops'
+   ...process.env,DATABASE_URL:direct,SUPABASE_PROJECT_REF:'wrong-project',GARMENTS_DB_SCHEMA:'garments_ops',MIKRO_ORM_SCHEMA:'garments_ops'
  }});
  assert.notEqual(bad.status,0);
  assert.match(bad.stderr,/check failed/);
  const good=spawnSync(process.execPath,[script],{encoding:'utf8',env:{
-   ...process.env,DATABASE_URL:direct,SUPABASE_PROJECT_REF:project,GARMENTS_DB_SCHEMA:'garments_ops'
+   ...process.env,DATABASE_URL:direct,SUPABASE_PROJECT_REF:project,GARMENTS_DB_SCHEMA:'garments_ops',MIKRO_ORM_SCHEMA:'garments_ops'
  }});
  assert.equal(good.status,0,good.stderr);
  assert.match(good.stdout,/Garments DB target verified/);

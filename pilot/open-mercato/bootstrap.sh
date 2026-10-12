@@ -58,11 +58,12 @@ const header=[
   '# Never put actual credentials into Git or a browser bundle.',
   'SUPABASE_PROJECT_REF=yumeijsyiphzdsulsubf',
   'GARMENTS_DB_SCHEMA=garments_ops',
+  'MIKRO_ORM_SCHEMA=garments_ops',
   '# DB role is NOLOGIN until deployment credentials are securely provisioned.',
   'DATABASE_URL=postgres://garments_ops_login:PASSWORD@db.yumeijsyiphzdsulsubf.supabase.co:5432/postgres?options=-c%20search_path%3Dgarments_ops',
   ''
 ];
-const filtered=lines.filter(x=>!/^DATABASE_URL=/.test(x) && !/^SUPABASE_PROJECT_REF=/.test(x) && !/^GARMENTS_DB_SCHEMA=/.test(x));
+const filtered=lines.filter(x=>!/^DATABASE_URL=/.test(x) && !/^SUPABASE_PROJECT_REF=/.test(x) && !/^GARMENTS_DB_SCHEMA=/.test(x) && !/^MIKRO_ORM_SCHEMA=/.test(x));
 writeFileSync(example,header.join('\n')+filtered.join('\n'));
 JS
 # Open Mercato defaults to .mercato/next, but the Vercel Next.js builder
