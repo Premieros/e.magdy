@@ -1,4 +1,10 @@
-import { resolveGarmentVariantsFromCatalog } from '../catalog-variant-projection'
+import {
+  resolveGarmentVariantsFromCatalog,
+  type CatalogOptionRecord,
+  type CatalogOptionValueRecord,
+  type CatalogVariantRecord,
+  type CatalogVariantOptionValueRecord,
+} from '../catalog-variant-projection'
 import { buildGarmentsSkuMatrixPlan, GarmentsMatrixError } from '../sku-matrix'
 
 const scope = {
@@ -14,7 +20,13 @@ const large = { ...scope, id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', optionId: 
 const first = { ...scope, id: '44444444-4444-4444-8444-000000000001', sku: 'TS-NAVY-M', isActive: true }
 const second = { ...scope, id: '44444444-4444-4444-8444-000000000002', sku: 'TS-NAVY-L', isActive: true }
 
-function records() {
+function records(): {
+  scope: typeof scope
+  options: CatalogOptionRecord[]
+  optionValues: CatalogOptionValueRecord[]
+  variants: CatalogVariantRecord[]
+  assignments: CatalogVariantOptionValueRecord[]
+} {
   return {
     scope,
     options: [colorOption, sizeOption],
