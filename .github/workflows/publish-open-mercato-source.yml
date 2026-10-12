@@ -2,7 +2,7 @@ name: Publish isolated Open Mercato source branch
 
 on:
   push:
-    branches: ['feature/publish-open-mercato-app']
+    branches: ['feature/publish-open-mercato-app', 'fix/open-mercato-yarn-lock-deploy']
     paths:
       - '.github/workflows/publish-open-mercato-source.yml'
       - 'pilot/open-mercato/**'
@@ -26,6 +26,23 @@ jobs:
         run: |
           set -euo pipefail
           bash pilot/open-mercato/bootstrap.sh "$RUNNER_TEMP/garments-source"
+      - name: Generate and validate Yarn 4 dependency lockfile
+        run: |
+          set -euo pipefail
+          source="$RUNNER_TEMP/garments-source/garments-ops"
+          cd "$source"
+          if ! command -v corepack >/dev/null 2>&1; then
+            npm install -g corepack@0.34.5
+          fi
+          corepack enable
+          # Official scaffold's yarn.lock has workspace metadata only.
+          # Populate it with Yarn Berry, *without* installing/building packages
+          # or ever connecting to a database.
+          corepack yarn install --mode=update-lockfile
+          test "$(wc -l < yarn.lock)" -gt 1000
+          grep -q '^"@open-mercato/core@' yarn.lock
+          grep -q '^__metadata:' yarn.lock
+          echo "Generated resolved Yarn 4 lockfile ($(wc -l < yarn.lock) lines)"
       - name: Validate clean source and project lock
         run: |
           set -euo pipefail
