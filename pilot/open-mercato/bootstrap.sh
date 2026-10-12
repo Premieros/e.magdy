@@ -82,6 +82,9 @@ cp "$ROOT/pilot/open-mercato/garments-db-preflight.mjs" garments-ops/scripts/gar
 cp "$ROOT/pilot/open-mercato/garments-health-route.js" garments-ops/src/app/api/garments-health/route.js
 test -s garments-ops/scripts/garments-db-preflight.mjs
 test -s garments-ops/src/app/api/garments-health/route.js
+# Replace opaque Next.js server errors with a safe human-readable fallback.
+cp "$ROOT/pilot/open-mercato/garments-global-error.jsx" garments-ops/src/app/global-error.jsx
+test -s garments-ops/src/app/global-error.jsx
 mkdir -p garments-ops/THIRD_PARTY_NOTICES
 cp "$ROOT/pilot/open-mercato/THIRD_PARTY_LICENSE.txt" garments-ops/THIRD_PARTY_NOTICES/Open-Mercato-MIT.txt
 cp "$ROOT/pilot/open-mercato/ATTRIBUTION.md" garments-ops/THIRD_PARTY_NOTICES/ATTRIBUTION.md
