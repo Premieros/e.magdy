@@ -26,6 +26,8 @@ export const enabledModules: ModuleEntry[] = [
   { id: 'sales', from: '@open-mercato/core' },
   { id: 'wms', from: '@open-mercato/core' },
   { id: 'currencies', from: '@open-mercato/core' },
+  // App-owned P1 read-only SKU-matrix logic; no entities, routes, or stock writes.
+  { id: 'garments_catalog', from: '@app' },
 ]
 
 const enterpriseModulesEnabled = parseBooleanWithDefault(process.env.OM_ENABLE_ENTERPRISE_MODULES, false)
