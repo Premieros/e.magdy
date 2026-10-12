@@ -79,6 +79,7 @@ JS
 # Include a read-only connection/isolation diagnostic before ERP migrations.
 mkdir -p garments-ops/src/app/api/garments-health
 cp "$ROOT/pilot/open-mercato/garments-db-ca.mjs" garments-ops/scripts/garments-db-ca.mjs
+cp "$ROOT/pilot/open-mercato/garments-catalog-recovery.mjs" garments-ops/scripts/garments-catalog-recovery.mjs
 cp "$ROOT/pilot/open-mercato/garments-db-preflight.mjs" garments-ops/scripts/garments-db-preflight.mjs
 cp "$ROOT/pilot/open-mercato/garments-health-route.js" garments-ops/src/app/api/garments-health/route.js
 test -s garments-ops/scripts/garments-db-preflight.mjs
