@@ -6,7 +6,9 @@
 // process, with no batch files anywhere. Works from the monorepo app workspace
 // (entry lives in the repo-root node_modules) and from standalone apps (local
 // node_modules) via the ancestor walk.
+import { installGarmentsDbCa } from './garments-db-ca.mjs'
 import fs from 'node:fs'
+installGarmentsDbCa()
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
