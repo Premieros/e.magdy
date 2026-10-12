@@ -85,6 +85,19 @@ const nextConfig: NextConfig & { agentRules?: boolean } = {
     '@open-mercato/onboarding',
     '@open-mercato/ai-assistant',
   ],
+  // pdfjs-dist is resolved via createRequire(process.cwd()/package.json) by the
+  // upstream attachments module at *module evaluation time*. Next/Vercel's
+  // static file tracer cannot reliably follow that dynamic require.resolve.
+  // Include only the package metadata and required PDF runtime/assets in
+  // server functions. Keep certificate verification and DB policy unchanged.
+  outputFileTracingIncludes: {
+    '/*': [
+      './node_modules/pdfjs-dist/package.json',
+      './node_modules/pdfjs-dist/legacy/build/**/*',
+      './node_modules/pdfjs-dist/cmaps/**/*',
+      './node_modules/pdfjs-dist/standard_fonts/**/*',
+    ],
+  },
   serverExternalPackages: [
     'esbuild',
     '@esbuild/darwin-arm64',
