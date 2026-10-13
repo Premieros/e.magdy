@@ -92,9 +92,11 @@ async function main() {
 
     const { MikroORM } = await import('@mikro-orm/core')
     const { pathToFileURL } = await import('node:url')
+    const { isAbsolute } = await import('node:path')
     const dynamicImportProvider = async (id) => {
-      const specifier = id.startsWith('/') ? pathToFileURL(id).href : id
-      return import(specifier)
+      const localPath = isAbsolute(id) || id.startsWith('./') || id.startsWith('../') ||
+        id.startsWith('node_modules/')
+      return import(localPath ? pathToFileURL(resolve(id)).href : id)
     }
     const { PostgreSqlDriver } = await import('@mikro-orm/postgresql')
     const { ReflectMetadataProvider } = await import('@mikro-orm/decorators/legacy')
@@ -110,7 +112,8 @@ async function main() {
       migrations: {
         path: migrationDir,
         glob: '!(*.d).{ts,js}',
-        tableName: 'mikro_orm_migrations_api_keys',
+        tableName: 'garments_ops.mikro_orm_migrations_api_keys',
+        schema,
         snapshot: false,
         dropTables: false,
       },
