@@ -99,10 +99,13 @@ async function main() {
     const password = process.env.GARMENTS_SETUP_ADMIN_PASSWORD
     const { getPasswordPolicy, validatePassword } = await import('@open-mercato/shared/lib/auth/passwordPolicy')
     check(validatePassword(password, getPasswordPolicy()).ok, 'Administrator password fails official policy')
-    if (isTenantDataEncryptionEnabled()) {
-      const { createKmsService } = await import('@open-mercato/shared/lib/encryption/kms')
-      check(createKmsService().isHealthy(), 'Encryption KMS is not healthy')
-    }
+    check(isTenantDataEncryptionEnabled(), 'Tenant data encryption must remain enabled')
+    const { createKmsService } = await import('@open-mercato/shared/lib/encryption/kms')
+    const kms = createKmsService()
+    check(kms.isHealthy(), 'Encryption KMS is not healthy')
+    const dek = await kms.getTenantDek(String(s.tenant_id))
+    check(dek && Buffer.from(dek.key, 'base64').length === 32,
+      'Approved tenant encryption key is unavailable')
 
     // An interrupted prior attempt may have successfully created the only
     // owner user before email encryption or ACL sync completed. Never create a
@@ -154,7 +157,7 @@ async function main() {
     // after creation when encryption is enabled. Both are schema-scoped.
     if (!resume) stage('add-user')
     else console.log('Exact existing owner verified; resuming remaining official setup stages')
-    if (isTenantDataEncryptionEnabled()) stage('encrypt-email')
+    stage('encrypt-email')
     stage('sync-acls')
 
     const rows = (await client.query([
@@ -183,7 +186,7 @@ async function main() {
     check(emailHashLookupValues(email).includes(created.email_hash),
       'Official deterministic administrator email hash differs')
     const segments = String(created.email).split(':')
-    check(!isTenantDataEncryptionEnabled() || (segments.length === 4 && segments[3] === 'v1'),
+    check(segments.length === 4 && segments[3] === 'v1',
       'Administrator email encryption verification failed')
     console.log('Existing PremierOS Garments superadmin recovered and verified; remove recovery approval and rotate the password after login')
   } finally {
