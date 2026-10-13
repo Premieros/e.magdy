@@ -76,7 +76,31 @@ async function main() {
       'Existing garments tenant/organization does not match the approved setup')
     check(Number(s.roles) === 3 && Number(s.approved_roles) === 3 && Number(s.users) === 0 &&
       Number(s.user_roles) === 0, 'User/role state changed; stop')
-    check(s.keys_table === null && s.migration_table === null, 'api_keys migrations already started; stop')
+    // Each official MikroORM migration runs in its own transaction. Allow a
+    // failed build to safely resume only from an exact prefix of these four
+    // migrations. Refuse mismatched tables and unauthorized histories.
+    let completed = 0
+    if (s.migration_table !== null) {
+      const history = (await connection.query(
+        'SELECT name FROM garments_ops.mikro_orm_migrations_api_keys ORDER BY id'
+      )).rows.map((row) => String(row.name).replace(/\\.(?:js|ts)$/, ''))
+      check(history.length <= expected.length &&
+        history.every((name, index) => name === expected[index]),
+        'Migration history is not the exact official api_keys prefix')
+      completed = history.length
+      check(completed === 0 || s.keys_table !== null,
+        'Migration history claims api_keys exists but table is missing')
+    } else {
+      check(s.keys_table === null,
+        'Existing api_keys table without migration history; manual review required')
+    }
+    if (s.keys_table !== null) {
+      const existingKeys = (await connection.query(
+        'SELECT count(*) AS n FROM garments_ops.api_keys'
+      )).rows[0]
+      check(Number(existingKeys?.n) === 0,
+        'Refusing to run while api_keys contains records')
+    }
 
     const appModules = readFileSync(resolve('src/modules.ts'), 'utf8')
     check(appModules.includes("{ id: 'api_keys', from: '@open-mercato/core' }"),
@@ -126,11 +150,11 @@ async function main() {
       const names = pending.map((item) => typeof item === 'string'
         ? item : (item.name ?? item.fileName))
       const canonical = names.map((name) => String(name).replace(/\.(?:ts|js)$/, ''))
-      check(JSON.stringify(canonical) === JSON.stringify(expected),
-        'Migration plan differs from the four approved official migrations')
+      check(JSON.stringify(canonical) === JSON.stringify(expected.slice(completed)),
+        'Migration plan differs from the remaining approved official migrations')
       for (let i = 0; i < names.length; i += 1) {
         await migrator.up({ migrations: [names[i]] })
-        console.log('Official api_keys migration ' + (i + 1) + '/4 completed')
+        console.log('Official api_keys migration ' + (completed + i + 1) + '/4 completed')
       }
     } finally {
       await orm.close(true)
