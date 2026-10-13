@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/lib/premieros/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".mercato",
+    ".next"
+  ]
+}
