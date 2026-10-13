@@ -1,188 +1,56 @@
-# PremierOS Garments — first administrator (operator runbook)
+# PremierOS Garments — administrator recovery completed
 
-**Approved email:** `sayed3la2@gmail.com`  
-**Organization:** `PremierOS Garments`  
-**Permitted Supabase project:** `yumeijsyiphzdsulsubf`  
-**Permitted schema:** `garments_ops`  
-**Git branch:** `deploy/garments-mercato`  
-**Vercel project:** `premieros-garments-mercato`
+Updated: 2026-10-13.
 
-## Safety properties
+## Installation and access
 
-- This runbook creates the *first* Open Mercato tenant, organization, and user through the **version-pinned** upstream `mercato auth setup` implementation, not through raw SQL.
-- No other Supabase project or AMMCO table is ever targeted. The app's restricted `garments_ops_login` and exclusive schema search path are required.
-- The bootstrap refuses non-empty `garments_ops.tenants`, `organizations`, `users`, or `roles`.
-- It acquires a PostgreSQL advisory lock during execution to prevent concurrent runs of this bootstrap tool.
-- Passwords are prompted with hidden input on the operator's own terminal; nothing is posted to GitHub, sent in a chat, saved as a Vercel runtime secret, or passed on the parent shell command line.
-- Normal upstream password-policy checks remain enabled; no demo accounts, seed examples, schema reset, or migrations.
-- The initial user receives the `superadmin` role. The `admin` and `employee` roles are also created, but demo users are **not** created. Do not confuse available roles with user-role assignments.
+- Existing repository: Premieros/e.magdy.
+- Production branch: deploy/garments-mercato.
+- Vercel project: premieros-garments-mercato (prj_cJZuRsheb50NS5hpy1ePrnA83IBB).
+- Open Mercato core: 0.9.0; installed MikroORM: 7.2.4 from the committed lockfile.
+- Login: https://premieros-garments-mercato.vercel.app/login?role=superadmin
+- Administrator: sayed3la2@gmail.com, confirmed, with the existing tenant's superadmin role.
 
-## One-time Vercel production-build bootstrap (operator-approved)
+The owner uses the initial password they privately configured in Vercel and must change it after first sign-in. No password, token, database URL, root encryption key, or ciphertext is included in this document.
 
-**Prefer this path when Codespaces is linked but Production Secrets cannot be
-exported.** It does not open any signup URL, copy the database password into
-Codespaces, or alter AMMCO. The guarded build hook is otherwise a no-op.
+## Verified state
 
-1. First ensure the safe build hook from branch
-   `ops/garments-first-admin-vercel-build` has been reviewed and deployed
-   to the approved `deploy/garments-mercato` branch with
-   `GARMENTS_BOOTSTRAP_BUILD_APPROVAL` **absent**.
-2. In your already-linked Codespace terminal (directory `open-mercato`),
-   run `vercel project inspect --non-interactive`. Confirm the existing
-   project, owner and scope exactly.
-3. Choose a **new temporary** high-entropy password (at least 16 characters),
-   not used for any other account. Enter it privately into the Vercel
-   Production **Secret** prompt via:
+The restricted operator verification confirmed one tenant, one PremierOS Garments organization, three existing roles, and one administrator. Official owner recovery verified exactly one user-role link and synchronized the role ACLs.
 
-   ```bash
-   vercel env add GARMENTS_SETUP_ADMIN_PASSWORD production --type secret
-   ```
+Only the four published api_keys migrations were applied, using garments_ops_login and the exclusive garments_ops search_path:
 
-   Never enter it in chat, GitHub code, screenshots or CLI command arguments.
-   This temporary secret is for first-account initialization only, **not**
-   a recommended long-term stored admin password.
-4. Once the operator confirms that the Production Secret exists (name and
-   type ONLY), set `GARMENTS_BOOTSTRAP_BUILD_APPROVAL` to
-   `PREMIEROS_GARMENTS_INITIAL_ADMIN_2026_10` **for Production only** and
-   trigger a *new Production build of the approved exact Git branch*.
-   Do not run a preview deployment, `setup:reinstall`, `db:migrate`,
-   `db:greenfield`, `init`, or sample seeding.
-5. A production build invokes the existing guarded
-   `scripts/garments-first-admin.mjs` after `yarn generate` and before
-   Next.js compilation. It requires the exact Supabase ref/schema,
-   target branch and approved admin email; refuses existing tenants,
-   users, organizations or roles; takes an advisory lock; runs official
-   Open Mercato `auth setup`; and verifies the `superadmin` assignment.
-   A failed gate makes the deployment fail **closed**; do not rerun blindly
-   after any partial failure.
-6. Verify the database records: one tenant, one organization, one user,
-   the approved email and `superadmin` membership. Then **immediately**
-   remove BOTH one-time Production environment variables using Vercel's
-   Dashboard, or (from the linked Codespace):
+1. Migration20251030150038
+2. Migration20260116225251
+3. Migration20260125204102
+4. Migration20260523234901
 
-   ```bash
-   vercel env rm GARMENTS_BOOTSTRAP_BUILD_APPROVAL production
-   vercel env rm GARMENTS_SETUP_ADMIN_PASSWORD production
-   ```
+Their exact ordered history is recorded in garments_ops.mikro_orm_migrations_api_keys. The migration runner verified zero API keys and the four added session columns. There was no general migration, manual user insert, second tenant/organization setup, or mutation through a privileged DB account.
 
-   Redeploy the ordinary production build **with neither variable present**,
-   and confirm `READY`. Older deployment snapshots may retain secret
-   references; after first sign-in, **change the temporary admin password
-   to a different new, strong permanent one** in the application's approved
-   password-change workflow. Sign out and verify login with the new password.
-7. Delete the Codespace and any temporary workspace after completion. The
-   production database credentials were never exported to it.
+Live verification confirmed:
+- The encrypted owner email decrypts correctly through the official KMS.
+- POST /api/auth/login returns 200.
+- The signed token carries the expected owner email, tenant, organization and superadmin role.
+- The authenticated GET /backend returns 200.
+- Logout removes the test session; no verification token or cookie was retained.
 
-The administrator's first sign-in is at
-`https://premieros-garments-mercato.vercel.app/login?role=superadmin`.
-If password change, production build, or verified user assignment fails,
-do not claim the account is ready for live operation.
+## Permanent security and runtime configuration
 
-## Cloud-only alternative (no local computer required)
+The only permitted Supabase project is yumeijsyiphzdsulsubf. All application data and ORM metadata stay in garments_ops under garments_ops_login. AMMCO schemas are outside this operation.
 
-The project owner can use **GitHub Codespaces** to authenticate to the
-approved Vercel project, without a local computer. Authentication alone
-does **not** grant access to the database connection string.
+TENANT_DATA_ENCRYPTION is explicitly true. The official Open Mercato DerivedKmsService uses a permanent high-entropy TENANT_DATA_ENCRYPTION_FALLBACK_KEY stored as a Vercel Production Secret. Preserve that key: replacing or deleting it without an approved cryptographic migration makes existing ciphertext unreadable. This is the published KMS implementation, not custom encryption or a development default.
 
-### Step 1 — Link the existing project
+Serverless runtime selects the same restricted pooler endpoint on transaction port 6543; target, username, password and exclusive schema options are preserved and TLS verification remains enabled. A read-only preflight verified the actual DB principal and search_path. Maintenance scripts keep their session connection for advisory-lock semantics.
 
-Open the `deploy/garments-mercato` branch in a private GitHub Codespace,
-then in its terminal run:
+Application connections are bounded by DB_POOL_MIN=0, DB_POOL_MAX=3 and DB_POOL_IDLE_TIMEOUT=1000. Query-index warmup is staggered (concurrency 1, stagger 1000 ms) rather than opening a burst above the session-pool limit.
 
-```bash
-cd open-mercato
-nvm install 24
-nvm use 24
-corepack enable
-npm install --global vercel
-vercel login
-vercel link --yes --project premieros-garments-mercato --scope sayedalaa82285-7634
-vercel project inspect --non-interactive
-```
+The backend home now invokes the same full bootstrap used by backend catch-all pages before resolving canonical session integrity. This fixed the /backend → session-refresh redirect loop without bypassing authentication.
 
-Inspect that the linked Vercel project is **premieros-garments-mercato**,
-not a new project. Complete device verification within Vercel/GitHub;
-do not disclose login tokens or verification codes.
+## Recovery is finished
 
-### Step 2 — Secure execution gate (NOT YET ENABLED)
+The old initial auth-setup build gate is disabled. Regular builds do not run owner recovery or migrations.
 
-**Important correction:** Vercel Production `Secret` / legacy
-`Sensitive` environment variables **cannot be read back** by
-`vercel env pull --environment=production`. In this deployment,
-`DATABASE_URL`, `AUTH_SECRET`, `JWT_SECRET` and
-`GARMENTS_DB_CA_PEM` are protected secrets. Consequently, the old
-Codespaces instructions that blindly pull `.env.local` and immediately
-run `yarn garments:bootstrap-admin` are not a working or approved path.
-**Do not run setup on missing or fabricated connection credentials.**
+GARMENTS_SETUP_ADMIN_PASSWORD was emptied after live verification, and GARMENTS_SETUP_ADMIN_EMAIL was cleared. One-off migration/recovery/verification approvals were scoped to explicit build commands or child processes, never persisted as project-wide approvals. The permanent KMS/JWT/auth/database secrets remain in place.
 
-A secure one-time execution path must first be configured, with the
-official Open Mercato `auth setup` routine running **inside the
-authorized Vercel execution environment**, or via an operator-managed
-trusted secret manager that can legitimately provide the production
-credentials without ChatGPT. It must require proof of control over the
-Vercel project and private password entry, be one-use, and be disabled
-after verification. No public or default-password bootstrap form is
-permitted.
+Older immutable deployment environments can retain the old temporary password; changing the owner's password in the application invalidates it. Never reactivate the initial bootstrap, rerun auth setup, run a general migration, or reset this shared installation.
 
-The approved new administrator remains `sayed3la2@gmail.com`;
-tenant/organization and user currently remain uninitialized. Do not
-copy project secrets into a chat, GitHub commit, issue, or screenshot.
-
-## Prerequisites
-
-**The following local-operator recipe requires independently authorized access to the protected production secrets; linking Vercel and pulling its production environment is not sufficient by itself.** Stop at this gate if protected values are missing. Do not invent or rotate credentials.
-
-Operator needs: Windows PowerShell, Node.js >=24, Corepack/Yarn 4, Git, Vercel CLI logged in as an authorized member of project `premieros-garments-mercato`. Work from a **fresh clone**, so there is no unrelated `.env.local` to overwrite.
-
-Use PowerShell:
-
-```powershell
-git clone --single-branch --branch deploy/garments-mercato https://github.com/Premieros/e.magdy.git
-Set-Location .\e.magdy\open-mercato
-corepack enable
-yarn install --immutable
-
-# Authentication happens directly with Vercel; do not copy passwords to chat.
-vercel login
-vercel link --yes --project premieros-garments-mercato --scope sayedalaa82285-7634
-vercel env pull .env.local --environment=production --yes
-
-# These env vars are temporary for this terminal only.
-$env:DOTENV_CONFIG_PATH = ".env.local"
-$env:NODE_OPTIONS = "--require=dotenv/config"
-try {
-  # The guard checks the exact Supabase ref and exclusive garments_ops schema.
-  yarn generate
-  yarn garments:bootstrap-admin
-} finally {
-  Remove-Item Env:DOTENV_CONFIG_PATH -ErrorAction SilentlyContinue
-  Remove-Item Env:NODE_OPTIONS -ErrorAction SilentlyContinue
-  Remove-Item .env.local -Force -ErrorAction SilentlyContinue
-}
-```
-
-When prompted, enter a **new unique password** twice. It will not echo. The length minimum is 16 characters and the upstream password policy must also pass. Do not use `secret` or enable `--include-demo-users`.
-
-`vercel env pull` saves database credentials temporarily in the ignored `.env.local` file. Keep the workstation trusted and delete the file as shown. Never upload the file or include its contents in a support ticket.
-
-## Verification
-
-After successful initialization, the application `/start` should display 1 tenant, 1 organization and 1 user. Sign in at:
-
-`https://premieros-garments-mercato.vercel.app/login?role=superadmin`
-
-Then check authorized role and navigation. If the command fails, **do not rerun blindly**: examine the error first and inspect only the `garments_ops` tenant, organization, user and role tables. The bootstrap deliberately refuses a partially initialized installation to prevent double provision.
-
-No schema migration or Supabase Auth signup is part of this runbook.
-
-## Git-triggered build diagnostic — 2026-10-13
-
-The previous Vercel **Redeploy** finished `READY` with an empty `garments_ops` tenant/user/organization/role set, and build logs did not show `Beginning explicitly approved one-time garments first-admin initialization`. The pinned `build` script and restricted DB target checks were present and ran. This does **not** establish that first-admin initialization completed.
-
-After operator authorization, a documentation-only change in `open-mercato/` can trigger a **fresh Git-based Production build** of `deploy/garments-mercato` with the project's current Production environment. Inspect its outcome and the `garments_ops` counts before taking further action. Never retry after partial initialization. Once the initial account and superadmin membership have been verified, delete both temporary bootstrap Production variables, deploy normally with the gate absent, and rotate the initial password.
-
-## Password rotation / guarded Git build — 2026-10-13
-
-An operator confirmed replacing the exposed one-time initial administrator password in Vercel Production **after** the failed `28f1e04` build. The Vercel environment metadata confirms the secret was updated later than that deployment; no secret value was retrieved, copied, or logged. Read-only verification before this commit: `garments_ops` had zero users, tenants, organizations and roles.
-
-This documentation-only commit deliberately starts **one** fresh Git-triggered Production build using the guarded `garments-bootstrap-build-gate.mjs` and private environment. Confirm the build reaches READY, and independently verify the first administrator and superadmin membership in `garments_ops`. If bootstrap fails, stop and diagnose rather than retrying blindly. After successful verification, immediately remove both temporary Production bootstrap variables and rotate the initial password after the first login. Never paste or publish a credential in logs.
+The guarded operator and verification scripts remain available for reviewed maintenance only. They stop on a mismatched project, branch, commit, principal, schema, recorded migration prefix, owner state or cryptographic prerequisite. Do not retry a failed operation without inspecting its exact recorded state.
