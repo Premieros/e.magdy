@@ -30,7 +30,7 @@
   "appShell.goToDashboard": "الانتقال إلى لوحة التحكم",
   "appShell.moreActions": "إجراءات إضافية",
   "appShell.openMenu": "فتح القائمة",
-  "appShell.productName": "Open Mercato",
+  "appShell.productName": "PremierOS",
   "appShell.searchNavAria": "البحث في القائمة",
   "appShell.searchNavClear": "مسح البحث",
   "appShell.searchNavPlaceholder": "بحث...",
@@ -195,7 +195,7 @@
   "auth.changePassword.title": "تغيير كلمة المرور",
   "auth.email": "البريد الإلكتروني",
   "auth.email.resetPassword.cta": "تعيين كلمة مرور جديدة",
-  "auth.login.brandName": "Open Mercato",
+  "auth.login.brandName": "PremierOS",
   "auth.login.errors.generic": "حدث خطأ. يرجى المحاولة مرة أخرى.",
   "auth.login.errors.invalidCredentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة",
   "auth.login.errors.permissionDenied": "ليس لديك صلاحية الوصول إلى هذه المنطقة. يرجى التواصل مع مدير النظام.",
@@ -203,7 +203,7 @@
   "auth.login.featureDenied": "ليس لديك صلاحية استخدام هذه الميزة ({feature}). يرجى التواصل مع مدير النظام.",
   "auth.login.forgotPassword": "نسيت كلمة المرور؟",
   "auth.login.loading": "جارٍ التحميل...",
-  "auth.login.logoAlt": "شعار Open Mercato",
+  "auth.login.logoAlt": "شعار PremierOS",
   "auth.login.rememberMe": "تذكرني",
   "auth.login.requireRoleMessage": "يتطلب الدخول الصلاحية: {roles}",
   "auth.login.requireRolesMessage": "يتطلب الدخول إحدى الصلاحيات التالية: {roles}",
@@ -2623,5 +2623,10 @@
   "wms.search.badge.location": "موقع",
   "wms.search.badge.warehouse": "مخزن",
   "wms.widgets.sales.stockContext.available": "متاح",
-  "wms.widgets.sales.stockContext.reserved": "محجوز"
+  "wms.widgets.sales.stockContext.reserved": "محجوز",
+  "ui.inputs.passwordInput.show": "إظهار كلمة المرور",
+  "ui.inputs.passwordInput.hide": "إخفاء كلمة المرور",
+  "organizationSwitcher.allOrganizations": "كل المؤسسات",
+  "organizationSwitcher.error": "تعذر التحميل",
+  "organizationSwitcher.manage": "إدارة"
 }

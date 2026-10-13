@@ -25,6 +25,7 @@ export const enabledModules: ModuleEntry[] = [
   { id: 'feature_toggles', from: '@open-mercato/core' },
   { id: 'catalog', from: '@open-mercato/core' },
   { id: 'sales', from: '@open-mercato/core' },
+  { id: 'premier_pos', from: '@app' },
   { id: 'wms', from: '@open-mercato/core' },
   { id: 'currencies', from: '@open-mercato/core' },
 ]
