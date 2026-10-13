@@ -1,6 +1,6 @@
 import { type VerticalCapability } from './capability-profiles'
 import { requireVerticalCapability } from './capability-access'
-import { parseOrganizationProfile, type OrganizationProfile } from './organization-profile'
+import { parseOrganizationProfile, profileSupports, type OrganizationProfile } from './organization-profile'
 
 /**
  * An adapter boundary for the official Open Mercato organization configuration.
@@ -34,7 +34,6 @@ export async function requireAuthorizedOrganizationCapability(
   // Do not ask ACL for a feature that the organization has not enabled.
   // A malformed/missing configuration must fail closed rather than default on.
   const profile = parseOrganizationProfile(await provider.loadOfficialOrganizationProfile(context))
-  const { profileSupports } = await import('./organization-profile')
   if (!profileSupports(profile, capability)) {
     throw new Error('Vertical capability is not enabled or authorized')
   }
