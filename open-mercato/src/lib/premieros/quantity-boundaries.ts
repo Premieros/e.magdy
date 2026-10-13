@@ -8,6 +8,7 @@ const scale = 1_000_000n
 export function toQuantityMicros(value: string): bigint {
   if (!/^(0|[1-9]\d*)(?:\.\d{1,6})?$/.test(value)) throw new Error('Invalid nonnegative decimal quantity')
   const [whole, fractional = ''] = value.split('.')
+  if (whole.length > 18) throw new Error('Quantity exceeds safe supported precision')
   return BigInt(whole) * scale + BigInt(fractional.padEnd(6, '0'))
 }
 
