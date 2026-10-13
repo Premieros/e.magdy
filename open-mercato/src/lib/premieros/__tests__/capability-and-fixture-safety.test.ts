@@ -1,3 +1,4 @@
+import { describe, it, expect } from '@jest/globals'
 import { canonicalOwners, resolveVerticalCapabilities } from '../capability-profiles'
 import { assertFixtureEnvironmentSafe, type FixtureEnvironment } from '../fixture-safety'
 
