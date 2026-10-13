@@ -59,9 +59,20 @@ try {
     Array.isArray(claims.roles) && claims.roles.includes('superadmin') && typeof claims.sid === 'string')
   cookie = response.headers.getSetCookie().map(x=>x.split(';')[0]).join('; ')
   check(cookie.includes('auth_token='))
-  const backend = await fetch(origin + '/backend', { redirect: 'manual',
-    headers: { cookie }, signal: AbortSignal.timeout(30000) })
-  console.log('Authenticated backend HTTP status: ' + backend.status)
+  let backendUrl = origin + '/backend'
+  let backend
+  for (let i = 0; i < 4; i += 1) {
+    backend = await fetch(backendUrl, { redirect: 'manual',
+      headers: { cookie }, signal: AbortSignal.timeout(30000) })
+    console.log('Authenticated backend HTTP status: ' + backend.status)
+    if (![302,303,307,308].includes(backend.status)) break
+    const location = backend.headers.get('location')
+    check(location)
+    const next = new URL(location, backendUrl)
+    console.log('Authenticated redirect path: ' + next.pathname)
+    check(next.origin === origin && next.pathname !== '/login' && next.pathname !== '/start')
+    backendUrl = next.href
+  }
   check(backend.status === 200)
   const logout = await fetch(origin + '/api/auth/logout', { method: 'POST', redirect: 'manual',
     headers: { cookie, origin }, signal: AbortSignal.timeout(30000) })
