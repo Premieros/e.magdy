@@ -1,6 +1,7 @@
 "use client"
 
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
+import { DirectionProvider } from '@radix-ui/react-direction'
 import { usePathname } from 'next/navigation'
 import type { Locale } from '@open-mercato/shared/lib/i18n/config'
 import type { Dict } from '@open-mercato/shared/lib/i18n/context'
@@ -25,18 +26,25 @@ type AppProvidersProps = {
 
 export function AppProviders({ children, locale, dict, localeLocked, supportedLocales, demoModeEnabled, noticeBarsEnabled }: AppProvidersProps) {
   const profile = resolveClientBootstrapProfile(usePathname())
+  const direction = locale === 'ar' ? 'rtl' : 'ltr'
+  useEffect(() => {
+    document.documentElement.lang = locale
+    document.documentElement.dir = direction
+  }, [locale, direction])
   return (
-    <I18nProvider locale={locale} dict={dict} localeLocked={localeLocked} supportedLocales={supportedLocales}>
-      <ClientBootstrapProvider profile={profile}>
-        <ComponentOverridesBootstrap profile={profile}>
-          <ThemeProvider>
-            <QueryProvider>
-              <FrontendLayout footer={<AuthFooter />}>{children}</FrontendLayout>
-              {noticeBarsEnabled ? <GlobalNoticeBars demoModeEnabled={demoModeEnabled} /> : null}
-            </QueryProvider>
-          </ThemeProvider>
-        </ComponentOverridesBootstrap>
-      </ClientBootstrapProvider>
-    </I18nProvider>
+    <DirectionProvider dir={direction}>
+      <I18nProvider locale={locale} dict={dict} localeLocked={localeLocked} supportedLocales={supportedLocales}>
+        <ClientBootstrapProvider profile={profile}>
+          <ComponentOverridesBootstrap profile={profile}>
+            <ThemeProvider>
+              <QueryProvider>
+                <FrontendLayout footer={<AuthFooter />}>{children}</FrontendLayout>
+                {noticeBarsEnabled ? <GlobalNoticeBars demoModeEnabled={demoModeEnabled} /> : null}
+              </QueryProvider>
+            </ThemeProvider>
+          </ComponentOverridesBootstrap>
+        </ClientBootstrapProvider>
+      </I18nProvider>
+    </DirectionProvider>
   )
 }

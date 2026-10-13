@@ -33,7 +33,7 @@ export default async function RootLayout({
   const noticeBarsEnabled = process.env.OM_INTEGRATION_TEST !== 'true'
   const devRuntime = resolveDevRuntimeLayoutConfig(process.env)
   return (
-    <html lang={locale} suppressHydrationWarning>
+    <html lang={locale} dir={locale === 'ar' ? 'rtl' : 'ltr'} suppressHydrationWarning>
       <head>
         {devRuntime.meta.map((meta) => (
           <meta key={meta.name} name={meta.name} content={meta.content} />

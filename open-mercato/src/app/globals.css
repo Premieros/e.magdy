@@ -1146,3 +1146,46 @@ body[data-demo-feedback-fab="visible"] main {
 .om-mdx-editor .cm-dropCursor {
   border-left-color: var(--foreground);
 }
+
+/* App-owned RTL compatibility for the physical spacing in Mercato 0.9.0.
+   Radix interaction and portal direction are supplied by DirectionProvider. */
+html[dir="rtl"] body {
+  font-family: Tahoma, "Segoe UI", Arial, sans-serif;
+}
+html[dir="rtl"] .text-left { text-align: right; }
+html[dir="rtl"] .text-right { text-align: left; }
+html[dir="rtl"] .ml-auto { margin-left: 0; margin-right: auto; }
+html[dir="rtl"] .mr-auto { margin-right: 0; margin-left: auto; }
+html[dir="rtl"] aside.border-r {
+  border-right-width: 0;
+  border-left-width: 1px;
+}
+html[dir="rtl"] aside.absolute.left-0 {
+  left: auto;
+  right: 0;
+}
+/* The desktop collapse control uses an inline physical left coordinate. */
+html[dir="rtl"] .min-h-svh > button.fixed.top-4[style*="left:"] {
+  left: auto !important;
+  right: calc(240px - 14px);
+}
+html[dir="rtl"] .min-h-svh:has(> aside[style*="width: 80px"]) > button.fixed.top-4[style*="left:"] {
+  right: calc(80px - 14px);
+}
+html[dir="rtl"] [role="option"] .absolute.right-2,
+html[dir="rtl"] [role="menuitem"] .absolute.right-2 {
+  right: auto;
+  left: 0.5rem;
+}
+html[dir="rtl"] [role="dialog"] > button.absolute.right-4 {
+  right: auto;
+  left: 1rem;
+}
+html[dir="rtl"] input:is([type="email"], [type="url"], [type="tel"], [type="password"], [type="number"], [inputmode="numeric"], [inputmode="decimal"]),
+html[dir="rtl"] :is(code, pre, [dir="ltr"]) {
+  direction: ltr;
+  text-align: left;
+}
+html[dir="rtl"] :is(.lucide-chevron-left, .lucide-chevron-right, .lucide-arrow-left, .lucide-arrow-right, .lucide-panel-left-open, .lucide-panel-left-close) {
+  transform: scaleX(-1);
+}
