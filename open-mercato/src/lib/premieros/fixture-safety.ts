@@ -25,8 +25,8 @@ export function assertFixtureEnvironmentSafe(env: FixtureEnvironment): void {
   if (env.projectId !== env.approvedProjectId || env.schema !== env.approvedSchema) {
     throw new Error('Fixture target does not match the approved isolated target')
   }
-  if (env.projectId === 'yumeijsyiphzdsulsubf' && env.schema === 'garments_ops') {
-    throw new Error('Fixture seeding is forbidden against the production ERP schema')
+  if (env.projectId === 'yumeijsyiphzdsulsubf') {
+    throw new Error('Fixture seeding is forbidden against the production Supabase project')
   }
   if (!env.approvalTokenPresent) throw new Error('Fixture seeding requires explicit approval')
 }
