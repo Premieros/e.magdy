@@ -33,7 +33,7 @@ jobs:
       - name: Install exact pinned dependencies
         run: yarn install --immutable
       - name: Validate ERP foundations
-        run: yarn jest --config jest.config.cjs --runInBand --runTestsByPath src/lib/premieros/__tests__/capability-and-fixture-safety.test.ts src/lib/premieros/__tests__/organization-profile.test.ts
+        run: yarn jest --config jest.config.cjs --runInBand --runTestsByPath src/lib/premieros/__tests__/capability-and-fixture-safety.test.ts src/lib/premieros/__tests__/organization-profile.test.ts src/lib/premieros/__tests__/capability-access.test.ts
       - name: Inventory app-owned screens
         run: node scripts/premieros-route-inventory.mjs > "$RUNNER_TEMP/premieros-routes.json"
       - name: Typecheck foundation source (isolated from generated registry)
