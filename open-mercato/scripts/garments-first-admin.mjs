@@ -126,28 +126,23 @@ async function main() {
     throw new Error('GARMENTS_SETUP_ADMIN_PASSWORD must be at least 16 characters')
   }
 
-    // Run the version-pinned upstream CLI inside this same Node process.
-    // No demo accounts, demo sample data, migrations or skip-policy flags.
-    // The password is never part of the parent shell command.
-    const originalArgv = process.argv
-    try {
-      process.argv = [
-        process.argv[0],
-        process.argv[1],
-        'auth', 'setup',
-        '--orgName', 'PremierOS Garments',
-        '--orgSlug', 'premieros-garments',
-        '--email', email,
-        '--password', password,
-        '--roles', 'superadmin,admin,employee',
-      ]
-      console.log('Starting official Open Mercato first-tenant setup in garments_ops.')
-      await import('./mercato-cli.mjs')
-      if (process.exitCode && process.exitCode !== 0) {
-        throw new Error('Open Mercato setup reported an unsuccessful exit code')
-      }
-    } finally {
-      process.argv = originalArgv
+    // Run CLI in its own process and wait for completion.
+    // The password stays in the private environment, not OS arguments.
+    const { spawnSync } = await import('node:child_process')
+    const cliChildFile = resolve(
+      dirname(fileURLToPath(import.meta.url)),
+      'garments-auth-setup-child.mjs'
+    )
+    console.log('Starting official Open Mercato first-tenant setup in garments_ops.')
+    const setup = spawnSync(process.execPath, [cliChildFile], {
+      cwd: resolve(dirname(fileURLToPath(import.meta.url)), '..'),
+      env: { ...process.env, GARMENTS_SETUP_ADMIN_PASSWORD: password },
+      stdio: 'inherit',
+      timeout: 150_000,
+    })
+    if (setup.error) throw setup.error
+    if (setup.status !== 0) {
+      throw new Error('Open Mercato auth setup failed; inspect garments_ops before retrying')
     }
     // Open Mercato 0.9.0 encrypts auth:user.email at rest. Resolve its
     // official deterministic lookup hashes; comparing u.email to plaintext
