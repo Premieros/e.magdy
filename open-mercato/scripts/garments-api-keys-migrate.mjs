@@ -83,7 +83,7 @@ async function main() {
     if (s.migration_table !== null) {
       const history = (await connection.query(
         'SELECT name FROM garments_ops.mikro_orm_migrations_api_keys ORDER BY id'
-      )).rows.map((row) => String(row.name).replace(/\\.(?:js|ts)$/, ''))
+      )).rows.map((row) => String(row.name).replace(/\.(?:js|ts)$/, ''))
       check(history.length <= expected.length &&
         history.every((name, index) => name === expected[index]),
         'Migration history is not the exact official api_keys prefix')
