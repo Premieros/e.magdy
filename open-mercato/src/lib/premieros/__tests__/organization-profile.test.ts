@@ -1,3 +1,4 @@
+import { describe, it, expect } from '@jest/globals'
 import { parseOrganizationProfile, profileSupports } from '../organization-profile'
 
 describe('strict organization capability profile', () => {
