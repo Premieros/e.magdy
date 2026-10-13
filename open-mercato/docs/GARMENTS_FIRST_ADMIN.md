@@ -174,3 +174,9 @@ After successful initialization, the application `/start` should display 1 tenan
 Then check authorized role and navigation. If the command fails, **do not rerun blindly**: examine the error first and inspect only the `garments_ops` tenant, organization, user and role tables. The bootstrap deliberately refuses a partially initialized installation to prevent double provision.
 
 No schema migration or Supabase Auth signup is part of this runbook.
+
+## Git-triggered build diagnostic — 2026-10-13
+
+The previous Vercel **Redeploy** finished `READY` with an empty `garments_ops` tenant/user/organization/role set, and build logs did not show `Beginning explicitly approved one-time garments first-admin initialization`. The pinned `build` script and restricted DB target checks were present and ran. This does **not** establish that first-admin initialization completed.
+
+After operator authorization, a documentation-only change in `open-mercato/` can trigger a **fresh Git-based Production build** of `deploy/garments-mercato` with the project's current Production environment. Inspect its outcome and the `garments_ops` counts before taking further action. Never retry after partial initialization. Once the initial account and superadmin membership have been verified, delete both temporary bootstrap Production variables, deploy normally with the gate absent, and rotate the initial password.
