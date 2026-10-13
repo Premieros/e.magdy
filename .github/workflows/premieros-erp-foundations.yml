@@ -36,6 +36,8 @@ jobs:
         run: yarn jest --config jest.config.cjs --runInBand --runTestsByPath src/lib/premieros/__tests__/capability-and-fixture-safety.test.ts src/lib/premieros/__tests__/organization-profile.test.ts src/lib/premieros/__tests__/capability-access.test.ts src/lib/premieros/__tests__/authorized-organization-profile.test.ts src/lib/premieros/__tests__/quantity-boundaries.test.ts src/lib/premieros/__tests__/settlement-boundaries.test.ts
       - name: Validate native POS order and payment recovery
         run: yarn jest --config jest.config.cjs --runInBand --runTestsByPath src/modules/premier_pos/lib/__tests__/checkout.test.ts
+      - name: Validate native POS API scope and calculations
+        run: yarn jest --config jest.config.cjs --runInBand --runTestsByPath src/modules/premier_pos/api/__tests__/routes.test.ts
       - name: Inventory app-owned screens
         run: node scripts/premieros-route-inventory.mjs > "$RUNNER_TEMP/premieros-routes.json"
       - name: Typecheck foundation source (isolated from generated registry)
