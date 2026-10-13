@@ -50,6 +50,12 @@ describe('test fixture fail-closed guard', () => {
       schema: 'garments_ops',
       approvedSchema: 'garments_ops',
     }, 'forbidden'],
+    [{
+      projectId: 'yumeijsyiphzdsulsubf',
+      approvedProjectId: 'yumeijsyiphzdsulsubf',
+      schema: 'other_schema',
+      approvedSchema: 'other_schema',
+    }, 'forbidden'],
   ] as const)('rejects unsafe fixture target %#', (patch, message) => {
     expect(() => assertFixtureEnvironmentSafe({ ...isolated, ...patch })).toThrow(message)
   })
