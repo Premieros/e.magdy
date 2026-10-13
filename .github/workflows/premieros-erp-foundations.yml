@@ -1,0 +1,36 @@
+name: PremierOS Open Mercato foundation checks
+
+on:
+  pull_request:
+    paths:
+      - 'open-mercato/src/lib/premieros/**'
+      - 'open-mercato/package.json'
+      - 'open-mercato/yarn.lock'
+      - '.github/workflows/premieros-erp-foundations.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  foundation-unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: open-mercato
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Activate pinned Yarn
+        run: corepack enable
+      - name: Install exact pinned dependencies
+        run: yarn install --immutable
+      - name: Validate ERP foundations
+        run: yarn jest --config jest.config.cjs --runInBand --runTestsByPath src/lib/premieros/__tests__/capability-and-fixture-safety.test.ts src/lib/premieros/__tests__/organization-profile.test.ts
+      - name: Typecheck foundation source
+        run: yarn tsc --noEmit --pretty false
