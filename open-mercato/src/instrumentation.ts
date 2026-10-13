@@ -4,6 +4,8 @@ export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     const { installGarmentsDbCa } = await import('../scripts/garments-db-ca.mjs')
     installGarmentsDbCa()
+    const { configureGarmentsRuntimeDb } = await import('../scripts/garments-runtime-db.mjs')
+    configureGarmentsRuntimeDb()
   }
   // Refuse to serve traffic in production with a missing, placeholder, or too-short JWT signing
   // secret: those tokens are forgeable by anyone who has read the published compose files. Skipped

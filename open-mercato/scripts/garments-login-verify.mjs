@@ -2,6 +2,7 @@
  * One-shot live sign-in verification. Never part of the normal build.
  * Password, cookies, JWT and database credentials are never logged or exported.
  */
+import { configureGarmentsRuntimeDb } from './garments-runtime-db.mjs'
 import { assertRuntimeConfig } from './garments-target-policy.mjs'
 import { installGarmentsDbCa } from './garments-db-ca.mjs'
 import { installSecretOutputGuard } from './garments-secret-output-guard.mjs'
@@ -16,6 +17,7 @@ try {
     e.VERCEL_GIT_COMMIT_REF === 'deploy/garments-mercato' &&
     /^[a-f0-9]{40}$/.test(e.GARMENTS_VERIFY_COMMIT ?? '') &&
     e.VERCEL_GIT_COMMIT_SHA === e.GARMENTS_VERIFY_COMMIT)
+  check(configureGarmentsRuntimeDb(e))
   assertRuntimeConfig(e)
   check(e.MIKRO_ORM_SCHEMA === 'garments_ops' && e.TENANT_DATA_ENCRYPTION === 'true')
   check(typeof e.GARMENTS_SETUP_ADMIN_PASSWORD === 'string' && e.GARMENTS_SETUP_ADMIN_PASSWORD.length >= 16)
