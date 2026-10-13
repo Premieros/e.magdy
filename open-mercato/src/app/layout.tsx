@@ -1,4 +1,6 @@
 import type { Metadata } from 'next'
+import { headers } from 'next/headers'
+import { selectClientDictionary } from '@/lib/i18n/client-dictionary'
 import './globals.css'
 import '@/lib/i18n/register-dictionary-loader'
 import { AppProviders } from '@/components/AppProviders'
@@ -27,7 +29,9 @@ export default async function RootLayout({
   // the app registry) and handed to the client provider, which can read neither.
   const supportedLocales = await resolveSupportedLocalesForRequest()
   const locale = await detectLocale({ supportedLocales })
-  const dict = await loadDictionary(locale)
+  const fullDictionary = await loadDictionary(locale)
+  const pathname = (await headers()).get('x-next-url') ?? ''
+  const dict = selectClientDictionary(pathname, fullDictionary)
   const localeLocked = resolveForcedLocale(process.env) !== null
   const demoModeEnabled = process.env.DEMO_MODE !== 'false'
   const noticeBarsEnabled = process.env.OM_INTEGRATION_TEST !== 'true'
