@@ -14,6 +14,7 @@ import { SettingsButton } from '@open-mercato/ui/backend/SettingsButton'
 import { useBackendChrome } from '@open-mercato/ui/backend/BackendChromeProvider'
 import { useT } from '@open-mercato/shared/lib/i18n/context'
 import { AiAssistantShellIntegration } from '@/components/AiAssistantShellIntegration'
+import { AppearanceControls } from '@/components/AppearanceControls'
 
 const LazyAiChatHeaderButton = dynamic(
   () => import('@open-mercato/ai-assistant/frontend').then((module) => module.AiChatHeaderButton),
@@ -196,6 +197,7 @@ export function BackendHeaderChrome({
       </span>
 
       {isReady && showNotifications ? <LazyNotificationBellWrapper /> : null}
+      <AppearanceControls />
       <ProfileDropdown email={email} />
     </>
   )
