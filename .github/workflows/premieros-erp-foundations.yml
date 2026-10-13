@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'open-mercato/src/lib/premieros/**'
+      - 'open-mercato/src/modules/premier_pos/**'
       - 'open-mercato/scripts/premieros-route-inventory.mjs'
       - 'open-mercato/tsconfig.premieros-foundations.json'
       - 'open-mercato/package.json'
@@ -38,6 +39,8 @@ jobs:
         run: yarn jest --config jest.config.cjs --runInBand --runTestsByPath src/modules/premier_pos/lib/__tests__/checkout.test.ts
       - name: Validate native POS API scope and calculations
         run: yarn jest --config jest.config.cjs --runInBand --runTestsByPath src/modules/premier_pos/api/__tests__/routes.test.ts
+      - name: Validate POS online-state rendering
+        run: yarn jest --config jest.config.cjs --runInBand --runTestsByPath src/modules/premier_pos/lib/__tests__/online-status.test.ts
       - name: Inventory app-owned screens
         run: node scripts/premieros-route-inventory.mjs > "$RUNNER_TEMP/premieros-routes.json"
       - name: Typecheck foundation source (isolated from generated registry)
