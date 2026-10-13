@@ -50,7 +50,7 @@
   "appShell.goToDashboard": "대시보드로 이동",
   "appShell.moreActions": "추가 작업",
   "appShell.openMenu": "메뉴 열기",
-  "appShell.productName": "Open Mercato",
+  "appShell.productName": "PremierOS",
   "appShell.searchNavAria": "탐색 검색",
   "appShell.searchNavClear": "검색 지우기",
   "appShell.searchNavPlaceholder": "검색...",
@@ -1176,5 +1176,7 @@
   "vector.api.errors.purgeFailed": "벡터 인덱스 삭제에 실패했습니다",
   "vector.api.errors.reindexFailed": "벡터 재인덱싱에 실패했습니다",
   "vector.api.errors.searchFailed": "벡터 검색에 실패했습니다",
-  "vector.api.errors.updateFailed": "벡터 설정 업데이트에 실패했습니다."
+  "vector.api.errors.updateFailed": "벡터 설정 업데이트에 실패했습니다.",
+  "auth.login.brandName": "PremierOS",
+  "auth.login.logoAlt": "PremierOS logo"
 }

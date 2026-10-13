@@ -50,7 +50,7 @@
   "appShell.goToDashboard": "Zum Dashboard",
   "appShell.moreActions": "Weitere Aktionen",
   "appShell.openMenu": "Menü öffnen",
-  "appShell.productName": "Open Mercato",
+  "appShell.productName": "PremierOS",
   "appShell.searchNavAria": "Navigation durchsuchen",
   "appShell.searchNavClear": "Suche zurücksetzen",
   "appShell.searchNavPlaceholder": "Suchen...",
@@ -1176,5 +1176,7 @@
   "vector.api.errors.purgeFailed": "Vektor-Index-Bereinigung fehlgeschlagen",
   "vector.api.errors.reindexFailed": "Vektor-Neuindizierung fehlgeschlagen",
   "vector.api.errors.searchFailed": "Vektorsuche fehlgeschlagen",
-  "vector.api.errors.updateFailed": "Vektor-Einstellungen konnten nicht aktualisiert werden."
+  "vector.api.errors.updateFailed": "Vektor-Einstellungen konnten nicht aktualisiert werden.",
+  "auth.login.brandName": "PremierOS",
+  "auth.login.logoAlt": "PremierOS logo"
 }

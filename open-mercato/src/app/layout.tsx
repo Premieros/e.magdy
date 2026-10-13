@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
 import { headers } from 'next/headers'
-import { selectClientDictionary } from '@/lib/i18n/client-dictionary'
 import './globals.css'
+import './premier-theme.css'
 import '@/lib/i18n/register-dictionary-loader'
 import { AppProviders } from '@/components/AppProviders'
+import { selectClientDictionary } from '@/lib/i18n/client-dictionary'
 
 import { THEME_INIT_SCRIPT } from '@open-mercato/ui/theme/theme-init-script'
 import { detectLocale, loadDictionary, resolveSupportedLocalesForRequest } from '@open-mercato/shared/lib/i18n/server'
@@ -13,10 +14,10 @@ import { DevRuntimeDiagnosticsBanner } from '@open-mercato/ui/backend/dev/DevRun
 import { DevRuntimeReporter } from '@open-mercato/ui/backend/dev/DevRuntimeReporter'
 
 export const metadata: Metadata = {
-  title: 'Open Mercato',
+  title: 'PremierOS',
   description: 'AI-supportive, modular ERP foundation for product & service companies',
   icons: {
-    icon: '/open-mercato.svg',
+    icon: '/brand/premier-os-icon.png',
   },
 }
 
