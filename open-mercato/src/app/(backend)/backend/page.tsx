@@ -1,9 +1,13 @@
+import { bootstrap } from '@/bootstrap'
 import { getAuthFromCookies } from '@open-mercato/shared/lib/auth/server'
 import { redirect } from 'next/navigation'
 import { DashboardScreen } from '@open-mercato/ui/backend/dashboard'
 import { createRequestContainer } from '@open-mercato/shared/lib/di/container'
 import { resolvePageMiddlewareRedirect } from '@open-mercato/shared/lib/middleware/page-executor'
 import { backendMiddlewareEntries } from '@/.mercato/generated/backend-middleware.generated'
+
+// Match the backend catch-all: register entities/DI before resolving the session.
+bootstrap()
 
 export default async function BackendIndex() {
   const auth = await getAuthFromCookies()
