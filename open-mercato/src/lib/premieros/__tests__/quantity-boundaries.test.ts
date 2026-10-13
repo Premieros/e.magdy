@@ -26,6 +26,11 @@ describe('quantity preflight invariants across business verticals', () => {
     },
   )
 
+  it('rejects quantities beyond the supported preflight precision', () => {
+    expect(() => toQuantityMicros('1234567890123456789')).toThrow()
+    expect(toQuantityMicros('123456789012345678')).toBe(123456789012345678000000n)
+  })
+
   it('does not allow zero posting or non-positive remaining', () => {
     expect(() => assertRemainingQuantity({
       authorizedQuantity: '0', alreadyPostedQuantity: '0', proposedQuantity: '0',
