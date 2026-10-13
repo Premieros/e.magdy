@@ -91,6 +91,11 @@ async function main() {
       'Unexpected upstream migration files; stop')
 
     const { MikroORM } = await import('@mikro-orm/core')
+    const { pathToFileURL } = await import('node:url')
+    const dynamicImportProvider = async (id) => {
+      const specifier = id.startsWith('/') ? pathToFileURL(id).href : id
+      return import(specifier)
+    }
     const { PostgreSqlDriver } = await import('@mikro-orm/postgresql')
     const { ReflectMetadataProvider } = await import('@mikro-orm/decorators/legacy')
     await import('@mikro-orm/migrations')
@@ -99,6 +104,7 @@ async function main() {
       clientUrl: process.env.DATABASE_URL,
       schema,
       entities: [],
+      dynamicImportProvider,
       metadataProvider: ReflectMetadataProvider,
       discovery: { warnWhenNoEntities: false },
       migrations: {
