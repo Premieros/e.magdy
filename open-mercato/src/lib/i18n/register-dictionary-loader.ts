@@ -1,8 +1,10 @@
-import { registerAppDictionaryLoader } from '@open-mercato/shared/lib/i18n/server'
+import { registerAppDictionaryLoader, registerLocales } from '@open-mercato/shared/lib/i18n/server'
 import type { Locale } from '@open-mercato/shared/lib/i18n/config'
 import { registerModules } from '@open-mercato/shared/lib/modules/registry'
 import type { Module } from '@open-mercato/shared/modules/registry'
 import { loadI18nModules } from '@/.mercato/generated/modules.i18n.loaders.generated'
+
+registerLocales(['ar'])
 
 function registerLoadedLocaleModules(
   localeModules: Module[],
@@ -13,6 +15,8 @@ function registerLoadedLocaleModules(
 
 async function loadAppDictionary(locale: Locale): Promise<Record<string, unknown>> {
   switch (locale) {
+    case 'ar':
+      return import('../../i18n/ar.json').then((module) => module.default)
     case 'en':
       return import('../../i18n/en.json').then((module) => module.default)
     case 'pl':
