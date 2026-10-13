@@ -84,8 +84,11 @@ async function main() {
     const s = preflight[0]
     check(Number(s.tenants) === 1 && Number(s.organizations) === 1 && Number(s.roles) === 3 &&
       Number(s.approved_roles) === 3, 'Tenant, organization, or roles have changed')
-    check(Number(s.users) === 0 && Number(s.user_roles) === 0 && Number(s.role_acls) === 0,
-      'Refusing recovery after another bootstrap/user/ACL operation')
+    check(
+      (Number(s.users) === 0 && Number(s.user_roles) === 0 && Number(s.role_acls) === 0) ||
+      (Number(s.users) === 1 && Number(s.user_roles) === 1),
+      'Recovery state does not match a fresh or safely resumable administrator'
+    )
     check(Number(s.api_keys) === 0 && Number(s.api_keys_migrations) === 4,
       'Official api_keys migrations are incomplete or contain unexpected data')
     // Refuse to bootstrap before the enabled module is part of the app.
@@ -99,6 +102,32 @@ async function main() {
     if (isTenantDataEncryptionEnabled()) {
       const { createKmsService } = await import('@open-mercato/shared/lib/encryption/kms')
       check(createKmsService().isHealthy(), 'Encryption KMS is not healthy')
+    }
+
+    // An interrupted prior attempt may have successfully created the only
+    // owner user before email encryption or ACL sync completed. Never create a
+    // duplicate. Resume ONLY if that exact existing owner has the correct
+    // organization, superadmin role, email hash, and stored password.
+    const resume = Number(s.users) === 1
+    if (resume) {
+      const existing = (await client.query([
+        'SELECT u.id, u.email_hash, u.password_hash, u.is_confirmed,',
+        'u.tenant_id::text AS tenant_id, u.organization_id::text AS org_id',
+        'FROM garments_ops.users u',
+        'JOIN garments_ops.user_roles ur ON ur.user_id=u.id',
+        'JOIN garments_ops.roles r ON r.id=ur.role_id',
+        "WHERE u.deleted_at IS NULL AND ur.deleted_at IS NULL",
+        "AND r.deleted_at IS NULL AND r.name='superadmin'",
+        'AND r.tenant_id=u.tenant_id AND u.tenant_id=$1::uuid',
+        'AND u.organization_id=$2::uuid',
+      ].join(' '), [s.tenant_id, s.org_id])).rows
+      check(existing.length === 1 && existing[0].is_confirmed === true &&
+        emailHashLookupValues(email).includes(existing[0].email_hash),
+        'Existing user does not match the approved first administrator')
+      const { compare } = await import('bcryptjs')
+      check(typeof existing[0].password_hash === 'string' &&
+        await compare(password, existing[0].password_hash),
+        'Existing owner password differs from the approved Production secret')
     }
 
     function stage(name) {
@@ -123,7 +152,8 @@ async function main() {
     // Add-user uses the official transactional staff/role command. Because it
     // does not encrypt the email itself, run the official encrypt-email pass
     // after creation when encryption is enabled. Both are schema-scoped.
-    stage('add-user')
+    if (!resume) stage('add-user')
+    else console.log('Exact existing owner verified; resuming remaining official setup stages')
     if (isTenantDataEncryptionEnabled()) stage('encrypt-email')
     stage('sync-acls')
 
