@@ -102,7 +102,19 @@ async function captureSaleInternal(intent: PosIntent, paymentMethodId: string, t
   if (!intent.paymentId) {
     const existing = await transport.list('sales/payments', { orderId: intent.orderId, pageSize: 100 })
     const recovered = existing.items.find((row) => (row.payment_reference ?? row.paymentReference) === intent.reference)
-    if (recovered?.id) intent.paymentId = String(recovered.id)
+    if (recovered?.id) {
+      // Recovery must never attach a foreign or mismatched tender merely because
+      // its human-facing payment reference happens to match.
+      const field = (name: string, alternate: string) => recovered[name] ?? recovered[alternate]
+      if (field('orderId', 'order_id') !== intent.orderId ||
+          field('tenantId', 'tenant_id') !== intent.tenantId ||
+          field('organizationId', 'organization_id') !== intent.organizationId ||
+          field('currencyCode', 'currency_code') !== intent.currencyCode ||
+          Number(recovered.amount) !== due) {
+        throw new UncertainCheckoutError('payment')
+      }
+      intent.paymentId = String(recovered.id)
+    }
     else if (intent.paymentUncertain) throw new UncertainCheckoutError('payment')
     else {
       // Set before dispatch: even a lost response cannot cause a second capture.
