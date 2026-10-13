@@ -15,6 +15,7 @@ import { Button } from '@open-mercato/ui/primitives/button'
 import { Input } from '@open-mercato/ui/primitives/input'
 import { createSalesOrderLineDraft, type SalesOrderLineDraft } from '@open-mercato/core/modules/sales/components/documents/SalesOrderDraftLines'
 import { AppearanceControls } from '@/components/AppearanceControls'
+import { useOnlineStatus } from '../lib/useOnlineStatus'
 import { saveOrder, captureSale, readSavedOrder, type PosIntent, type PosSavedOrder, type Row, nativeTransport, type PosTransport } from '../lib/checkout'
 
 const LineItemDialog = dynamic(() => import('@open-mercato/core/modules/sales/components/documents/LineItemDialog').then((module) => module.LineItemDialog), { ssr: false })
@@ -124,7 +125,7 @@ function ScopedWorkspace({ userId, tenantId, organizationId }: { userId: string;
       }
     } finally { busyRef.current = false; if (mounted.current) setBusy(false) }
   }
-  const offline = typeof navigator !== 'undefined' && !navigator.onLine
+  const offline = !useOnlineStatus()
   return (
     <section className="premier-pos mx-auto flex w-full max-w-[1600px] flex-col gap-3 p-2 md:p-3" aria-label={t('premier_pos.title')}>
       <header className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-card p-2">
