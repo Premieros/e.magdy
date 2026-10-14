@@ -21,7 +21,7 @@ const request = (body: unknown) => new Request('https://example.invalid/api/prem
 const cart = () => ({ expectedTenantId: tenant, expectedOrganizationId: org, channelId: channel, currencyCode: 'EGP', lines: [{ kind: 'service', name: 'Generic service', currencyCode: 'EGP', quantity: 2, unitPriceGross: 120, taxRate: 20, discountPercent: 10 }] })
 const scoped = jest.mocked(resolvePosScope)
 function scope() {
-  const em = { findOne: jest.fn(async (_entity: unknown, _where: unknown, _options: unknown) => ({ id: channel })), find: jest.fn(async (_entity: unknown, _where: unknown, _options: unknown) => [{ id: channel, name: 'Cash', code: 'cash' }]) }
+  const em = { findOne: jest.fn(async (_entity: unknown, where: unknown, _options: unknown) => 'code' in (where as Record<string, unknown>) ? { code: 'EGP' } : { id: channel }), find: jest.fn(async (_entity: unknown, _where: unknown, _options: unknown) => [{ id: channel, name: 'Cash', code: 'cash' }]) }
   const calc = new DefaultSalesCalculationService()
   const calculate = jest.spyOn(calc, 'calculateDocumentTotals')
   const generator = { generate: jest.fn(async (_input: unknown) => ({ number: 'NATIVE-1' })) }
@@ -86,4 +86,19 @@ test('currency options deny missing authentication before reading native currenc
   scoped.mockRejectedValue(new CrudHttpError(401, { error: 'Authentication required' }))
   const response = await currencyOptions(new Request('https://example.invalid/api/premier_pos/currency-options'))
   expect(response.status).toBe(401)
+})
+
+test('preview refuses currency not active in this organization without calculation', async () => {
+  const f = scope()
+  f.em.findOne.mockResolvedValueOnce({ id: channel }).mockResolvedValueOnce(null as never)
+  const response = await preview(request(cart()))
+  expect(response.status).toBe(403)
+  expect(f.calculate).not.toHaveBeenCalled()
+})
+test('preview checks official currency scope before computing totals', async () => {
+  const f = scope()
+  expect((await preview(request(cart()))).status).toBe(200)
+  expect(f.em.findOne).toHaveBeenCalledWith(expect.anything(), {
+    code: 'EGP', tenantId: tenant, organizationId: org, deletedAt: null, isActive: true,
+  }, { fields: ['code'] })
 })
