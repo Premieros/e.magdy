@@ -42,6 +42,8 @@ jobs:
         run: yarn jest --config jest.config.cjs --runInBand --runTestsByPath src/modules/premier_pos/api/__tests__/routes.test.ts
       - name: Validate POS online-state rendering
         run: yarn jest --config jest.config.cjs --runInBand --runTestsByPath src/modules/premier_pos/lib/__tests__/online-status.test.ts
+      - name: Validate canonical order lifecycle read-model
+        run: yarn jest --config jest.config.cjs --runInBand --runTestsByPath src/modules/premier_pos/lib/__tests__/order-trace.test.ts
       - name: Inventory app-owned screens
         run: node scripts/premieros-route-inventory.mjs > "$RUNNER_TEMP/premieros-routes.json"
       - name: Typecheck foundation source (isolated from generated registry)
