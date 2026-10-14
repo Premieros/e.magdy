@@ -117,3 +117,33 @@ test('invoice recovery cannot reuse a document from a foreign organization', asy
   await expect(captureSale(intent, 'cash', f.transport)).rejects.toThrow('POS_INVOICE_UNCERTAIN')
   expect(f.calls.filter((path) => path === 'sales/invoices')).toHaveLength(1)
 })
+
+test('readback refuses a saved order that belongs to a different sales channel', async () => {
+  const f = fixture(), intent = makeIntent()
+  await saveOrder(intent, f.transport)
+  f.rows['sales/orders'][0].channelId = 'foreign-channel'
+  await expect(readSavedOrder(intent, f.transport)).rejects.toThrow('scope or reference changed')
+  expect(f.calls).toEqual(['sales/orders'])
+})
+test('recovery refuses another payment method even with identical reference and amount', async () => {
+  const f = fixture(), intent = makeIntent()
+  await captureSale(intent, 'cash', f.transport)
+  f.rows['sales/payments'][0].paymentMethodId = 'card'
+  f.rows['sales/orders'][0].outstandingAmount = 240
+  intent.paymentId = undefined
+  await expect(captureSale(intent, 'cash', f.transport)).rejects.toThrow('POS_PAYMENT_UNCERTAIN')
+  expect(f.calls.filter((path) => path === 'sales/payments')).toHaveLength(1)
+})
+test('conflicting concurrent tender methods do not silently share a capture promise', async () => {
+  const f = fixture(), intent = makeIntent()
+  const first = captureSale(intent, 'cash', f.transport)
+  await expect(captureSale(intent, 'card', f.transport)).rejects.toThrow('Payment method changed')
+  await first
+  expect(f.transport.create).toHaveBeenCalledWith('sales/payments', expect.objectContaining({ paymentMethodId: 'cash' }))
+  expect(f.calls.filter((path) => path === 'sales/payments')).toHaveLength(1)
+})
+test('empty tender method is denied before any financial command', async () => {
+  const f = fixture()
+  await expect(captureSale(makeIntent(), '', f.transport)).rejects.toThrow('Payment method required')
+  expect(f.calls).toHaveLength(0)
+})
