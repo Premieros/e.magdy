@@ -112,6 +112,7 @@ function ScopedLifecycle({
             }}>{t('premier_pos.traceRefresh')}</button>
           <Link className="rounded-md border px-3 py-2 underline" href="/backend/pos">{t('premier_pos.title')}</Link>
           <Link className="rounded-md border px-3 py-2 underline" href="/backend/wms/inventory">{t('premier_pos.inventory')}</Link>
+          <Link className="rounded-md border px-3 py-2 underline" href="/backend/pos/stock">{t('premier_pos.stockTitle')}</Link>
         </div>
       </header>
       {!enabled ? <p role="alert" className="rounded-md border p-4">{t('premier_pos.scopeRequired')}</p> : (

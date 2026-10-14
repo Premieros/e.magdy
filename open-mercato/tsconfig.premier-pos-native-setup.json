@@ -11,7 +11,10 @@
     "src/modules/premier_pos/components/NativeSetupWorkspace.tsx",
     "src/modules/premier_pos/backend/pos/setup/page.tsx",
     "src/modules/premier_pos/lib/native-catalog-setup.ts",
-    "src/modules/premier_pos/components/NativeCatalogSetup.tsx"
+    "src/modules/premier_pos/components/NativeCatalogSetup.tsx",
+    "src/modules/premier_pos/lib/stock-operations.ts",
+    "src/modules/premier_pos/components/StockOperationsWorkspace.tsx",
+    "src/modules/premier_pos/backend/pos/stock/page.tsx"
   ],
   "exclude": [
     "node_modules",
