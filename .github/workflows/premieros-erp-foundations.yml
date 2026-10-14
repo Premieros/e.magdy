@@ -35,7 +35,7 @@ jobs:
       - name: Install exact pinned dependencies
         run: yarn install --immutable
       - name: Validate ERP foundations
-        run: yarn jest --config jest.config.cjs --runInBand --runTestsByPath src/lib/premieros/__tests__/capability-and-fixture-safety.test.ts src/lib/premieros/__tests__/organization-profile.test.ts src/lib/premieros/__tests__/capability-access.test.ts src/lib/premieros/__tests__/authorized-organization-profile.test.ts src/lib/premieros/__tests__/quantity-boundaries.test.ts src/lib/premieros/__tests__/settlement-boundaries.test.ts src/lib/premieros/__tests__/receipt-preflight.test.ts src/lib/premieros/__tests__/fulfillment-return-preflight.test.ts
+        run: yarn jest --config jest.config.cjs --runInBand --runTestsByPath src/lib/premieros/__tests__/capability-and-fixture-safety.test.ts src/lib/premieros/__tests__/organization-profile.test.ts src/lib/premieros/__tests__/capability-access.test.ts src/lib/premieros/__tests__/authorized-organization-profile.test.ts src/lib/premieros/__tests__/quantity-boundaries.test.ts src/lib/premieros/__tests__/settlement-boundaries.test.ts src/lib/premieros/__tests__/receipt-preflight.test.ts src/lib/premieros/__tests__/fulfillment-return-preflight.test.ts src/lib/premieros/__tests__/html-translation-guard.test.ts
       - name: Validate native POS order and payment recovery
         run: yarn jest --config jest.config.cjs --runInBand --runTestsByPath src/modules/premier_pos/lib/__tests__/checkout.test.ts
       - name: Validate native POS API scope and calculations
