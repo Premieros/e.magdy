@@ -133,6 +133,7 @@ function ScopedWorkspace({ userId, tenantId, organizationId }: { userId: string;
         <div className="flex flex-wrap items-center gap-2">
           <Button type="button" size="sm" variant="outline" disabled={busy || Boolean(intent.current?.paymentUncertain && !intent.current?.paymentId)} onClick={newOrder}><Plus className="size-4" />{t('premier_pos.new')}</Button>
           <Link href="/backend/sales/orders" className="inline-flex items-center gap-1 rounded-md border px-3 py-2 text-sm"><ListOrdered className="size-4" />{t('premier_pos.orders')}</Link>
+          <Link href="/backend/wms/inventory" className="inline-flex items-center gap-1 rounded-md border px-3 py-2 text-sm"><Package className="size-4" />{t('premier_pos.inventory')}</Link>
           <AppearanceControls />
         </div>
       </header>
@@ -144,7 +145,7 @@ function ScopedWorkspace({ userId, tenantId, organizationId }: { userId: string;
         <label className="grid gap-1 text-xs">{t('premier_pos.customerSearch')}<Input value={customerSearch} disabled={locked || cart.length > 0} onChange={(event) => setCustomerSearch(event.target.value)} placeholder={t('premier_pos.customerPlaceholder')} /></label>
         <label className="grid gap-1 text-xs">{t('premier_pos.customer')}<select className={selectClasses} value={customerId} disabled={locked || cart.length > 0} onChange={(event) => setCustomerId(event.target.value)}><option value="">{t('premier_pos.walkIn')}</option>{customers.data?.map((row) => <option key={String(row.id)} value={String(row.id)}>{text(row, 'display_name', 'displayName', 'name', 'title')}</option>)}</select></label>
       </div>
-      {channels.isError || currencies.isError || channels.data?.items.length === 0 || currencies.data?.length === 0 ? <div role="alert" className="rounded-xl border bg-card p-3 text-sm">{t('premier_pos.configRequired')} <Link href="/backend/sales/channels/create" className="text-primary underline">{t('premier_pos.configureChannels')}</Link>{' · '}<Link href="/backend/config/sales" className="text-primary underline">{t('premier_pos.configureSales')}</Link></div> : null}
+      {channels.isError || currencies.isError || channels.data?.items.length === 0 || currencies.data?.length === 0 ? <div role="alert" className="rounded-xl border bg-card p-3 text-sm">{t('premier_pos.configRequired')} <Link href="/backend/sales/channels/create" className="text-primary underline">{t('premier_pos.configureChannels')}</Link>{' · '}<Link href="/backend/config/sales" className="text-primary underline">{t('premier_pos.configureSales')}</Link>{' · '}<Link href="/backend/currencies/currencies" className="text-primary underline">{t('premier_pos.configureCurrencies')}</Link></div> : null}
       <div className="flex gap-2 lg:hidden"><Button variant={!mobileCart ? 'default' : 'outline'} onClick={() => setMobileCart(false)}>{t('premier_pos.products')}</Button><Button variant={mobileCart ? 'default' : 'outline'} onClick={() => setMobileCart(true)}>{t('premier_pos.cart')} ({cart.length})</Button></div>
       <div className="grid min-h-[520px] gap-3 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className={`${mobileCart ? 'hidden lg:flex' : 'flex'} min-w-0 flex-col gap-3 rounded-xl border border-border bg-card p-3`}>
