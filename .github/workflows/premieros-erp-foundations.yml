@@ -5,6 +5,7 @@ on:
     paths:
       - 'open-mercato/src/lib/premieros/**'
       - 'open-mercato/src/modules/premier_pos/**'
+      - 'open-mercato/src/app/layout.tsx'
       - 'open-mercato/scripts/premieros-route-inventory.mjs'
       - 'open-mercato/tsconfig.premieros-foundations.json'
       - 'open-mercato/package.json'
