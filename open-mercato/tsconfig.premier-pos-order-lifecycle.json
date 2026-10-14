@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node", "react"]
+  },
+  "include": [
+    "src/modules/premier_pos/lib/order-trace.ts",
+    "src/modules/premier_pos/components/OrderLifecycleWorkspace.tsx",
+    "src/modules/premier_pos/backend/pos/operations/page.tsx"
+  ],
+  "exclude": ["node_modules", ".mercato", ".next"]
+}

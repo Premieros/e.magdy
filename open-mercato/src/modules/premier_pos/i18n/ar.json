@@ -56,5 +56,22 @@
   "premier_pos.receipt": "إيصال بيع",
   "premier_pos.receiptNote": "هذا الإيصال للدفع المسجّل؛ التسليم والمخزون يتبعان دورة التشغيل المهيأة في النظام.",
   "premier_pos.inventory": "المخزون",
-  "premier_pos.configureCurrencies": "إعداد العملات"
+  "premier_pos.configureCurrencies": "إعداد العملات",
+  "premier_pos.traceTitle": "متابعة دورة الطلب",
+  "premier_pos.traceDescription": "عرض حالة الطلب والفواتير والمدفوعات والشحن وحركات المخزون المسجلة رسميًا",
+  "premier_pos.traceOrders": "أوامر البيع",
+  "premier_pos.traceInvoices": "الفواتير",
+  "premier_pos.tracePayments": "المدفوعات",
+  "premier_pos.traceShipments": "الشحنات",
+  "premier_pos.traceMovements": "حركات WMS المرتبطة مباشرة بالطلب",
+  "premier_pos.tracePaid": "المبلغ المسدد",
+  "premier_pos.traceOutstanding": "المبلغ المتبقي",
+  "premier_pos.traceFulfillment": "حالة التسليم المسجلة",
+  "premier_pos.traceUnavailable": "البيانات غير متاحة أو لا توجد صلاحية لعرض هذا السجل",
+  "premier_pos.traceEmpty": "لا توجد أوامر بيع في هذه الصفحة",
+  "premier_pos.traceChooseOrder": "اختر أمر بيع لعرض دورة تنفيذه",
+  "premier_pos.traceNone": "لا توجد سجلات مطابقة مؤكدة",
+  "premier_pos.traceDisclaimer": "البيانات من وحدات Sales وWMS الرسمية فقط. قد لا تشمل حركات المخزون المرتبطة بشحنة بدلاً من الطلب، وغياب الحركات لا يؤكد عدم الصرف. تعرض القوائم أول 100 سجل فقط، ولا تعني حالة الدفع اكتمال التسليم.",
+  "premier_pos.traceRefresh": "تحديث البيانات",
+  "premier_pos.traceCredits": "إشعارات الدائن والمرتجعات المالية"
 }
