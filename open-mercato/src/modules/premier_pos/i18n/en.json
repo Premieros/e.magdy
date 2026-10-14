@@ -155,5 +155,7 @@
   "premier_pos.stockOnHand": "On hand",
   "premier_pos.stockReserved": "Reserved",
   "premier_pos.stockAvailable": "Available",
-  "premier_pos.stockPagingNote": "Only the first page of canonical records is shown. Never infer all stock totals or absence of movements from incomplete data."
+  "premier_pos.stockPagingNote": "Only the first page of canonical records is shown. Never infer all stock totals or absence of movements from incomplete data.",
+  "premier_pos.stockLot": "Canonical WMS lot",
+  "premier_pos.stockUntrackedLot": "No existing lot / receive a new lot"
 }
