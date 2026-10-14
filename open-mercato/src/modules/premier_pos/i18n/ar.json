@@ -54,5 +54,7 @@
   "premier_pos.previewError": "تعذر تأكيد إجمالي السلة. راجع الأسعار والكميات والمؤسسة المحددة.",
   "premier_pos.discardConfirm": "تجاهل السلة الحالية غير المسجّلة؟",
   "premier_pos.receipt": "إيصال بيع",
-  "premier_pos.receiptNote": "هذا الإيصال للدفع المسجّل؛ التسليم والمخزون يتبعان دورة التشغيل المهيأة في النظام."
+  "premier_pos.receiptNote": "هذا الإيصال للدفع المسجّل؛ التسليم والمخزون يتبعان دورة التشغيل المهيأة في النظام.",
+  "premier_pos.inventory": "المخزون",
+  "premier_pos.configureCurrencies": "إعداد العملات"
 }
