@@ -21,7 +21,7 @@ export function relatedTraceRows(
   items: readonly TraceRow[],
   scope: TraceScope,
   orderId: string,
-  kind: 'invoice' | 'payment' | 'shipment' | 'movement',
+  kind: 'invoice' | 'payment' | 'shipment' | 'credit' | 'movement',
 ): TraceRow[] {
   return items.filter((row) => {
     if (!isScopedTraceRow(row, scope)) return false
