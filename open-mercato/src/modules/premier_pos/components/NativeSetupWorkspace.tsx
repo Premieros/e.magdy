@@ -88,8 +88,11 @@ function ScopedSetup({
   const validWarehouses = enabled && warehouses.data
     ? availableSetupRows(warehouses.data, scope)
     : []
+  const testWarehouse = validWarehouses.find(
+    (row) => setupRowField(row, 'code') === 'DEV-TEST-WH',
+  )
   const effectiveWarehouseId = selectedWarehouseId || (
-    typeof validWarehouses[0]?.id === 'string' ? validWarehouses[0].id : ''
+    typeof testWarehouse?.id === 'string' ? testWarehouse.id : ''
   )
   const locations = useQuery({
     queryKey: [...cacheKey, 'location', effectiveWarehouseId],
@@ -117,6 +120,10 @@ function ScopedSetup({
       const current = getCurrentOrganizationScope()
       if (current.tenantId !== scope.tenantId || current.organizationId !== scope.organizationId) {
         throw new Error('Organization changed; reload before continuing')
+      }
+      const fresh = await datasets[kind].refetch()
+      if (!fresh.data || hasConfiguredSetup(kind, fresh.data, scope, effectiveWarehouseId)) {
+        throw new Error('Configuration exists or cannot be verified; inspect native records')
       }
       const { path, body } = buildNativeSetupRequest(kind, scope, effectiveWarehouseId)
       const result = await apiCall<{ id?: string }>(path, {
@@ -189,6 +196,7 @@ function ScopedSetup({
                       {t('premier_pos.setupSelectWarehouse')}
                       <select className="mt-1 w-full rounded border bg-background p-2" value={effectiveWarehouseId}
                         disabled={busy !== null} onChange={(event) => setSelectedWarehouseId(event.target.value)}>
+                        <option value="">{t('premier_pos.setupSelectWarehouse')}</option>
                         {validWarehouses.map((w) => <option key={String(w.id)} value={String(w.id)}>
                           {String(setupRowField(w, 'name') ?? setupRowField(w, 'code') ?? w.id)}
                         </option>)}
