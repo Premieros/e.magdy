@@ -155,5 +155,7 @@
   "premier_pos.stockOnHand": "الموجود",
   "premier_pos.stockReserved": "المحجوز",
   "premier_pos.stockAvailable": "المتاح",
-  "premier_pos.stockPagingNote": "تُعرض أول صفحة فقط من بيانات الوحدة الرسمية. لا تستنتج رصيد المخزون الإجمالي أو غياب الحركات من النتائج الناقصة."
+  "premier_pos.stockPagingNote": "تُعرض أول صفحة فقط من بيانات الوحدة الرسمية. لا تستنتج رصيد المخزون الإجمالي أو غياب الحركات من النتائج الناقصة.",
+  "premier_pos.stockLot": "التشغيلة المسجلة في WMS",
+  "premier_pos.stockUntrackedLot": "بدون تشغيلة مسجلة / استلام تشغيلة جديدة"
 }
