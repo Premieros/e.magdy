@@ -94,5 +94,20 @@
   "premier_pos.setupCreate.channel": "Create DEV TEST channel",
   "premier_pos.setupCreate.paymentMethod": "Create DEV TEST manual method",
   "premier_pos.setupCreate.warehouse": "Create DEV TEST warehouse",
-  "premier_pos.setupCreate.location": "Create DEV TEST receiving dock"
+  "premier_pos.setupCreate.location": "Create DEV TEST receiving dock",
+  "premier_pos.catalogSetupTitle": "Configure a saleable sample product",
+  "premier_pos.catalogSetupDescription": "Create a product, SKU variant, price kind, channel offer and price using the native catalog, one step at a time",
+  "premier_pos.catalogSetupPrerequisites": "Set up active EGP currency and the DEV TEST sales channel above before continuing.",
+  "premier_pos.catalogSetupWaiting": "Waiting for previous steps",
+  "premier_pos.catalogSetupNotice": "Each button creates a persistent official record in the current organization, subject to module permissions. The EGP 100 price excludes tax and is for development only. This does not create orders, payments or stock movements.",
+  "premier_pos.catalogSetup.product": "Sample product",
+  "premier_pos.catalogSetup.variant": "Default SKU variant",
+  "premier_pos.catalogSetup.priceKind": "Development price kind",
+  "premier_pos.catalogSetup.offer": "DEV TEST channel offer",
+  "premier_pos.catalogSetup.price": "Offer price: EGP 100",
+  "premier_pos.catalogSetupCreate.product": "Add product",
+  "premier_pos.catalogSetupCreate.variant": "Add variant",
+  "premier_pos.catalogSetupCreate.priceKind": "Add price kind",
+  "premier_pos.catalogSetupCreate.offer": "Add channel offer",
+  "premier_pos.catalogSetupCreate.price": "Add offer price"
 }
