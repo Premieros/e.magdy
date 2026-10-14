@@ -9,6 +9,7 @@ import { getCurrentOrganizationScope } from '@open-mercato/shared/lib/frontend/o
 import { apiCall } from '@open-mercato/ui/backend/utils/apiCall'
 import { fetchCrudList } from '@open-mercato/ui/backend/utils/crud'
 import { Button } from '@open-mercato/ui/primitives/button'
+import { NativeCatalogSetup } from './NativeCatalogSetup'
 import {
   availableSetupRows, buildNativeSetupRequest, hasConfiguredSetup, setupRowField,
   type NativeSetupKind, type NativeSetupRow, type NativeSetupScope,
@@ -210,6 +211,7 @@ function ScopedSetup({
               )
             })}
           </div>
+          <NativeCatalogSetup userId={userId} scope={scope} />
           <p className="text-sm text-muted-foreground">{t('premier_pos.setupNext')}</p>
           <div className="flex flex-wrap gap-2">
             <Link className="rounded-md border px-3 py-2 text-sm underline" href="/backend/catalog/products">{t('premier_pos.manageProducts')}</Link>
