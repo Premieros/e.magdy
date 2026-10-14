@@ -133,6 +133,7 @@ function ScopedWorkspace({ userId, tenantId, organizationId }: { userId: string;
         <div className="flex flex-wrap items-center gap-2">
           <Button type="button" size="sm" variant="outline" disabled={busy || Boolean(intent.current?.paymentUncertain && !intent.current?.paymentId)} onClick={newOrder}><Plus className="size-4" />{t('premier_pos.new')}</Button>
           <Link href="/backend/sales/orders" className="inline-flex items-center gap-1 rounded-md border px-3 py-2 text-sm"><ListOrdered className="size-4" />{t('premier_pos.orders')}</Link>
+          <Link href="/backend/pos/operations" className="inline-flex items-center gap-1 rounded-md border px-3 py-2 text-sm"><ListOrdered className="size-4" />{t('premier_pos.traceTitle')}</Link>
           <Link href="/backend/wms/inventory" className="inline-flex items-center gap-1 rounded-md border px-3 py-2 text-sm"><Package className="size-4" />{t('premier_pos.inventory')}</Link>
           <AppearanceControls />
         </div>
