@@ -56,9 +56,10 @@ export function hasConfiguredSetup(
   kind: NativeSetupKind, rows: readonly NativeSetupRow[], scope: NativeSetupScope, warehouseId?: string,
 ): boolean {
   const available = availableSetupRows(rows, scope)
-  if (kind !== 'location') return available.length > 0
-  if (!nonEmptyUuid(warehouseId)) return false
-  return available.some((row) => setupRowField(row, 'warehouseId') === warehouseId)
+  if (kind === 'location' && !nonEmptyUuid(warehouseId)) return false
+  return available.some((row) =>
+    setupRowField(row, 'code') === NATIVE_SETUP_CODES[kind] &&
+    (kind !== 'location' || setupRowField(row, 'warehouseId') === warehouseId))
 }
 
 export function buildNativeSetupRequest(kind: NativeSetupKind, scope: NativeSetupScope, warehouseId?: string) {
