@@ -1,12 +1,21 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "types": ["node", "react"]
+    "types": [
+      "node",
+      "react"
+    ]
   },
   "include": [
     "src/modules/premier_pos/lib/native-setup.ts",
     "src/modules/premier_pos/components/NativeSetupWorkspace.tsx",
-    "src/modules/premier_pos/backend/pos/setup/page.tsx"
+    "src/modules/premier_pos/backend/pos/setup/page.tsx",
+    "src/modules/premier_pos/lib/native-catalog-setup.ts",
+    "src/modules/premier_pos/components/NativeCatalogSetup.tsx"
   ],
-  "exclude": ["node_modules", ".mercato", ".next"]
+  "exclude": [
+    "node_modules",
+    ".mercato",
+    ".next"
+  ]
 }
