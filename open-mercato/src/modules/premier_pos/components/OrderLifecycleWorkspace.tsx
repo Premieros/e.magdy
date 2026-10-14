@@ -11,11 +11,12 @@ import {
   type TraceRow, type TraceScope,
 } from '../lib/order-trace'
 
-type Source = 'invoice' | 'shipment' | 'payment' | 'movement'
+type Source = 'invoice' | 'shipment' | 'payment' | 'credit' | 'movement'
 const sourcePaths: Record<Source, string> = {
   invoice: 'sales/invoices',
   shipment: 'sales/shipments',
   payment: 'sales/payments',
+  credit: 'sales/credit-memos',
   movement: 'wms/inventory/movements',
 }
 
@@ -59,6 +60,10 @@ function ScopedLifecycle({
     queryKey: [...prefix, orderId, 'payments'], enabled: enabled && Boolean(orderId), retry: false,
     queryFn: ({ signal }) => fetchCrudList<TraceRow>(sourcePaths.payment, { orderId, pageSize: 100 }, { signal }),
   })
+  const credits = useQuery({
+    queryKey: [...prefix, orderId, 'credits'], enabled: enabled && Boolean(orderId), retry: false,
+    queryFn: ({ signal }) => fetchCrudList<TraceRow>(sourcePaths.credit, { orderId, pageSize: 100 }, { signal }),
+  })
   const shipments = useQuery({
     queryKey: [...prefix, orderId, 'shipments'], enabled: enabled && Boolean(orderId), retry: false,
     queryFn: ({ signal }) => fetchCrudList<TraceRow>(sourcePaths.shipment, { orderId, pageSize: 100 }, { signal }),
@@ -83,6 +88,7 @@ function ScopedLifecycle({
     { kind: 'invoice', title: t('premier_pos.traceInvoices'), result: invoices, numberField: 'invoiceNumber' },
     { kind: 'payment', title: t('premier_pos.tracePayments'), result: payments, numberField: 'paymentReference' },
     { kind: 'shipment', title: t('premier_pos.traceShipments'), result: shipments, numberField: 'shipmentNumber' },
+    { kind: 'credit', title: t('premier_pos.traceCredits'), result: credits, numberField: 'creditMemoNumber' },
     { kind: 'movement', title: t('premier_pos.traceMovements'), result: movements, numberField: 'type' },
   ]
   return (
@@ -100,6 +106,7 @@ function ScopedLifecycle({
                 void invoices.refetch()
                 void payments.refetch()
                 void shipments.refetch()
+                void credits.refetch()
                 void movements.refetch()
               }
             }}>{t('premier_pos.traceRefresh')}</button>
