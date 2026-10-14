@@ -85,3 +85,35 @@ test('invoice copies saved amounts and quantities instead of recomputing financi
   expect(f.transport.create).toHaveBeenCalledWith('sales/invoices', expect.objectContaining({ grandTotalGrossAmount: 240, taxTotalAmount: 40, lines: [expect.objectContaining({ orderLineId: 'line-a', totalGrossAmount: 240, quantity: 2 })] }))
   expect(f.transport.create).toHaveBeenCalledWith('sales/payments', expect.objectContaining({ amount: 240, capturedAmount: 240, allocations: [expect.objectContaining({ orderId: intent.orderId, invoiceId: intent.invoiceId, amount: 240 })] }))
 })
+
+test('payment recovery rejects a matching reference from a different organization without recapturing', async () => {
+  const f = fixture()
+  const intent = makeIntent()
+  await captureSale(intent, 'cash', f.transport)
+  const created = f.calls.filter((path) => path === 'sales/payments').length
+  f.rows['sales/payments'][0].organizationId = 'foreign-org'
+  f.rows['sales/orders'][0].outstandingAmount = 240
+  intent.paymentId = undefined
+  await expect(captureSale(intent, 'cash', f.transport)).rejects.toThrow('POS_PAYMENT_UNCERTAIN')
+  expect(f.calls.filter((path) => path === 'sales/payments')).toHaveLength(created)
+})
+test('payment recovery rejects an altered amount without posting twice', async () => {
+  const f = fixture()
+  const intent = makeIntent()
+  await captureSale(intent, 'cash', f.transport)
+  f.rows['sales/payments'][0].amount = 1
+  f.rows['sales/orders'][0].outstandingAmount = 240
+  intent.paymentId = undefined
+  await expect(captureSale(intent, 'cash', f.transport)).rejects.toThrow('POS_PAYMENT_UNCERTAIN')
+  expect(f.calls.filter((path) => path === 'sales/payments')).toHaveLength(1)
+})
+
+test('invoice recovery cannot reuse a document from a foreign organization', async () => {
+  const f = fixture()
+  const intent = makeIntent()
+  await captureSale(intent, 'cash', f.transport)
+  f.rows['sales/invoices'][0].organizationId = 'foreign-org'
+  intent.invoiceId = undefined
+  await expect(captureSale(intent, 'cash', f.transport)).rejects.toThrow('POS_INVOICE_UNCERTAIN')
+  expect(f.calls.filter((path) => path === 'sales/invoices')).toHaveLength(1)
+})

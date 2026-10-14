@@ -83,7 +83,15 @@ async function captureSaleInternal(intent: PosIntent, paymentMethodId: string, t
     if (!intent.invoiceNumber) intent.invoiceNumber = await transport.number('invoice', intent)
     const existing = await transport.list('sales/invoices', { orderId: intent.orderId, pageSize: 100 })
     const recovered = existing.items.find((row) => (row.invoice_number ?? row.invoiceNumber) === intent.invoiceNumber && (row.order_id ?? row.orderId) === intent.orderId)
-    if (recovered?.id) intent.invoiceId = String(recovered.id)
+    if (recovered?.id) {
+      const read = (name: string, snake: string) => recovered[name] ?? recovered[snake]
+      if (read('tenantId', 'tenant_id') !== intent.tenantId ||
+          read('organizationId', 'organization_id') !== intent.organizationId ||
+          read('currencyCode', 'currency_code') !== intent.currencyCode) {
+        throw new UncertainCheckoutError('invoice')
+      }
+      intent.invoiceId = String(recovered.id)
+    }
     else {
       if (existing.items.length > 0) throw new UncertainCheckoutError('invoice')
       const { items } = await transport.list('sales/order-lines', { orderId: intent.orderId, pageSize: 100 })
@@ -102,7 +110,19 @@ async function captureSaleInternal(intent: PosIntent, paymentMethodId: string, t
   if (!intent.paymentId) {
     const existing = await transport.list('sales/payments', { orderId: intent.orderId, pageSize: 100 })
     const recovered = existing.items.find((row) => (row.payment_reference ?? row.paymentReference) === intent.reference)
-    if (recovered?.id) intent.paymentId = String(recovered.id)
+    if (recovered?.id) {
+      // Recovery must never attach a foreign or mismatched tender merely because
+      // its human-facing payment reference happens to match.
+      const field = (name: string, alternate: string) => recovered[name] ?? recovered[alternate]
+      if (field('orderId', 'order_id') !== intent.orderId ||
+          field('tenantId', 'tenant_id') !== intent.tenantId ||
+          field('organizationId', 'organization_id') !== intent.organizationId ||
+          field('currencyCode', 'currency_code') !== intent.currencyCode ||
+          Number(recovered.amount) !== due) {
+        throw new UncertainCheckoutError('payment')
+      }
+      intent.paymentId = String(recovered.id)
+    }
     else if (intent.paymentUncertain) throw new UncertainCheckoutError('payment')
     else {
       // Set before dispatch: even a lost response cannot cause a second capture.
