@@ -18,12 +18,14 @@ export type StockDraft = Readonly<{
   quantity: string
   reason: string
   lotNumber: string
+  lotId: string
   serialNumber: string
 }>
 export type StockContext = Readonly<{
   warehouses: readonly StockRow[]
   locations: readonly StockRow[]
   variants: readonly StockRow[]
+  lots?: readonly StockRow[]
 }>
 export const STOCK_COMMANDS: Record<StockOperation, string> = {
   receive: '/api/wms/inventory/receive',
@@ -111,6 +113,11 @@ export function buildStockCommand(
   if (lotNumber.length > 120 || serialNumber.length > 120) {
     throw new Error('Lot or serial number is too long')
   }
+  if (draft.lotId) {
+    if (!isStockUuid(draft.lotId) || !stockRowsForScope(context.lots ?? [], scope).some(
+      row => row.id === draft.lotId && stockField(row, 'catalogVariantId') === draft.catalogVariantId,
+    )) throw new Error('Lot does not belong to selected SKU and organization')
+  }
   if (draft.operation === 'move') {
     if (!isStockUuid(draft.toLocationId) ||
         !locations.some(row => row.id === draft.toLocationId) ||
@@ -127,13 +134,14 @@ export function buildStockCommand(
     referenceType: 'manual',
     referenceId,
     performedBy: scope.performedBy,
+    ...(draft.lotId ? { lotId: draft.lotId } : {}),
   }
   let body: Record<string, unknown>
   switch (draft.operation) {
     case 'receive':
       body = { ...base, locationId: draft.locationId, quantity,
         ...(reason ? { reason } : {}),
-        ...(lotNumber ? { lotNumber } : {}), ...(serialNumber ? { serialNumber } : {}) }
+        ...(!draft.lotId && lotNumber ? { lotNumber } : {}), ...(serialNumber ? { serialNumber } : {}) }
       break
     case 'adjust':
       body = { ...base, locationId: draft.locationId, delta: quantity, reason,
