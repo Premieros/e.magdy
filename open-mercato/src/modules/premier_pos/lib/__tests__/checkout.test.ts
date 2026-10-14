@@ -107,3 +107,13 @@ test('payment recovery rejects an altered amount without posting twice', async (
   await expect(captureSale(intent, 'cash', f.transport)).rejects.toThrow('POS_PAYMENT_UNCERTAIN')
   expect(f.calls.filter((path) => path === 'sales/payments')).toHaveLength(1)
 })
+
+test('invoice recovery cannot reuse a document from a foreign organization', async () => {
+  const f = fixture()
+  const intent = makeIntent()
+  await captureSale(intent, 'cash', f.transport)
+  f.rows['sales/invoices'][0].organizationId = 'foreign-org'
+  intent.invoiceId = undefined
+  await expect(captureSale(intent, 'cash', f.transport)).rejects.toThrow('POS_INVOICE_UNCERTAIN')
+  expect(f.calls.filter((path) => path === 'sales/invoices')).toHaveLength(1)
+})
