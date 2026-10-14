@@ -94,5 +94,20 @@
   "premier_pos.setupCreate.channel": "إنشاء قناة DEV TEST",
   "premier_pos.setupCreate.paymentMethod": "إنشاء طريقة دفع يدوية DEV TEST",
   "premier_pos.setupCreate.warehouse": "إنشاء مستودع DEV TEST",
-  "premier_pos.setupCreate.location": "إنشاء موقع استقبال DEV TEST"
+  "premier_pos.setupCreate.location": "إنشاء موقع استقبال DEV TEST",
+  "premier_pos.catalogSetupTitle": "تجهيز منتج تجريبي قابل للبيع",
+  "premier_pos.catalogSetupDescription": "منتج ومتغير SKU ونوع سعر وعرض للقناة وسعر محدد عبر الكتالوج الرسمي، خطوة بخطوة",
+  "premier_pos.catalogSetupPrerequisites": "ابدأ بتجهيز عملة EGP وقناة البيع DEV TEST من القسم أعلاه. يجب أن يكون كلاهما نشطًا.",
+  "premier_pos.catalogSetupWaiting": "ينتظر اكتمال الخطوات السابقة",
+  "premier_pos.catalogSetupNotice": "كل زر ينشئ سجلًا دائمًا في المؤسسة الحالية بعد التحقق من الصلاحيات. السعر 100 جنيه مصري وبدون ضريبة لأغراض التطوير فقط. لا تُنشئ هذه الشاشة طلبات بيع أو تحصيلًا أو حركات مخزون.",
+  "premier_pos.catalogSetup.product": "منتج تجريبي",
+  "premier_pos.catalogSetup.variant": "متغير SKU افتراضي",
+  "premier_pos.catalogSetup.priceKind": "نوع سعر تجريبي",
+  "premier_pos.catalogSetup.offer": "عرض المنتج بقناة DEV TEST",
+  "premier_pos.catalogSetup.price": "سعر العرض: 100 EGP",
+  "premier_pos.catalogSetupCreate.product": "إضافة المنتج",
+  "premier_pos.catalogSetupCreate.variant": "إضافة المتغير",
+  "premier_pos.catalogSetupCreate.priceKind": "إضافة نوع السعر",
+  "premier_pos.catalogSetupCreate.offer": "إضافة عرض البيع",
+  "premier_pos.catalogSetupCreate.price": "إضافة السعر"
 }
