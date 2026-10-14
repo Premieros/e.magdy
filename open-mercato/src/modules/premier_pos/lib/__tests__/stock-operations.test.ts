@@ -99,6 +99,15 @@ describe('native WMS operator commands', () => {
     expect(() => build(draft, wrongSku)).toThrow('SKU')
     expect(() => build(draft, context, 'not-uuid')).toThrow('scope')
   })
+  it('checks a selected WMS lot against the canonical SKU', () => {
+    const id = referenceId
+    const ctx: StockContext = { ...context,
+      lots: [{ id, catalog_variant_id: catalogVariantId, tenant_id: scope.tenantId,
+        organization_id: scope.organizationId }] }
+    expect(build({ ...draft, lotId: id }, ctx).body).toMatchObject({ lotId: id })
+    expect(() => build({ ...draft, lotId: id },
+      { ...ctx, lots: [{ id, catalog_variant_id: locationId }] })).toThrow('Lot')
+  })
   it('filters disabled or foreign scope rows for an accurate UI', () => {
     const foreign = { ...context.locations[0], organization_id: referenceId }
     expect(stockRowsForWarehouse([context.locations[0], foreign], scope, warehouseId))
