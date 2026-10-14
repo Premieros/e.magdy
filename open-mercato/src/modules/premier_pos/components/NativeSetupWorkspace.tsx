@@ -224,6 +224,7 @@ function ScopedSetup({
           <div className="flex flex-wrap gap-2">
             <Link className="rounded-md border px-3 py-2 text-sm underline" href="/backend/catalog/products">{t('premier_pos.manageProducts')}</Link>
             <Link className="rounded-md border px-3 py-2 text-sm underline" href="/backend/wms/inventory">{t('premier_pos.inventory')}</Link>
+          <Link className="rounded-md border px-3 py-2 text-sm underline" href="/backend/pos/stock">{t('premier_pos.stockTitle')}</Link>
             <Link className="rounded-md border px-3 py-2 text-sm underline" href="/backend/pos/operations">{t('premier_pos.traceTitle')}</Link>
           </div>
         </>
