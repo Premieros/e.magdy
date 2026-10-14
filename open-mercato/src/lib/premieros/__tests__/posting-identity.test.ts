@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals'
-import { canonicalPostingIdentity, type PostingIdentity } from '../posting-identity'
+import { canonicalPostingIdentity, assertUniqueScopedPostingBatch, type PostingIdentity } from '../posting-identity'
 
 const entry: PostingIdentity = {
   tenantId: 't1', organizationId: 'o1', sourceType: 'purchase-receipt',
@@ -24,5 +24,21 @@ describe('canonical WMS posting identity (non-posting)', () => {
   it('fails closed on missing or padded context', () => {
     expect(() => canonicalPostingIdentity({ ...entry, tenantId: '' })).toThrow()
     expect(() => canonicalPostingIdentity({ ...entry, organizationId: ' o1' })).toThrow()
+  })
+})
+
+describe('proposed WMS batch safety', () => {
+  it('allows separate partial-receipt events in the same scope', () => {
+    expect(() => assertUniqueScopedPostingBatch(
+      { tenantId: 't1', organizationId: 'o1' },
+      [entry, { ...entry, eventId: 'receipt-2' }],
+    )).not.toThrow()
+  })
+  it('denies replayed IDs and mixed organization or tenant', () => {
+    const scope = { tenantId: 't1', organizationId: 'o1' }
+    expect(() => assertUniqueScopedPostingBatch(scope, [entry, entry])).toThrow('Duplicate')
+    expect(() => assertUniqueScopedPostingBatch(scope, [entry, { ...entry, organizationId: 'o2' }])).toThrow('Cross-organization')
+    expect(() => assertUniqueScopedPostingBatch(scope, [{ ...entry, tenantId: 't2' }])).toThrow('Cross-organization')
+    expect(() => assertUniqueScopedPostingBatch(scope, [])).toThrow()
   })
 })
