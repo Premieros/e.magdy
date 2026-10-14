@@ -60,8 +60,10 @@ export function matchingCatalogRows(
     return setupRowField(row, 'productId') === ids.product &&
       setupRowField(row, 'variantId') === ids.variant &&
       setupRowField(row, 'offerId') === ids.offer &&
+      setupRowField(row, 'channelId') === ids.channel &&
       setupRowField(row, 'priceKindId') === ids.priceKind &&
-      setupRowField(row, 'currencyCode') === CATALOG_STARTER.currencyCode
+      setupRowField(row, 'currencyCode') === CATALOG_STARTER.currencyCode &&
+      Number(setupRowField(row, 'unitPriceNet')) === CATALOG_STARTER.priceNet
   })
 }
 
