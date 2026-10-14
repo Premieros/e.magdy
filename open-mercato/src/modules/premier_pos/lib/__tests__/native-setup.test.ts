@@ -37,7 +37,7 @@ describe('native setup safety', () => {
   })
   it('filters inactive and foreign-scope rows', () => {
     const rows = [
-      { id: 'a', tenant_id: scope.tenantId, organization_id: scope.organizationId, is_active: true },
+      { id: 'a', code: 'dev_test_pos', tenant_id: scope.tenantId, organization_id: scope.organizationId, is_active: true },
       { id: 'b', organization_id: 'other' },
       { id: 'c', tenantId: 'other' },
       { id: 'd', isActive: false },
@@ -46,12 +46,15 @@ describe('native setup safety', () => {
     expect(availableSetupRows(rows, scope)).toEqual([rows[0]])
     expect(hasConfiguredSetup('channel', rows, scope)).toBe(true)
     expect(hasConfiguredSetup('channel', rows.slice(1), scope)).toBe(false)
+    expect(hasConfiguredSetup('channel', [{ ...rows[0], code: 'other' }], scope)).toBe(false)
   })
   it('requires the selected warehouse for location readiness', () => {
-    const matching = { warehouse_id: warehouseId, is_active: true }
-    const other = { warehouse_id: '44444444-4444-4444-8444-444444444444', is_active: true }
+    const matching = { warehouse_id: warehouseId, code: 'DEV-TEST-DOCK', is_active: true }
+    const other = { warehouse_id: '44444444-4444-4444-8444-444444444444', code: 'DEV-TEST-DOCK', is_active: true }
     expect(hasConfiguredSetup('location', [matching, other], scope, warehouseId)).toBe(true)
     expect(hasConfiguredSetup('location', [other], scope, warehouseId)).toBe(false)
     expect(hasConfiguredSetup('location', [matching], scope)).toBe(false)
+    expect(hasConfiguredSetup('currency', [{ code: 'USD' }], scope)).toBe(false)
+    expect(hasConfiguredSetup('currency', [{ code: 'EGP' }], scope)).toBe(true)
   })
 })
