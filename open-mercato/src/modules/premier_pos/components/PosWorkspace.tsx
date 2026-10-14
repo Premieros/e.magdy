@@ -55,9 +55,9 @@ function ScopedWorkspace({ userId, tenantId, organizationId }: { userId: string;
   const channels = useQuery({ queryKey: [...scopeKey, 'channels'], enabled, staleTime: 60000, retry: false, queryFn: ({ signal }) => fetchCrudList<Row>('sales/channels', { pageSize: 100, isActive: true }, { signal }) })
   const categories = useQuery({ queryKey: [...scopeKey, 'categories'], enabled, staleTime: 60000, retry: false, queryFn: ({ signal }) => fetchCrudList<Row>('catalog/categories', { pageSize: 100, status: 'active' }, { signal }) })
   const currencies = useQuery({ queryKey: [...scopeKey, 'currencies'], enabled, staleTime: 60000, retry: false, queryFn: async ({ signal }) => {
-    const call = await apiCall<{ entries?: Array<{ value: string; label?: string }> }>('/api/customers/dictionaries/currency', { signal })
+    const call = await apiCall<{ items?: Array<{ value: string; label?: string }> }>('/api/premier_pos/currency-options', { signal })
     if (!call.ok) throw new Error('Currencies unavailable')
-    return call.result?.entries ?? []
+    return call.result?.items ?? []
   } })
   const methods = useQuery({ queryKey: [...scopeKey, 'methods'], enabled, staleTime: 60000, retry: false, queryFn: async ({ signal }) => {
     const call = await apiCall<{ items?: Row[] }>('/api/premier_pos/payment-methods', { signal })
