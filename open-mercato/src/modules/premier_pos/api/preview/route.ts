@@ -2,6 +2,7 @@ import { z } from 'zod'
 import type { EntityManager } from '@mikro-orm/postgresql'
 import type { OpenApiRouteDoc } from '@open-mercato/shared/lib/openapi'
 import { SalesChannel } from '@open-mercato/core/modules/sales/data/entities'
+import { Currency } from '@open-mercato/core/modules/currencies/data/entities'
 import type { SalesCalculationService } from '@open-mercato/core/modules/sales/services/salesCalculationService'
 import { resolvePosScope, posErrorResponse } from '../../lib/serverScope'
 import { previewSchema } from '../../lib/schema'
@@ -20,6 +21,8 @@ export async function POST(request: Request) {
     const em = scope.container.resolve<EntityManager>('em')
     const channel = await em.findOne(SalesChannel, { id: data.channelId, organizationId: scope.organizationId, tenantId: scope.tenantId, deletedAt: null, isActive: true }, { fields: ['id'] })
     if (!channel) return Response.json({ error: 'Sales channel unavailable' }, { status: 403 })
+    const currency = await em.findOne(Currency, { code: data.currencyCode, tenantId: scope.tenantId, organizationId: scope.organizationId, deletedAt: null, isActive: true }, { fields: ['code'] })
+    if (!currency) return Response.json({ error: 'Currency unavailable for this organization' }, { status: 403 })
     const service = scope.container.resolve<SalesCalculationService>('salesCalculationService')
     const result = await service.calculateDocumentTotals({
       documentKind: 'order',
