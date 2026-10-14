@@ -21,7 +21,7 @@
   "premier_pos.categories": "Categories",
   "premier_pos.all": "All products",
   "premier_pos.chooseSetup": "Choose a sales channel and currency to load products.",
-  "premier_pos.loading": "Loading products\u2026",
+  "premier_pos.loading": "Loading products…",
   "premier_pos.loadError": "Products could not be loaded.",
   "premier_pos.retry": "Try again",
   "premier_pos.emptyProducts": "No matching products are available in this sales channel.",
@@ -54,5 +54,7 @@
   "premier_pos.previewError": "Cart totals could not be verified. Check prices, quantities and selected organization.",
   "premier_pos.discardConfirm": "Discard the current unsaved cart?",
   "premier_pos.receipt": "Sales receipt",
-  "premier_pos.receiptNote": "Recorded payment only; shipment and warehouse execution follow the configured native workflow."
+  "premier_pos.receiptNote": "Recorded payment only; shipment and warehouse execution follow the configured native workflow.",
+  "premier_pos.inventory": "Inventory",
+  "premier_pos.configureCurrencies": "Configure currencies"
 }
