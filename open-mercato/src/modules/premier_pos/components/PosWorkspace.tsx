@@ -136,6 +136,7 @@ function ScopedWorkspace({ userId, tenantId, organizationId }: { userId: string;
           <Link href="/backend/pos/operations" className="inline-flex items-center gap-1 rounded-md border px-3 py-2 text-sm"><ListOrdered className="size-4" />{t('premier_pos.traceTitle')}</Link>
           <Link href="/backend/pos/setup" className="inline-flex items-center gap-1 rounded-md border px-3 py-2 text-sm"><Package className="size-4" />{t('premier_pos.setupTitle')}</Link>
           <Link href="/backend/wms/inventory" className="inline-flex items-center gap-1 rounded-md border px-3 py-2 text-sm"><Package className="size-4" />{t('premier_pos.inventory')}</Link>
+          <Link href="/backend/pos/stock" className="inline-flex items-center gap-1 rounded-md border px-3 py-2 text-sm"><Package className="size-4" />{t('premier_pos.stockTitle')}</Link>
           <AppearanceControls />
         </div>
       </header>
