@@ -8,6 +8,7 @@ on:
       - 'open-mercato/src/app/layout.tsx'
       - 'open-mercato/scripts/premieros-route-inventory.mjs'
       - 'open-mercato/tsconfig.premieros-foundations.json'
+      - 'open-mercato/tsconfig.premier-pos-order-lifecycle.json'
       - 'open-mercato/package.json'
       - 'open-mercato/yarn.lock'
       - '.github/workflows/premieros-erp-foundations.yml'
@@ -48,3 +49,5 @@ jobs:
         run: node scripts/premieros-route-inventory.mjs > "$RUNNER_TEMP/premieros-routes.json"
       - name: Typecheck foundation source (isolated from generated registry)
         run: yarn tsc --project tsconfig.premieros-foundations.json --noEmit --pretty false
+      - name: Typecheck order lifecycle screen without production credentials
+        run: yarn tsc --project tsconfig.premier-pos-order-lifecycle.json --noEmit --pretty false
