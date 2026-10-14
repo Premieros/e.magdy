@@ -17,7 +17,7 @@ describe('read-only order lifecycle projection', () => {
       { order_id: 'order-1', tenant_id: 'tenant-a', organization_id: 'org-a' },
       { order_id: 'order-2' }, { orderId: 'order-1', organizationId: 'other' },
     ]
-    for (const kind of ['invoice', 'payment', 'shipment'] as const) {
+    for (const kind of ['invoice', 'payment', 'shipment', 'credit'] as const) {
       expect(relatedTraceRows(items, scope, 'order-1', kind)).toHaveLength(1)
     }
   })
