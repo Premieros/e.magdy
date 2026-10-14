@@ -143,7 +143,12 @@ async function captureSaleInternal(intent: PosIntent, paymentMethodId: string, t
 const activeOperations = new WeakMap<PosIntent, { kind: string; promise: Promise<PosSavedOrder> }>()
 function serialize(intent: PosIntent, kind: string, operation: () => Promise<PosSavedOrder>): Promise<PosSavedOrder> {
   const active = activeOperations.get(intent)
-  if (active) return active.kind === kind ? active.promise : active.promise.then(() => serialize(intent, kind, operation))
+  if (active) {
+    if (active.kind.startsWith('capture:') && kind.startsWith('capture:') && active.kind !== kind) {
+      return Promise.reject(new Error('Payment method changed during checkout'))
+    }
+    return active.kind === kind ? active.promise : active.promise.then(() => serialize(intent, kind, operation))
+  }
   const promise = Promise.resolve().then(operation).finally(() => { if (activeOperations.get(intent)?.promise === promise) activeOperations.delete(intent) })
   activeOperations.set(intent, { kind, promise })
   return promise
