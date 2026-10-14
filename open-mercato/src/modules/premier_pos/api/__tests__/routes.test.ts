@@ -5,6 +5,7 @@ import { resolvePosScope } from '../../lib/serverScope'
 import { POST as preview } from '../preview/route'
 import { POST as number } from '../number/route'
 import { GET as methods } from '../payment-methods/route'
+import { GET as currencyOptions, metadata as currencyMetadata } from '../currency-options/route'
 
 jest.mock('@open-mercato/shared/lib/di/container', () => ({ createRequestContainer: jest.fn() }))
 jest.mock('@open-mercato/shared/lib/auth/server', () => ({ getAuthFromRequest: jest.fn() }))
@@ -65,4 +66,24 @@ test('no authenticated context is not widened to system scope', async () => {
   expect((await preview(request(cart()))).status).toBe(401)
   expect((await number(request({ kind: 'order', expectedTenantId: tenant, expectedOrganizationId: org }))).status).toBe(401)
   expect((await methods(new Request('https://example.invalid'))).status).toBe(401)
+})
+
+test('cashier currency selector uses native active currencies scoped to one organization', async () => {
+  const f = scope()
+  f.em.find.mockResolvedValue([{ code: 'EGP', name: 'Egyptian Pound' }, { code: 'USD', name: 'US Dollar' }] as never)
+  const response = await currencyOptions(new Request('https://example.invalid/api/premier_pos/currency-options'))
+  expect(response.status).toBe(200)
+  expect(await response.json()).toEqual({
+    items: [{ value: 'EGP', label: 'EGP - Egyptian Pound' }, { value: 'USD', label: 'USD - US Dollar' }],
+  })
+  expect(f.em.find).toHaveBeenCalledWith(expect.anything(),
+    { tenantId: tenant, organizationId: org, isActive: true, deletedAt: null },
+    { fields: ['code', 'name'], orderBy: { code: 'ASC' }, limit: 100 })
+  expect(currencyMetadata.GET.requireFeatures).toEqual(['sales.orders.manage'])
+  expect(response.headers.get('cache-control')).toBe('private, no-store')
+})
+test('currency options deny missing authentication before reading native currencies', async () => {
+  scoped.mockRejectedValue(new CrudHttpError(401, { error: 'Authentication required' }))
+  const response = await currencyOptions(new Request('https://example.invalid/api/premier_pos/currency-options'))
+  expect(response.status).toBe(401)
 })
