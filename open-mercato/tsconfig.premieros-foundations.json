@@ -7,5 +7,10 @@
     "node_modules",
     ".mercato",
     ".next"
-  ]
+  ],
+  "compilerOptions": {
+    "types": [
+      "node"
+    ]
+  }
 }
