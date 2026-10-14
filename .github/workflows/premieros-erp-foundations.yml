@@ -48,6 +48,8 @@ jobs:
         run: yarn jest --config jest.config.cjs --runInBand --runTestsByPath src/modules/premier_pos/lib/__tests__/order-trace.test.ts
       - name: Validate native setup payloads and scope isolation
         run: yarn jest --config jest.config.cjs --runInBand --runTestsByPath src/modules/premier_pos/lib/__tests__/native-setup.test.ts
+      - name: Verify native catalog sample pricing and offer contracts
+        run: yarn jest --config jest.config.cjs --runInBand --runTestsByPath src/modules/premier_pos/lib/__tests__/native-catalog-setup.test.ts
       - name: Inventory app-owned screens
         run: node scripts/premieros-route-inventory.mjs > "$RUNNER_TEMP/premieros-routes.json"
       - name: Typecheck foundation source (isolated from generated registry)
