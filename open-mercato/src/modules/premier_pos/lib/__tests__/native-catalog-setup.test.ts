@@ -69,11 +69,11 @@ describe('native catalog sample setup', () => {
   it('matches prices strictly by product, variant, kind, channel, offer and currency', () => {
     const row = {
       product_id: ids.product, variant_id: ids.variant, price_kind_id: ids.priceKind,
-      offer_id: ids.offer, channel_id: ids.channel, currency_code: 'EGP',
+      offer_id: ids.offer, channel_id: ids.channel, currency_code: 'EGP', unit_price_net: '100',
     }
     expect(matchingCatalogRows('price', [row], scope, ids)).toHaveLength(1)
     for (const field of ['product_id', 'variant_id', 'price_kind_id',
-      'offer_id', 'channel_id', 'currency_code']) {
+      'offer_id', 'channel_id', 'currency_code', 'unit_price_net']) {
       expect(matchingCatalogRows('price', [{ ...row, [field]: 'different' }], scope, ids))
         .toHaveLength(0)
     }
