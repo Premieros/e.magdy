@@ -50,7 +50,7 @@ export async function readSavedOrder(intent: PosIntent, transport = nativeTransp
   if (!intent.orderId) throw new Error('Order not saved')
   const result = await transport.list('sales/orders', { id: intent.orderId, pageSize: 1 })
   const row = result.items.find((item) => item.id === intent.orderId)
-  if (!row || row.currencyCode !== intent.currencyCode || row.organizationId !== intent.organizationId || row.tenantId !== intent.tenantId || row.externalReference !== intent.reference) throw new Error('Saved order scope or reference changed')
+  if (!row || row.currencyCode !== intent.currencyCode || row.organizationId !== intent.organizationId || row.tenantId !== intent.tenantId || row.externalReference !== intent.reference || row.channelId !== intent.channelId) throw new Error('Saved order scope or reference changed')
   return { ...row, id: intent.orderId, currencyCode: intent.currencyCode, grandTotalGrossAmount: amount(row, 'grandTotalGrossAmount') }
 }
 
@@ -118,6 +118,7 @@ async function captureSaleInternal(intent: PosIntent, paymentMethodId: string, t
           field('tenantId', 'tenant_id') !== intent.tenantId ||
           field('organizationId', 'organization_id') !== intent.organizationId ||
           field('currencyCode', 'currency_code') !== intent.currencyCode ||
+          field('paymentMethodId', 'payment_method_id') !== paymentMethodId ||
           Number(recovered.amount) !== due) {
         throw new UncertainCheckoutError('payment')
       }
@@ -148,4 +149,9 @@ function serialize(intent: PosIntent, kind: string, operation: () => Promise<Pos
   return promise
 }
 export function saveOrder(intent: PosIntent, transport = nativeTransport) { return serialize(intent, 'save', () => saveOrderInternal(intent, transport)) }
-export function captureSale(intent: PosIntent, paymentMethodId: string, transport = nativeTransport) { return serialize(intent, 'capture', () => captureSaleInternal(intent, paymentMethodId, transport)) }
+export function captureSale(intent: PosIntent, paymentMethodId: string, transport = nativeTransport) {
+  if (!paymentMethodId.trim()) return Promise.reject(new Error('Payment method required'))
+  // Never join captures using different methods; they represent distinct
+  // financial instructions even when they target the same in-memory intent.
+  return serialize(intent, `capture:${paymentMethodId}`, () => captureSaleInternal(intent, paymentMethodId, transport))
+}
