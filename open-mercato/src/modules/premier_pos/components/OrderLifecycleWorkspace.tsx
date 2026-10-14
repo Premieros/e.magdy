@@ -93,6 +93,16 @@ function ScopedLifecycle({
           <p className="text-sm text-muted-foreground">{t('premier_pos.traceDescription')}</p>
         </div>
         <div className="flex flex-wrap gap-2 text-sm">
+          <button type="button" disabled={!enabled || orders.isFetching} className="rounded-md border px-3 py-2 disabled:opacity-50"
+            onClick={() => {
+              void orders.refetch()
+              if (orderId) {
+                void invoices.refetch()
+                void payments.refetch()
+                void shipments.refetch()
+                void movements.refetch()
+              }
+            }}>{t('premier_pos.traceRefresh')}</button>
           <Link className="rounded-md border px-3 py-2 underline" href="/backend/pos">{t('premier_pos.title')}</Link>
           <Link className="rounded-md border px-3 py-2 underline" href="/backend/wms/inventory">{t('premier_pos.inventory')}</Link>
         </div>
