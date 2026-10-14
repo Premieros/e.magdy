@@ -17,7 +17,7 @@ const catalogVariantId = '77777777-7777-4777-8777-777777777777'
 const referenceId = '88888888-8888-4888-8888-888888888888'
 const draft: StockDraft = {
   operation: 'receive', warehouseId, catalogVariantId, locationId, toLocationId,
-  quantity: '5.25', reason: 'Warehouse test receiving', lotNumber: '', serialNumber: '',
+  quantity: '5.25', reason: 'Warehouse test receiving', lotNumber: '', lotId: '', serialNumber: '',
 }
 const context: StockContext = {
   warehouses: [{ id: warehouseId, tenant_id: scope.tenantId, organization_id: scope.organizationId, is_active: true }],
