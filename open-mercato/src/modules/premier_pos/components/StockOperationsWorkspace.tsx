@@ -19,7 +19,7 @@ type Prepared = { referenceId: string; operation: StockOperation; draft: StockDr
 type Outcome = { movementId: string | null; adjustmentDelta?: string; referenceId: string }
 const starter: StockDraft = {
   operation: 'receive', warehouseId: '', locationId: '', toLocationId: '',
-  catalogVariantId: '', quantity: '1', reason: '', lotNumber: '', serialNumber: '',
+  catalogVariantId: '', quantity: '1', reason: '', lotNumber: '', lotId: '', serialNumber: '',
 }
 
 const friendly = (row: StockRow, ...fields: string[]) => {
@@ -79,6 +79,14 @@ function ScopedStockOperations({ userId, tenantId, organizationId }: {
       { pageSize: 100, search: search || undefined, isActive: true }, { signal }),
   })
   const availableVariants = enabled ? stockRowsForScope(variants.data?.items ?? [], scope) : []
+  const lots = useQuery({
+    queryKey: [...keys, 'lots', draft.catalogVariantId],
+    enabled: enabled && Boolean(draft.catalogVariantId), retry: false, staleTime: 15000,
+    queryFn: ({ signal }) => fetchCrudList<StockRow>('wms/lots',
+      { pageSize: 100, catalogVariantId: draft.catalogVariantId, status: 'available' }, { signal }),
+  })
+  const availableLots = enabled ? stockRowsForScope(lots.data?.items ?? [], scope)
+    .filter(row => stockField(row, 'catalogVariantId') === draft.catalogVariantId) : []
   const balances = useQuery({
     queryKey: [...keys, 'balances', draft.warehouseId, draft.catalogVariantId],
     enabled: enabled && Boolean(draft.warehouseId && draft.catalogVariantId),
@@ -99,6 +107,7 @@ function ScopedStockOperations({ userId, tenantId, organizationId }: {
     warehouses: warehouses.data?.items ?? [],
     locations: locations.data?.items ?? [],
     variants: variants.data?.items ?? [],
+    lots: lots.data?.items ?? [],
   }
   const locked = busy || uncertain || outcome !== null
   const canPrepare = enabled && !locked && Boolean(
@@ -112,6 +121,9 @@ function ScopedStockOperations({ userId, tenantId, organizationId }: {
     setDraft(current => {
       if (field === 'warehouseId') return {
         ...current, warehouseId: String(value), locationId: '', toLocationId: '',
+      }
+      if (field === 'catalogVariantId') return {
+        ...current, catalogVariantId: String(value), lotId: '', lotNumber: '', serialNumber: '',
       }
       if (field === 'operation') return {
         ...current, operation: value as StockOperation,
@@ -219,6 +231,7 @@ function ScopedStockOperations({ userId, tenantId, organizationId }: {
     void warehouses.refetch()
     if (draft.warehouseId) void locations.refetch()
     void variants.refetch()
+    if (draft.catalogVariantId) void lots.refetch()
     if (draft.warehouseId && draft.catalogVariantId) {
       void balances.refetch()
       void movements.refetch()
@@ -307,7 +320,16 @@ function ScopedStockOperations({ userId, tenantId, organizationId }: {
           <input className={inputClass} type="number" step="0.000001" value={draft.quantity}
             disabled={locked} onChange={event => edit('quantity', event.target.value)} />
         </label>
-        {draft.operation === 'receive' ?
+        {draft.catalogVariantId ? <label className={labelClass}>{t('premier_pos.stockLot')}
+          <select className={inputClass} value={draft.lotId} disabled={locked}
+            onChange={event => edit('lotId', event.target.value)}>
+            <option value="">{t('premier_pos.stockUntrackedLot')}</option>
+            {availableLots.map(row => <option key={String(row.id)} value={String(row.id)}>
+              {friendly(row, 'lotNumber', 'sku')}
+            </option>)}
+          </select>
+        </label> : null}
+        {draft.operation === 'receive' && !draft.lotId ?
           <label className={labelClass}>{t('premier_pos.stockLotNumber')}
             <input className={inputClass} value={draft.lotNumber} disabled={locked}
               onChange={event => edit('lotNumber', event.target.value)} maxLength={120}/>
