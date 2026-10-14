@@ -56,5 +56,20 @@
   "premier_pos.receipt": "Sales receipt",
   "premier_pos.receiptNote": "Recorded payment only; shipment and warehouse execution follow the configured native workflow.",
   "premier_pos.inventory": "Inventory",
-  "premier_pos.configureCurrencies": "Configure currencies"
+  "premier_pos.configureCurrencies": "Configure currencies",
+  "premier_pos.traceTitle": "Order lifecycle",
+  "premier_pos.traceDescription": "Read official order, invoice, payment, shipment, and WMS movement records",
+  "premier_pos.traceOrders": "Sales orders",
+  "premier_pos.traceInvoices": "Invoices",
+  "premier_pos.tracePayments": "Payments",
+  "premier_pos.traceShipments": "Shipments",
+  "premier_pos.traceMovements": "WMS movements directly referencing this order",
+  "premier_pos.tracePaid": "Paid amount",
+  "premier_pos.traceOutstanding": "Outstanding amount",
+  "premier_pos.traceFulfillment": "Recorded fulfillment status",
+  "premier_pos.traceUnavailable": "Records unavailable or you lack permission to view them",
+  "premier_pos.traceEmpty": "No sales orders on this page",
+  "premier_pos.traceChooseOrder": "Select an order to inspect its lifecycle",
+  "premier_pos.traceNone": "No verified matching records",
+  "premier_pos.traceDisclaimer": "Only official Sales and WMS records are shown. Movements referencing shipments rather than orders may be omitted; no movements is not proof of no stock deduction. Each source is limited to the first 100 rows. Paid does not mean delivered."
 }
