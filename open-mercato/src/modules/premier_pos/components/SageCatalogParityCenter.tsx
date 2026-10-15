@@ -14,6 +14,7 @@ import {
 import type {
   SageCatalogCandidate, SageCatalogPreview,
 } from '../../../lib/premieros/sage-catalog-bridge'
+import { SageSpreadsheetParityPanel } from './SageSpreadsheetParityPanel'
 
 const MAX_LOCAL_FILE_BYTES = 5_000_000
 const PAGE_SIZE = 50
@@ -160,6 +161,7 @@ function ScopedSageParity({ tenantId, organizationId }: {
         {localError ? <p role="alert" className="text-sm text-destructive">{localError}</p> : null}
       </article>
     </div>
+    <SageSpreadsheetParityPanel source={source} completeSource={complete} hasLoadedSource={hasLoadedSource} />
     {report ? <article className="space-y-4 rounded-lg border bg-card p-4">
       <div>
         <h2 className="font-semibold">{t('premier_pos.parityResult')}</h2>
