@@ -14,7 +14,8 @@
     "src/modules/premier_pos/components/NativeCatalogSetup.tsx",
     "src/modules/premier_pos/lib/stock-operations.ts",
     "src/modules/premier_pos/components/StockOperationsWorkspace.tsx",
-    "src/modules/premier_pos/backend/pos/stock/page.tsx"
+    "src/modules/premier_pos/backend/pos/stock/page.tsx",
+    "src/modules/premier_pos/api/sage-catalog-preview/route.ts"
   ],
   "exclude": [
     "node_modules",

@@ -157,5 +157,8 @@
   "premier_pos.stockAvailable": "المتاح",
   "premier_pos.stockPagingNote": "تُعرض أول صفحة فقط من بيانات الوحدة الرسمية. لا تستنتج رصيد المخزون الإجمالي أو غياب الحركات من النتائج الناقصة.",
   "premier_pos.stockLot": "التشغيلة المسجلة في WMS",
-  "premier_pos.stockUntrackedLot": "بدون تشغيلة مسجلة / استلام تشغيلة جديدة"
+  "premier_pos.stockUntrackedLot": "بدون تشغيلة مسجلة / استلام تشغيلة جديدة",
+  "premier_pos.sageExportTitle": "معاينة توافق الكتالوج مع PremierOS Sage",
+  "premier_pos.sageExportWarning": "تصدير للقراءة فقط من المؤسسة الحالية بعد التحقق من صلاحيات الكتالوج. يحتوي الملف على أول 50 منتجًا ومتغيراتها فقط؛ قد توجد صفحات إضافية. لا يغيّر قاعدة Sage ولا ينقل المخزون أو الأسعار أو وصفات التصنيع.",
+  "premier_pos.sageExportDownload": "تنزيل معاينة الكتالوج (أول 50 منتجًا)"
 }

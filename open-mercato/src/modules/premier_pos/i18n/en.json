@@ -157,5 +157,8 @@
   "premier_pos.stockAvailable": "Available",
   "premier_pos.stockPagingNote": "Only the first page of canonical records is shown. Never infer all stock totals or absence of movements from incomplete data.",
   "premier_pos.stockLot": "Canonical WMS lot",
-  "premier_pos.stockUntrackedLot": "No existing lot / receive a new lot"
+  "premier_pos.stockUntrackedLot": "No existing lot / receive a new lot",
+  "premier_pos.sageExportTitle": "PremierOS Sage catalog compatibility preview",
+  "premier_pos.sageExportWarning": "Read-only export from the selected organization using your catalog view permission. This file includes only the first 50 products and their variants; more pages may exist. It does not change Sage, stocks, prices or manufacturing recipes.",
+  "premier_pos.sageExportDownload": "Download catalog preview (first 50 products)"
 }
