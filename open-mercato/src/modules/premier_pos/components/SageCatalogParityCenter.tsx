@@ -173,7 +173,10 @@ function ScopedSageParity({ tenantId, organizationId }: {
           </div>)}
       </div>
       <ul className="list-disc space-y-1 ps-5 text-sm text-muted-foreground">
-        {report.warnings.map(warning => <li key={warning}>{warning}</li>)}
+        {[
+          ...(report.completeSource ? [] : ['incomplete']),
+          'match', 'branch', 'finance',
+        ].map(code => <li key={code}>{t(`premier_pos.parityWarning.${code}`)}</li>)}
       </ul>
       {entries.length === 0 ? <p className="text-sm">{t('premier_pos.parityNoRows')}</p> :
         <div className="overflow-x-auto"><table className="w-full text-sm">
