@@ -220,6 +220,14 @@ function ScopedSetup({
             })}
           </div>
           <NativeCatalogSetup userId={userId} scope={scope} />
+          <section className="rounded-lg border bg-card p-4" aria-label={t('premier_pos.sageExportTitle')}>
+            <h2 className="font-semibold">{t('premier_pos.sageExportTitle')}</h2>
+            <p className="mt-2 text-sm text-muted-foreground">{t('premier_pos.sageExportWarning')}</p>
+            <a href="/api/premier_pos/sage-catalog-preview?download=1&pageSize=50"
+              className="mt-3 inline-flex rounded-md border px-3 py-2 text-sm underline">
+              {t('premier_pos.sageExportDownload')}
+            </a>
+          </section>
           <p className="text-sm text-muted-foreground">{t('premier_pos.setupNext')}</p>
           <div className="flex flex-wrap gap-2">
             <Link className="rounded-md border px-3 py-2 text-sm underline" href="/backend/catalog/products">{t('premier_pos.manageProducts')}</Link>
