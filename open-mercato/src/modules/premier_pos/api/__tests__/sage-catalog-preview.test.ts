@@ -74,8 +74,8 @@ test('fails closed if a product page contains more than 2,000 variants', async (
   em.find.mockImplementation(async (_entity: unknown, where: unknown) => {
     if ('product' in (where as Record<string, unknown>)) {
       return Array.from({ length: 2001 }, (_v, i) => ({
-        id: 'variant-' + i, product: { id: productId }, sku: 'X-' + i,
-        isActive: true,
+        id: 'variant-' + i, product: { id: productId }, name: 'Variant ' + i,
+        sku: 'X-' + i, barcode: 'BAR-' + i, isActive: true,
       }))
     }
     return [{ id: productId, title: 'Multi-variant', sku: 'X', productType: 'configurable', isActive: true }]
