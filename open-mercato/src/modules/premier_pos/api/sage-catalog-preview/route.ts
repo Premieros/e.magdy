@@ -48,8 +48,14 @@ export async function GET(request: Request) {
     const variants = ids.length ? await em.find(
       CatalogProductVariant,
       { tenantId, organizationId, deletedAt: null, product: { $in: ids } },
-      { fields: ['id', 'product', 'sku', 'name', 'barcode', 'isActive'], orderBy: { id: 'ASC' } },
+      { fields: ['id', 'product', 'sku', 'name', 'barcode', 'isActive'], orderBy: { id: 'ASC' }, limit: 2001 },
     ) : []
+    // Never silently truncate a large multi-variant product; the caller must
+    // request fewer products per page before comparing anything with Sage.
+    if (variants.length > 2000) return Response.json(
+      { error: 'Too many variants on this page; reduce pageSize' },
+      { status: 413, headers: { 'Cache-Control': 'private, no-store' } },
+    )
     const projected = buildSageCatalogPreview({
       tenantId, organizationId,
       products: page.map(product => ({
