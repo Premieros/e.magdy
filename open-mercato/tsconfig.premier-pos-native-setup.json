@@ -16,7 +16,9 @@
     "src/modules/premier_pos/components/StockOperationsWorkspace.tsx",
     "src/modules/premier_pos/backend/pos/stock/page.tsx",
     "src/modules/premier_pos/api/sage-catalog-preview/route.ts",
-    "src/modules/premier_pos/api/__tests__/sage-catalog-preview.test.ts"
+    "src/modules/premier_pos/api/__tests__/sage-catalog-preview.test.ts",
+    "src/modules/premier_pos/components/SageCatalogParityCenter.tsx",
+    "src/modules/premier_pos/backend/pos/sage-parity/page.tsx"
   ],
   "exclude": [
     "node_modules",
