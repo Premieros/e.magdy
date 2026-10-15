@@ -58,6 +58,8 @@ jobs:
         run: yarn jest --config jest.config.cjs --runInBand --runTestsByPath src/lib/premieros/__tests__/sage-catalog-parity.test.ts
       - name: Test Sage's existing Excel-export CSV comparison safety
         run: yarn jest --config jest.config.cjs --runInBand --runTestsByPath src/lib/premieros/__tests__/sage-excel-parity.test.ts
+      - name: Verify Sage identity export and readiness by branch without SKUs
+        run: yarn jest --config jest.config.cjs --runInBand --runTestsByPath src/lib/premieros/__tests__/sage-identity-readiness.test.ts
       - name: Inventory app-owned screens
         run: node scripts/premieros-route-inventory.mjs > "$RUNNER_TEMP/premieros-routes.json"
       - name: Typecheck foundation source (isolated from generated registry)

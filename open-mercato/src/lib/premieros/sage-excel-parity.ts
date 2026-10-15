@@ -54,7 +54,7 @@ function detectDelimiter(header: string): ',' | ';' | '\t' {
 }
 
 /** Small, strict RFC 4180 parser. Sheets must be saved as UTF-8 CSV. */
-function parseCsvCells(raw: string): string[][] {
+export function parseCsvCells(raw: string): string[][] {
   if (raw.length > MAX_CSV_CHARS) throw new Error('CSV exceeds the 5 MB comparison limit')
   const input = raw.replace(/^\uFEFF/, '')
   const headerEnd = input.search(/\r|\n/)
