@@ -191,5 +191,22 @@
   "premier_pos.parityWarning.incomplete": "Source pages are incomplete; SKU uniqueness cannot be established globally.",
   "premier_pos.parityWarning.match": "Matching SKU never authorizes database writes or merging records.",
   "premier_pos.parityWarning.branch": "Sage branches and product types are not mapped to native organizations or types.",
-  "premier_pos.parityWarning.finance": "Prices, cost, tax, recipes, units, inventory, kitchen and balances are excluded."
+  "premier_pos.parityWarning.finance": "Prices, cost, tax, recipes, units, inventory, kitchen and balances are excluded.",
+  "premier_pos.sageCsvTitle": "Compare Sage's existing Excel product export",
+  "premier_pos.sageCsvInstructions": "In Sage Products, export the usual Excel file, open it in Excel and save a copy as CSV UTF-8. Select the CSV here. No changes to Sage are needed; the file is processed entirely in your browser.",
+  "premier_pos.sageCsvWarning": "Important: Sage's existing export omits stable product and branch IDs. We can compare SKU overlaps only, never prove product identity or authorize an import. Prices, inventory and cost are not compared.",
+  "premier_pos.sageCsvChoose": "Choose a local Sage CSV UTF-8 file",
+  "premier_pos.sageCsvErrorFormat": "Select a CSV saved locally from the Sage Excel export; this view does not open XLSX directly.",
+  "premier_pos.sageCsvErrorSize": "File exceeds the 5 MB local comparison limit.",
+  "premier_pos.sageCsvProducts": "Sage spreadsheet products",
+  "premier_pos.sageCsvLoadSource": "Load an Open Mercato catalog page above to view the comparison.",
+  "premier_pos.sageCsvResult": "SKU-only comparison (not verified for migration)",
+  "premier_pos.sageCsvStatus.missing-source-sku": "Missing source SKU",
+  "premier_pos.sageCsvStatus.duplicate-source-sku": "Duplicate source SKU",
+  "premier_pos.sageCsvStatus.no-spreadsheet-match": "No matching Sage SKU",
+  "premier_pos.sageCsvStatus.ambiguous-spreadsheet-sku": "Duplicate SKU in Sage sheet",
+  "premier_pos.sageCsvStatus.sku-overlap-unverified": "Unverified SKU overlap",
+  "premier_pos.sageCsvRow": "Sage sheet row",
+  "premier_pos.sageCsvDownload": "Download local JSON comparison report",
+  "premier_pos.sageCsvReportWarning": "This local report never authorizes migration. Excel-to-CSV may strip leading SKU zeros: inspect original cells. No Sage data is uploaded."
 }
