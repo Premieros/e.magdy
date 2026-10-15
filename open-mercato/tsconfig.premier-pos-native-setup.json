@@ -18,7 +18,9 @@
     "src/modules/premier_pos/api/sage-catalog-preview/route.ts",
     "src/modules/premier_pos/api/__tests__/sage-catalog-preview.test.ts",
     "src/modules/premier_pos/components/SageCatalogParityCenter.tsx",
-    "src/modules/premier_pos/backend/pos/sage-parity/page.tsx"
+    "src/modules/premier_pos/backend/pos/sage-parity/page.tsx",
+    "src/modules/premier_pos/components/SageSpreadsheetParityPanel.tsx",
+    "src/lib/premieros/sage-excel-parity.ts"
   ],
   "exclude": [
     "node_modules",

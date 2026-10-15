@@ -191,5 +191,22 @@
   "premier_pos.parityWarning.incomplete": "القراءة غير مكتملة؛ لا يمكن إثبات تفرد SKU على مستوى المصدر بالكامل.",
   "premier_pos.parityWarning.match": "تطابق SKU لا يسمح بالكتابة أو الدمج تلقائيًا.",
   "premier_pos.parityWarning.branch": "لم يتم ربط فروع Sage بالمؤسسات، أو التحقق من تكافؤ نوع المنتج.",
-  "premier_pos.parityWarning.finance": "الأسعار والتكلفة والضرائب والوصفات والوحدات والمخزون والمطبخ والأرصدة ليست ضمن هذه المقارنة."
+  "premier_pos.parityWarning.finance": "الأسعار والتكلفة والضرائب والوصفات والوحدات والمخزون والمطبخ والأرصدة ليست ضمن هذه المقارنة.",
+  "premier_pos.sageCsvTitle": "مقارنة تصدير Excel الحالي من Sage",
+  "premier_pos.sageCsvInstructions": "من شاشة منتجات Sage صدّر ملف Excel المعتاد، وافتحه في Excel واحفظ نسخة بصيغة CSV UTF-8، ثم اختر نسخة CSV هنا. لا يتطلب ذلك تعديل Sage. تتم القراءة بالكامل داخل المتصفح.",
+  "premier_pos.sageCsvWarning": "مهم: ملف Sage الحالي لا يحتوي على معرفات المنتجات والفروع. لذلك نكتشف تشابه SKU فقط، ولا يمكن إثبات أن المنتجين متطابقان أو استخدام هذه النتائج لاستيراد البيانات. لا تتم مقارنة الأسعار أو المخزون أو التكلفة.",
+  "premier_pos.sageCsvChoose": "اختيار ملف CSV UTF-8 المحفوظ من تصدير Sage",
+  "premier_pos.sageCsvErrorFormat": "يرجى اختيار ملف CSV بعد تحويل ملف Excel محليًا؛ لا يمكن قراءة XLSX مباشرة هنا.",
+  "premier_pos.sageCsvErrorSize": "الملف يتجاوز حد المقارنة المحلية (5 ميجابايت).",
+  "premier_pos.sageCsvProducts": "منتج في جدول Sage",
+  "premier_pos.sageCsvLoadSource": "حمّل صفحة من كتالوج Open Mercato أعلاه لإظهار نتيجة المقارنة.",
+  "premier_pos.sageCsvResult": "نتيجة مقارنة الرموز فقط (غير موثوقة للترحيل)",
+  "premier_pos.sageCsvStatus.missing-source-sku": "SKU مفقود بالمصدر",
+  "premier_pos.sageCsvStatus.duplicate-source-sku": "SKU مكرر بالمصدر",
+  "premier_pos.sageCsvStatus.no-spreadsheet-match": "لا يوجد SKU في ملف Sage",
+  "premier_pos.sageCsvStatus.ambiguous-spreadsheet-sku": "SKU مكرر في ملف Sage",
+  "premier_pos.sageCsvStatus.sku-overlap-unverified": "تشابه SKU غير مؤكد",
+  "premier_pos.sageCsvRow": "صف ملف Sage",
+  "premier_pos.sageCsvDownload": "تنزيل تقرير المقارنة JSON للرجوع إليه",
+  "premier_pos.sageCsvReportWarning": "التقرير محلي ولا يمثل تصريح ترحيل. تحويل ملف Excel إلى CSV قد يزيل الأصفار في بداية SKU؛ راجع النسخة الأصلية. لا يتم رفع ملف Sage إلى الخادم."
 }

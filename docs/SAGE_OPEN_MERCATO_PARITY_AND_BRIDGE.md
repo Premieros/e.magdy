@@ -64,3 +64,18 @@ This candidate adds a **GET-only** route, pure projection tests and a download l
 - The dashboard is in the Open Mercato application, **not in the Sage user interface yet**. Before a Sage-side UI or backend consumer is changed, reconcile Sage's single-writer gate and its current work plan. As checked 2026-10-15, `docs/CURRENT_WORK_PLAN.md` still names `hotfix/kitchen-atomic-remote-stop-20261015` while PR #507 for that branch is merged; do not assume that plan's stale active branch authorizes a new writer.
 - This phase has focused unit tests for strict input validation, duplicate/ambiguous SKU cases, incomplete pagination, and no-write semantics. A signed-in browser walkthrough with an authorized operator and real Sage JSON export remains a separate acceptance gate.
 
+
+
+## Phase 2b: use the existing Sage Excel export (without modifying Sage)
+
+The current Sage Products page (`Premieros/johna-s/src/features/catalog/pages/ProductsPage.tsx`) exports an **XLSX** spreadsheet with `Name`, `NameEn`, `Barcode`, `SKU`, `ProductType`, costs, prices, category and stock thresholds. It does **not** export `id` or `branch_id`. That source file is therefore **not safe for definitive cross-product identity mapping**.
+
+For an immediate read-only comparison on Open Mercato:
+
+1. Sage > Products > **Export** and download `products.xlsx`.
+2. Open it locally in Excel (or a trusted spreadsheet application) and **Save As CSV UTF-8 (comma-separated values)**. The original XLSX is not uploaded or modified. Check leading zeros in SKU after conversion.
+3. Log in to the Open Mercato app with catalog-view permissions, open `/backend/pos/sage-parity`, load the native source catalog pages, and choose the local `.csv` file under **Compare Sage's existing Excel product export**.
+4. The browser parses CSV (also handles BOM, quoted/newline fields, semicolon/tab-delimited saves), caps input at 5 MB / 20,000 products, compares normalized SKU and highlights missing/duplicate matches. The operator may download a local JSON report labeled `mode=sku-hints-only`, `readOnly=true`, `canImport=false`, `identityVerified=false` on every row.
+5. **No data is sent to Sage or external servers**, no branch/product ID is invented and no price/cost/stock/recipe is imported. Native product pages still come through the authenticated read-only Open Mercato source route. A unique SKU overlap is **not a validated match**.
+
+The **separate branch-aware JSON mode remains available** when an ID-bearing Sage export is supplied later by the owner-coordinated Sage implementation. Implementing that export within Sage itself still requires reconciling the repo's `docs/SINGLE_WRITER_EXECUTION_FENCE.md` and active work plan first. Do **not** bypass this by treating Sage's current spreadsheet as a migration-ready input.
