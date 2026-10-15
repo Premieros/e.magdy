@@ -56,6 +56,8 @@ jobs:
         run: yarn jest --config jest.config.cjs --runInBand --runTestsByPath src/lib/premieros/__tests__/sage-catalog-bridge.test.ts src/modules/premier_pos/api/__tests__/sage-catalog-preview.test.ts
       - name: Verify local-only Sage catalog comparison and safety boundaries
         run: yarn jest --config jest.config.cjs --runInBand --runTestsByPath src/lib/premieros/__tests__/sage-catalog-parity.test.ts
+      - name: Test Sage's existing Excel-export CSV comparison safety
+        run: yarn jest --config jest.config.cjs --runInBand --runTestsByPath src/lib/premieros/__tests__/sage-excel-parity.test.ts
       - name: Inventory app-owned screens
         run: node scripts/premieros-route-inventory.mjs > "$RUNNER_TEMP/premieros-routes.json"
       - name: Typecheck foundation source (isolated from generated registry)
