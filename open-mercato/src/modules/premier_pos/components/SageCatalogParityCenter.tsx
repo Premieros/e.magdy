@@ -15,6 +15,7 @@ import type {
   SageCatalogCandidate, SageCatalogPreview,
 } from '../../../lib/premieros/sage-catalog-bridge'
 import { SageSpreadsheetParityPanel } from './SageSpreadsheetParityPanel'
+import { SageIdentityReadinessPanel } from './SageIdentityReadinessPanel'
 
 const MAX_LOCAL_FILE_BYTES = 5_000_000
 const PAGE_SIZE = 50
@@ -130,6 +131,7 @@ function ScopedSageParity({ tenantId, organizationId }: {
       </div>
     </header>
     <p className="rounded-md border p-3 text-sm">{t('premier_pos.parityPrivacy')}</p>
+    <SageIdentityReadinessPanel />
     {!enabled ? <p role="alert">{t('premier_pos.scopeRequired')}</p> : null}
     <div className="grid gap-4 md:grid-cols-2">
       <article className="space-y-3 rounded-lg border bg-card p-4">
