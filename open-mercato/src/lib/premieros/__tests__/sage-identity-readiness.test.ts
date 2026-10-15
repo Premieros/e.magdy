@@ -75,6 +75,6 @@ describe('Sage-first ID-preserving readiness audit', () => {
     expect(result.duplicateNameWithinBranchGroups).toBe(1)
     expect(result.duplicateSkuGroups).toBe(0)
     expect(result.canImport).toBe(false)
-    expect(JSON.stringify(result)).not.toContain('Sage product')
+    expect(JSON.stringify(result)).not.toContain('\"name\":\"TEA\"')
   })
 })
