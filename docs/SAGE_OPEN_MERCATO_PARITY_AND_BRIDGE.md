@@ -30,7 +30,7 @@ The endpoint `GET /api/premier_pos/sage-catalog-preview` is intended as a delibe
 
 1. Requires a **native Open Mercato login**, exact organization selection and native `catalog.products.view` permission.
 2. Reads **only official CatalogProduct and CatalogProductVariant** for the selected tenant + organization; no Sage database reads.
-3. Deterministic page of **1–100 products**, sorted by product UUID, cursor `?cursor=<last product id>`. `nextCursor` signals further pages. The returned number of *variant rows* may exceed product page size.
+3. Deterministic page of **1–100 products**, sorted by product UUID, cursor `?cursor=<last product id>`. `nextCursor` signals further pages. The returned number of *variant rows* may exceed product page size; the endpoint rejects pages with more than 2,000 variants (HTTP 413, reduce pageSize) instead of silently truncating.
 4. Version `premieros.sage.catalog-preview.v1`: product ID, variant ID, suggested SKU, title, variant name/barcode, native type and active state. Explicit warnings mark missing/duplicate SKU and other unmapped domains. Read-only JSON, `Cache-Control: private, no-store`. Optional `?download=1` downloads current page.
 5. **No credential sharing, Sage imports or writing.** Sage's importer is not implemented; this export alone does not mean the two production systems are connected or ready to migrate.
 
