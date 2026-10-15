@@ -52,7 +52,7 @@ test('authenticated read-only catalog bridge uses official view-only permission'
     { fields: ['id', 'title', 'sku', 'productType', 'isActive'], orderBy: { id: 'ASC' }, limit: 11 })
   expect(em.find).toHaveBeenCalledWith(expect.anything(),
     { tenantId: tenant, organizationId: org, deletedAt: null, product: { $in: [productId] } },
-    { fields: ['id', 'product', 'sku', 'name', 'barcode', 'isActive'], orderBy: { id: 'ASC' } })
+    { fields: ['id', 'product', 'sku', 'name', 'barcode', 'isActive'], orderBy: { id: 'ASC' }, limit: 2001 })
   expect(metadata.GET.requireFeatures).toEqual(['catalog.products.view'])
 })
 test('rejects oversized, negative, malformed cursor and unexpected query parameters', async () => {
@@ -67,4 +67,21 @@ test('denies access when scoped auth fails before any database request', async (
   scoped.mockRejectedValue(new CrudHttpError(403, { error: 'Catalog view denied' }))
   const result = await GET(req())
   expect(result.status).toBe(403)
+})
+
+test('fails closed if a product page contains more than 2,000 variants', async () => {
+  const em = setScope()
+  em.find.mockImplementation(async (_entity: unknown, where: unknown) => {
+    if ('product' in (where as Record<string, unknown>)) {
+      return Array.from({ length: 2001 }, (_v, i) => ({
+        id: 'variant-' + i, product: { id: productId }, sku: 'X-' + i,
+        isActive: true,
+      }))
+    }
+    return [{ id: productId, title: 'Multi-variant', sku: 'X', productType: 'configurable', isActive: true }]
+  })
+  const response = await GET(req())
+  expect(response.status).toBe(413)
+  expect((await response.json()).error).toMatch(/reduce pageSize/)
+  expect(response.headers.get('cache-control')).toBe('private, no-store')
 })
