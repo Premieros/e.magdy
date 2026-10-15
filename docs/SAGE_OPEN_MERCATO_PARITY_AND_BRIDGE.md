@@ -53,3 +53,14 @@ The endpoint `GET /api/premier_pos/sage-catalog-preview` is intended as a delibe
 ## Rollback and non-goals
 
 This candidate adds a **GET-only** route, pure projection tests and a download link. Revert it or disable the link without any data rollback. It does not change Sage source, production passwords/roles, auth provider, currencies, costing, printing, inventory movements, or production schema.
+
+
+## Phase 2: browser-only comparison center (Sage remains untouched)
+
+- Open `/backend/pos/sage-parity` on the **Open Mercato** backend using `catalog.products.view`. Read official catalog pages 50 products at a time (max 10 pages per session); incomplete source is always marked incomplete.
+- Select a **local Sage JSON export** containing either an array or `{ "products": [...] }`. Required per row: `id` (UUID), `name`, `sku` (string/null), `branch_id` (UUID), `product_type` (`ready` or `manufactured`). Files over 5 MB or lists over 20,000 records are rejected. **The file is read inside the browser and not uploaded.**
+- Exact normalized SKU matching yields only **review candidates**, never confirmed identities. The report explicitly flags source duplicates, missing codes, missing Sage records and ambiguous same-SKU Sage rows spanning branches.
+- It does **not** infer branch→organization, Sage `ready/manufactured`→Mercato type, prices, taxes, cost, units, recipes, quantities, balances, cashier operations or accounting. No import, token-sharing or writes are implemented.
+- The dashboard is in the Open Mercato application, **not in the Sage user interface yet**. Before a Sage-side UI or backend consumer is changed, reconcile Sage's single-writer gate and its current work plan. As checked 2026-10-15, `docs/CURRENT_WORK_PLAN.md` still names `hotfix/kitchen-atomic-remote-stop-20261015` while PR #507 for that branch is merged; do not assume that plan's stale active branch authorizes a new writer.
+- This phase has focused unit tests for strict input validation, duplicate/ambiguous SKU cases, incomplete pagination, and no-write semantics. A signed-in browser walkthrough with an authorized operator and real Sage JSON export remains a separate acceptance gate.
+
