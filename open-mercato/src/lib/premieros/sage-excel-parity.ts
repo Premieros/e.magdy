@@ -49,7 +49,7 @@ const normalizeSku = (v: string | null) => v?.trim().toLocaleUpperCase('en-US') 
 
 function detectDelimiter(header: string): ',' | ';' | '\t' {
   const score = (delimiter: string) => header.split(delimiter).length - 1
-  const scores = [',', ';', '\t'] as const
+  const scores: Array<',' | ';' | '\t'> = [',', ';', '\t']
   return scores.sort((a, b) => score(b) - score(a))[0]
 }
 
