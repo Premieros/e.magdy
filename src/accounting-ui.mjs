@@ -23,7 +23,7 @@ export function accountingPageMarkup(db,{esc,heading,btn,metric,table,td,empty,c
   const cashBars=[['إجمالي المبالغ الداخلة',data.inflow,'in'],['إجمالي المبالغ الخارجة',data.outflow,'out']].map(([label,value,type])=>
     '<div class="ac-cash-row"><div><b>'+label+'</b><span>'+cur(value)+'</span></div><div class="ac-track"><span class="ac-fill ac-fill-'+type+'" style="width:'+(value/scale*100).toFixed(2)+'%"></span></div></div>').join('');
   return heading('الحسابات','متابعة سهلة للمبيعات الفعلية، التحصيلات، المدفوعات والربح التقديري.',btn('＋ تسجيل حركة مالية','new-finance','','primary'))
-    +'<section class="ac-hero"><div><small>WHITE TEX · الحسابات</small><h2>صورة واضحة عن أموال المصنع</h2><p>البيع يُحسب عند التسليم، والتحصيل يُسجَّل عند استلام المال فعلًا.</p></div><span aria-hidden="true">ج.م</span></section>'
+    +'<section class="ac-hero"><div><small>WHITE TEX · الحسابات</small><p>البيع يُحسب عند التسليم، والتحصيل يُسجَّل عند استلام المال فعلًا.</p></div><span aria-hidden="true">ج.م</span></section>'
     +'<div class="ac-metrics">'
     +metric('قيمة مبيعات تم تسليمها',cur(data.revenue),'بضاعة خرجت للعملاء')
     +metric('مبالغ محصّلة من العملاء',cur(data.receipts),'حركات قبض مدخلة فعليًا')
