@@ -8,7 +8,7 @@ export const NOTIFICATION_LIMIT = 160;
 export const LOW_STOCK_LEVEL = 25;
 export const notificationIcons = Object.freeze({
   stage:'⚡', stock:'📦', warning:'⚠️', success:'🏆', quality:'🎯',
-  order:'📋', delivery:'🚚', worker:'🧵', info:'✦', error:'⛔'
+  order:'📋', delivery:'🚚', worker:'🧵', finance:'💳', info:'✦', error:'⛔'
 });
 const stamp = () => new Date().toISOString();
 const uid = () => globalThis.crypto?.randomUUID?.() ??
@@ -93,7 +93,19 @@ export function buildNotifications(before, after) {
     push('delivery','تم تسليم بضاعة وخصم التام',
       row.reference+' • '+quantity+' قطعة • '+(row.customer||'عميل'),null,row.reference);
   }
-  const previousMaterials = new Map(items(before,'materials').map(m=>[m.id,m]));
+  for(const row of added(before,after,'financeEntries')){
+    const types={
+      'customer-receipt':'تحصيل من عميل',
+      'owner-capital':'إيداع أموال',
+      'supplier-payment':'سداد لمورد',
+      'wages-payment':'صرف أجور إنتاج',
+      'operating-expense':'مصروف إداري',
+      'owner-withdrawal':'سحب من الصندوق'
+    };
+    push('finance',types[row.kind]||'حركة مالية',
+      row.amount+' ج.م'+(row.customer?' • '+row.customer:row.category?' • '+row.category:''));
+  }
+  const previousMaterials = new Map(items(before,'materials').map(m=>[m.id,m]));;
   for (const mat of items(after,'materials')) {
     const old = previousMaterials.get(mat.id);
     if (old && Number(old.stock)>=LOW_STOCK_LEVEL && Number(mat.stock)<LOW_STOCK_LEVEL) {
