@@ -29,6 +29,7 @@ jobs:
         run: |
           node --check app.js
           node --check src/workflow.mjs
+          node --check src/notifications.mjs
           node --check src/factory-ops.mjs
           node --check src/cloud-backup.mjs
           node --check src/production-planning.mjs
@@ -41,7 +42,7 @@ jobs:
         run: |
           mkdir -p site/src
           cp index.html styles.css app.js app-icon.svg site/
-          cp src/workflow.mjs src/factory-ops.mjs src/cloud-backup.mjs src/production-planning.mjs src/wholesale.mjs src/demo-data.mjs src/cloud-intake.mjs site/src/
+          cp src/workflow.mjs src/notifications.mjs src/factory-ops.mjs src/cloud-backup.mjs src/production-planning.mjs src/wholesale.mjs src/demo-data.mjs src/cloud-intake.mjs site/src/
           touch site/.nojekyll
           test -s site/index.html
           test -s site/app-icon.svg
@@ -49,6 +50,7 @@ jobs:
           grep -q 'family=Inter' site/index.html
           grep -q 'PREMIEROS DESIGN LANGUAGE' site/styles.css
           test -s site/src/workflow.mjs
+          test -s site/src/notifications.mjs
           test -s site/src/cloud-backup.mjs
           test -s site/src/production-planning.mjs
           test -s site/src/wholesale.mjs
