@@ -13,6 +13,8 @@ jobs:
           node-version: '22'
       - run: node --check app.js
       - run: node --check src/analytics.mjs
+      - run: node --check src/accounting.mjs
+      - run: node --check src/accounting-ui.mjs
       - run: node --check src/notifications.mjs
       - run: node --check src/factory-ops.mjs
       - run: node --check src/cloud-backup.mjs

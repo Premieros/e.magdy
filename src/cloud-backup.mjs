@@ -1,3 +1,4 @@
+import { validateAccountingState } from './accounting.mjs';
 /* PremierOS Garments manual cloud backup only.
  * AMMCO is a shared Supabase instance; no access to AMMCO business tables.
  * Publishable key is safe for client distribution; RLS is enforced by database.
@@ -8,7 +9,7 @@ const PUBLISHABLE_KEY = 'sb_publishable_ktXP7ss_qK6hZFmKybHw8A_89guYEK9';
 let session = null; // Deliberately memory-only: credentials/tokens are not persisted in localStorage.
 
 const REQUIRED_ARRAYS = ['styles', 'materials', 'orders', 'ledger', 'finished', 'audit'];
-const OPTIONAL_ARRAYS = ['workers', 'workLogs', 'fabricRolls', 'cuttingBundles', 'wholesaleOrders', 'finishedDispatches', 'notifications'];
+const OPTIONAL_ARRAYS = ['workers', 'workLogs', 'fabricRolls', 'cuttingBundles', 'wholesaleOrders', 'finishedDispatches', 'notifications', 'financeEntries'];
 
 export function validateCloudSnapshot(payload) {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload) || payload.version !== 1) {
@@ -31,6 +32,7 @@ export function validateCloudSnapshot(payload) {
       throw Error('بيانات رول غير صحيحة في النسخة السحابية');
     }
   }
+  validateAccountingState(parsed);
   return parsed;
 }
 
