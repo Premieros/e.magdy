@@ -1,5 +1,6 @@
 /* PremierOS Garments | independent, browser-local prototype | no remote database */
 import { stages, labels, workStages, stageTargetQuantity, nextStageAction } from './src/workflow.mjs';
+import { dashboardAnalytics } from './src/analytics.mjs';
 import { buildNotifications, newNotification, ensureNotifications, appendNotifications, unreadCount, notificationIcons, LOW_STOCK_LEVEL } from './src/notifications.mjs';
 import { cloudIdentity, cloudLogin, cloudLogout, cloudSave, cloudLoad, validateCloudSnapshot, cloudFactoryList, cloudIntakeOrders, cloudCreateIntakeOrder } from './src/cloud-backup.mjs';
 import { buildIntakeOrder, intakeOrderTotal } from './src/cloud-intake.mjs';
@@ -148,61 +149,100 @@ function notificationMarkup(){
     +'<div class="wt-notice-feed">'+content+'</div></section>':'')
     +'</div>';
 }
+function dashboardBarGraph(stats){
+  if(!stats.totalOrders)return '<div class="wt-chart-empty">أضف أول أمر تصنيع لتظهر مقارنة مراحل الإنتاج.</div>';
+  const max=Math.max(1,...stats.stages.map(s=>s.value));
+  return '<div class="wt-bar-graph" role="img" aria-label="عدد أوامر التصنيع حسب مرحلة العمل">'
+    +stats.stages.map(row=>'<div class="wt-bar-row"><span class="wt-bar-label">'+esc(row.label)+'</span>'
+      +'<div class="wt-bar-line" aria-hidden="true"><span style="width:'+(row.value/max*100).toFixed(2)+'%"></span></div>'
+      +'<b>'+num(row.value)+'</b></div>').join('')+'</div>';
+}
+function dashboardWeekChart(stats){
+  if(!stats.dailyTotal)return '<div class="wt-chart-empty">لم يكتمل إنتاج أي قطعة خلال الأيام السبعة الماضية. سيظهر الرسم عندما تُستكمل التعبئة.</div>';
+  const max=Math.max(...stats.daily.map(row=>row.completed),1);
+  return '<div class="wt-week-graph" role="img" aria-label="القطع التي اكتمل تصنيعها خلال آخر سبعة أيام">'
+    +stats.daily.map((row,i)=>'<div class="wt-week-day" title="'+esc(row.label+' — '+num(row.completed)+' قطعة')+'">'
+      +'<span class="wt-week-value">'+(row.completed?num(row.completed):'—')+'</span>'
+      +'<div class="wt-week-track"><span style="height:'+(row.completed?Math.max(7,row.completed/max*100):0)+'%" aria-hidden="true"></span></div>'
+      +'<strong>'+esc(row.label)+'</strong></div>').join('')+'</div>'
+    +'<p class="wt-chart-caption">إجمالي آخر 7 أيام: <b>'+num(stats.dailyTotal)+' قطعة مكتملة</b> — حسب تاريخ انتهاء التعبئة.</p>';
+}
+function dashboardQualityChart(stats){
+  if(!stats.inspected)return '<div class="wt-chart-empty">لا توجد نتائج جودة مكتملة بعد. ستظهر نسبة المقبول والمرفوض بمجرد اعتماد الفحص.</div>';
+  const percent=stats.qualityRate;
+  return '<div class="wt-donut-layout"><div class="wt-quality-donut" role="img" aria-label="نسبة القطع المقبولة '+num(percent)+' بالمئة" style="--wt-quality:'+percent+'">'
+    +'<div class="wt-donut-center"><strong>'+num(percent)+'٪</strong><span>اجتازت الجودة</span></div></div>'
+    +'<div class="wt-quality-legend"><div><i class="wt-legend-good" aria-hidden="true"></i><span>قطع مقبولة</span><b>'+num(stats.good)+'</b></div>'
+    +'<div><i class="wt-legend-reject" aria-hidden="true"></i><span>قطع مرفوضة</span><b>'+num(stats.rejected)+'</b></div>'
+    +'<p>من إجمالي '+num(stats.inspected)+' قطعة تم فحصها بالكامل.</p></div></div>';
+}
+function dashboardModelsChart(stats){
+  if(!stats.topModels.length)return '<div class="wt-chart-empty">بعد إضافة موديلات وأوامر تصنيع، ستظهر الموديلات الأكثر إنتاجًا هنا.</div>';
+  const max=Math.max(1,...stats.topModels.map(row=>row.qty));
+  return '<div class="wt-model-bars" role="img" aria-label="أكثر الموديلات من حيث عدد القطع المطلوبة للإنتاج">'
+    +stats.topModels.map(row=>'<div class="wt-model-entry"><div><strong>'+esc(row.name)+'</strong>'
+      +'<small>'+num(row.qty)+' قطعة</small></div><div class="wt-model-track"><span style="width:'+(row.qty/max*100).toFixed(2)+'%"></span></div></div>').join('')+'</div>'
+    +'<p class="wt-chart-caption">المقارنة حسب كميات أوامر الإنتاج المسجلة، وليست المبيعات.</p>';
+}
+function dashboardInsights(stats){
+  return '<section class="wt-insight-strip" aria-label="قراءة مبسطة لبيانات المصنع"><div class="wt-insight-title">'
+    +'<span aria-hidden="true">✦</span><div><strong>ماذا تقول الأرقام؟</strong><small>استنتاجات مباشرة من الحركات المسجلة</small></div></div>'
+    +'<div class="wt-insight-list">'+stats.insights.map(item=>'<p><span aria-hidden="true">✓</span>'+esc(item)+'</p>').join('')+'</div></section>';
+}
 function dashboard(){
-  ensureNotifications(db);
+  const stats=dashboardAnalytics(db);
   const live=db.orders.filter(o=>!['completed','cancelled'].includes(o.status));
-  const finished=db.orders.filter(o=>o.status==='completed');
-  const pendingQuality=live.filter(o=>o.status==='quality').length;
-  const nearEnd=live.filter(o=>['printing','ironing','presentation_quality','packing'].includes(o.status)).length;
   const low=db.materials.filter(m=>m.stock<LOW_STOCK_LEVEL);
-  const stockValue=db.materials.reduce((sum,m)=>sum+m.stock*m.avgCost,0);
-  const available=db.finished.reduce((sum,x)=>sum+x.qty,0)-wholesaleOverview(db).delivered;
-  const latest=db.notifications.slice(0,7);
+  const latest=db.notifications.slice(0,6);
   const activity=latest.length
     ?latest.map(e=>eventCard(e,true)).join('')
-    :db.audit.slice(0,7).map(row=>eventCard({type:'info',title:'حركة من السجل السابق',detail:row.message,at:row.at,read:true},true)).join('');
-  const stageRows=stages.filter(s=>!['planned','completed'].includes(s)).map(s=>{
-    const count=live.filter(o=>o.status===s).length;
-    const progress=live.length?Math.round(count/live.length*100):0;
-    return '<div class="wt-phase-row"><div class="wt-phase-title"><span>'+esc(labels[s])+'</span><b>'+num(count)+'</b></div>'
-      +'<div class="wt-phase-track"><span style="width:'+progress+'%"></span></div></div>';
-  }).join('');
-  return heading('مركز قيادة White tex','متابعة مراحل المصنع، الحركات التشغيلية وتنبيهات المخزون من بيانات هذا المتصفح.',
+    :db.audit.slice(0,6).map(row=>eventCard({type:'info',title:'عملية مسجلة سابقًا',detail:row.message,at:row.at,read:true},true)).join('');
+  const completionLabel=stats.completionRate===null?'—':num(stats.completionRate)+'٪';
+  const qualityLabel=stats.qualityRate===null?'—':num(stats.qualityRate)+'٪';
+  return heading('لوحة تحكم White tex','الأرقام والرسوم البيانية تشرح أداء المصنع ببساطة، دون تفاصيل تقنية.',
       btn('＋ أمر تصنيع','new-order','','primary'))
     +'<section class="wt-command-hero"><div class="wt-command-main">'
     +'<span class="wt-command-kicker"><i aria-hidden="true"></i> WHITE TEX · PRODUCTION CONTROL</span>'
-    +'<h2>كل مرحلة تحت السيطرة<span class="wt-command-dot">.</span></h2>'
-    +'<p>من القص والفرز إلى جودة البرزنتيشن والتعبئة، تابع دورة الإنتاج وحركة الخامات لحظة تسجيلها.</p>'
-    +'<div class="wt-command-buttons">'+btn('عرض أوامر الإنتاج','nav','orders','primary')
-    +(isDemoEligible(db)?btn('تجربة بيانات المصنع','seed','','dark'):'')
+    +'<h2>صورة واضحة عن أداء مصنعك<span class="wt-command-dot">.</span></h2>'
+    +'<p>تعرف ما أُنجز، وما ينتظر الجودة، وأين تحتاج الخامات إلى متابعة، من شاشة واحدة.</p>'
+    +'<div class="wt-command-buttons">'+btn('متابعة أوامر الإنتاج','nav','orders','primary')
+    +(isDemoEligible(db)?btn('عرض بيانات تجريبية','seed','','dark'):'')
     +'</div></div><div class="wt-command-insights">'
-    +'<div><small>أوامر قيد التشغيل</small><strong>'+num(live.length)+'</strong><span>حالة تشغيلية حالية</span></div>'
-    +'<div><small>أوامر وصلت للتشغيل النهائي</small><strong>'+num(nearEnd)+'</strong><span>طباعة / مكواة / تعبئة</span></div>'
-    +'<div><small>سجل الإشعارات</small><strong>'+num(db.notifications.length)+'</strong><span>مخزن محليًا على الجهاز</span></div>'
+    +'<div><small>أوامر جارية</small><strong>'+num(stats.activeOrders)+'</strong><span>قيد التصنيع</span></div>'
+    +'<div><small>أوامر مكتملة</small><strong>'+num(stats.completedOrders)+'</strong><span>انتهت التعبئة</span></div>'
+    +'<div><small>تحتاج متابعة</small><strong>'+num(stats.lowCount)+'</strong><span>خامات قليلة أو نافدة</span></div>'
     +'</div></section>'
-    +'<section class="wt-kpis" aria-label="مؤشرات الأداء">'
-    +'<article class="wt-kpi wt-kpi--blue"><span class="wt-kpi-symbol">◈</span><small>أوامر إنتاج نشطة</small><strong>'+num(live.length)+'</strong><span>'+num(live.reduce((sum,o)=>sum+o.qty,0))+' قطعة قيد التشغيل</span></article>'
-    +'<article class="wt-kpi wt-kpi--cyan"><span class="wt-kpi-symbol">◉</span><small>بانتظار الجودة</small><strong>'+num(pendingQuality)+'</strong><span>أوامر تحتاج فحصًا</span></article>'
-    +'<article class="wt-kpi wt-kpi--green"><span class="wt-kpi-symbol">✓</span><small>مخزون تام متاح</small><strong>'+num(available)+'</strong><span>'+num(finished.length)+' أمر مكتمل</span></article>'
-    +'<article class="wt-kpi wt-kpi--amber"><span class="wt-kpi-symbol">!</span><small>خامات منخفضة الرصيد</small><strong>'+num(low.length)+'</strong><span>أقل من '+LOW_STOCK_LEVEL+' وحدة</span></article>'
+    +'<section class="wt-kpis wt-kpis--analytics" aria-label="مؤشرات أداء المصنع">'
+    +'<article class="wt-kpi wt-kpi--blue"><span class="wt-kpi-symbol" aria-hidden="true">◈</span><small>أوامر قيد التصنيع</small><strong>'+num(stats.activeOrders)+'</strong><span>من '+num(stats.totalOrders)+' أمر مسجل</span></article>'
+    +'<article class="wt-kpi wt-kpi--cyan"><span class="wt-kpi-symbol" aria-hidden="true">✓</span><small>نسبة إنجاز الأوامر</small><strong>'+completionLabel+'</strong><span>الأوامر المكتملة من الإجمالي</span></article>'
+    +'<article class="wt-kpi wt-kpi--green"><span class="wt-kpi-symbol" aria-hidden="true">★</span><small>نسبة اجتياز الجودة</small><strong>'+qualityLabel+'</strong><span>القطع المقبولة من القطع المفحوصة</span></article>'
+    +'<article class="wt-kpi wt-kpi--amber"><span class="wt-kpi-symbol" aria-hidden="true">◉</span><small>قطع جاهزة للتسليم</small><strong>'+num(stats.onHand)+'</strong><span>بعد خصم ما تم تسليمه</span></article>'
+    +'<article class="wt-kpi wt-kpi--violet"><span class="wt-kpi-symbol" aria-hidden="true">↗</span><small>قطع مكتملة هذا الأسبوع</small><strong>'+num(stats.dailyTotal)+'</strong><span>خلال آخر 7 أيام</span></article>'
+    +'<article class="wt-kpi wt-kpi--red"><span class="wt-kpi-symbol" aria-hidden="true">!</span><small>خامات تحتاج متابعة</small><strong>'+num(stats.lowCount)+'</strong><span>أقل من 25 وحدة من نوعها</span></article>'
     +'</section>'
-    +'<div class="wt-dashboard-grid"><section class="card wt-phase-card"><div class="wt-section-head"><div><span class="wt-overline">PRODUCTION FLOW</span>'
-    +'<h3>خريطة مراحل التشغيل</h3><p>عدد أوامر التصنيع الموجودة حاليًا في كل مرحلة</p></div><span class="wt-running">'+num(live.length)+' نشط</span></div>'
-    +'<div class="wt-phase-list">'+stageRows+'</div></section>'
-    +'<section class="card wt-activity-card"><div class="wt-section-head"><div><span class="wt-overline">ACTIVITY FEED</span><h3>نبض المصنع</h3><p>آخر الحركات والإشعارات المسجلة محليًا</p></div>'
-    +'<button class="wt-text-button" data-act="notifications-open">عرض الكل ↗</button></div>'
-    +'<div class="wt-activity-list">'+(activity||'<div class="wt-notice-empty"><strong>لا توجد حركات مسجلة بعد</strong><p>أضف أمر إنتاج لبدء المتابعة.</p></div>')+'</div></section></div>'
-    +'<div class="wt-dashboard-grid wt-dashboard-grid--bottom"><section class="card wt-orders-card"><div class="wt-section-head"><div><h3>الأوامر الجاري تنفيذها</h3><p>الحالة الفعلية لكل أمر تصنيع</p></div>'
-    +'<button class="wt-text-button" data-act="nav" data-id="orders">كل الأوامر ↗</button></div>'
-    +(live.length?table(['رقم الأمر','الموديل','الكمية','المرحلة',''],live.slice(0,6).map(o=>'<tr>'
-      +td('<span class="mono">'+esc(o.ref)+'</span>')+td(esc(style(o.styleId)?.name))
-      +td(num(o.qty))+td(status(o.status))
+    +dashboardInsights(stats)
+    +'<div class="wt-analytics-grid">'
+    +'<section class="card wt-graph-card"><div class="wt-section-head"><div><h3>أين وصلت أوامر الإنتاج؟</h3><p>عدد الأوامر في كل مجموعة مراحل</p></div><span class="wt-running">'+num(stats.totalOrders)+' أمر</span></div>'+dashboardBarGraph(stats)+'</section>'
+    +'<section class="card wt-graph-card"><div class="wt-section-head"><div><h3>كيف تسير جودة المنتجات؟</h3><p>نسبة المقبول إلى المرفوض بعد اكتمال الفحص</p></div></div>'+dashboardQualityChart(stats)+'</section>'
+    +'<section class="card wt-graph-card"><div class="wt-section-head"><div><h3>كم قطعة اكتملت خلال الأسبوع؟</h3><p>القطع التي انتهت تعبئتها، يومًا بيوم</p></div></div>'+dashboardWeekChart(stats)+'</section>'
+    +'<section class="card wt-graph-card"><div class="wt-section-head"><div><h3>ما أكثر الموديلات طلبًا للإنتاج؟</h3><p>مقارنة كميات أوامر التصنيع لكل موديل</p></div></div>'+dashboardModelsChart(stats)+'</section>'
+    +'</div>'
+    +'<div class="wt-dashboard-grid wt-dashboard-grid--bottom">'
+    +'<section class="card wt-orders-card"><div class="wt-section-head"><div><h3>أوامر المصنع الجارية</h3><p>اسم المنتج والمرحلة الحالية، دون أكواد</p></div>'
+    +'<button class="wt-text-button" data-act="nav" data-id="orders">عرض جميع الأوامر ↗</button></div>'
+    +(live.length?table(['المنتج','الكمية','المرحلة',''],live.slice(0,6).map(o=>'<tr>'
+      +td('<strong>'+esc(style(o.styleId)?.name||'منتج ملابس')+'</strong><small class="wt-order-variant">'+esc(variant(o)?.size||'')+' · '+esc(variant(o)?.color||'')+'</small>')
+      +td(num(o.qty)+' قطعة')+td(status(o.status))
       +td('<button class="rowbtn" data-act="show-order" data-id="'+esc(o.id)+'">فتح</button>')+'</tr>').join(''))
-      :empty('لا توجد أوامر مفتوحة','أضف موديلًا وأمر إنتاج للبدء.'))+'</section>'
-    +'<section class="card wt-inventory-card"><div class="wt-section-head"><div><h3>رادار المخزون</h3><p>تنبيهات الخامات والأرصدة</p></div><span class="wt-stock-total">'+cur(stockValue)+'</span></div>'
+      :empty('لا توجد أوامر مفتوحة','يمكنك إضافة أمر إنتاج جديد.'))+'</section>'
+    +'<section class="card wt-activity-card"><div class="wt-section-head"><div><h3>آخر ما حدث في المصنع</h3><p>تنبيهات واضحة عن العمل والمخزون</p></div>'
+    +'<button class="wt-text-button" data-act="notifications-open">جميع الإشعارات ↗</button></div>'
+    +'<div class="wt-activity-list">'+(activity||'<div class="wt-notice-empty"><strong>لا توجد حركات بعد</strong><p>ستظهر بعد إضافة أو تحديث البيانات.</p></div>')+'</div></section></div>'
+    +'<section class="card wt-simple-stock"><div class="wt-section-head"><div><h3>الخامات التي تحتاج إلى إعادة توريد</h3><p>كل خامة تعرض الكمية بوحدتها الصحيحة</p></div>'
+    +'<button class="wt-text-button" data-act="nav" data-id="materials">عرض المخزون ↗</button></div>'
     +(low.length?low.slice(0,8).map(m=>'<div class="wt-stock-warning"><span aria-hidden="true">⚠</span><strong>'+esc(m.name)+'</strong><b>'+num(m.stock)+' '+esc(m.unit)+'</b></div>').join('')
       :'<div class="wt-inventory-ok">✓ لا توجد خامات تحت مستوى التنبيه</div>')
-    +'<p class="wt-small-note">جميع المؤشرات مستمدة من بيانات الموقع المحلية؛ ليست مزامنة سحابية فورية.</p></section></div>';
+    +'<p class="wt-small-note">تُحسب الرسوم والمؤشرات من بيانات هذا المتصفح فقط، ولا تعني وجود مزامنة مباشرة مع الأجهزة الأخرى.</p></section>';
 }
 function stylesPage(){let rows=db.styles.filter(s=>(s.name+s.code+s.category).toLowerCase().includes(search.toLowerCase()));return heading('الموديلات والمنتجات','موديلات ومقاسات وألوان مستقلة لكل SKU.',btn('＋ إضافة موديل','new-style','','primary'))+'<div class="toolbar"><input id="search" value="'+esc(search)+'" placeholder="ابحث باسم الموديل أو الكود..."><span class="muted">'+num(db.styles.length)+' موديل</span></div>'+(rows.length?'<div class="products">'+rows.map(s=>'<article class="product"><div class="product-head">♧</div><div class="product-body"><small class="eyebrow">'+esc(s.code)+' · '+esc(s.category)+'</small><h3>'+esc(s.name)+'</h3><p>'+num(s.variants.length)+' متغير · '+esc(s.season)+'</p><div class="product-footer"><strong>'+cur(s.sellingPrice)+'</strong>'+btn('التفاصيل','show-style',s.id)+'</div></div></article>').join('')+'</div>':empty('لا توجد موديلات','أضف أول موديل للتصنيع.'));}
 function materialsPage(){return heading('الأقمشة والخامات','تتبع مخزون الخام والاستلام وتكلفة الوحدة.',btn('＋ استلام خامات','new-receipt')+btn('＋ إضافة خامة','new-material','','primary'))+'<section class="card">'+(db.materials.length?table(['الكود','الخامة','التصنيف','الرصيد','متوسط التكلفة','القيمة',''],db.materials.map(m=>'<tr>'+td('<span class="mono">'+esc(m.code)+'</span>')+td('<b>'+esc(m.name)+'</b>')+td(esc(m.category))+td('<b class="'+(m.stock<25?'bad':'good')+'">'+num(m.stock)+' '+esc(m.unit)+'</b>')+td(cur(m.avgCost))+td(cur(m.stock*m.avgCost))+td('<button class="rowbtn" data-act="receipt-for" data-id="'+m.id+'">استلام</button>')+'</tr>').join('')):empty('لا توجد خامات','ابدأ بتعريف قماش أو خامة.'))+'</section>';}
