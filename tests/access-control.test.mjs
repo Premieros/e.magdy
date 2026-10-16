@@ -45,7 +45,7 @@ test('default role catalog has a protected owner and separate narrow permissions
 });
 test('first user must be owner; user can be added without a password or forced login',()=>{
   const db=api.fresh();
-  assert.throws(()=>saveUser(db,form({name:'مدير',roleId:'manager'})),/المالك/);
+  assert.throws(()=>saveUser(db,form({name:'مدير',roleId:'manager'})),/مالك/);
   saveUser(db,form({name:'مالك الشركة',roleId:'owner',email:'owner@whitetex.example'}));
   assert.equal(db.appUsers.length,1);
   assert.equal(db.appUsers[0].active,true);
@@ -93,14 +93,14 @@ test('custom roles may be configured, edited and removed only when unassigned',(
 test('invalid or duplicate rights, owner mutation and damaged snapshots are rejected',()=>{
   const db=api.fresh();
   const owner=db.appRoles.find(x=>x.id==='owner');
-  assert.throws(()=>saveRole(db,form({name:'المالك',permission:['dashboard.view']}),'owner'),/المالك/);
+  assert.throws(()=>saveRole(db,form({name:'المالك',permission:['dashboard.view']}),'owner'),/مالك/);
   assert.throws(()=>saveRole(db,form({name:'غريب',permission:['hack.server']})),/معروفة/);
   assert.throws(()=>saveRole(db,form({name:'غريب',permission:[]})),/صلاحية/);
   assert.equal(owner.permissions.length,PERMISSIONS.length);
   const changed=structuredClone(db);changed.appRoles[0].permissions=['dashboard.view'];
   assert.throws(()=>validateCloudSnapshot(changed),/مالك النظام/);
   const noOwners=structuredClone(db);noOwners.appRoles=[];
-  assert.throws(()=>validateAccessConfig(noOwners),/المالك|تعريف دور/);
+  assert.throws(()=>validateAccessConfig(noOwners),/مالك|تعريف دور/);
 });
 test('UI exposes roster and permission editing while leaving app open',()=>{
   const db=api.fresh();
