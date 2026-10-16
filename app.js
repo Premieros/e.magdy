@@ -1,5 +1,6 @@
 /* PremierOS Garments | independent, browser-local prototype | no remote database */
 import { stages, labels, workStages, stageTargetQuantity, nextStageAction } from './src/workflow.mjs';
+import { buildNotifications, newNotification, ensureNotifications, appendNotifications, unreadCount, notificationIcons, LOW_STOCK_LEVEL } from './src/notifications.mjs';
 import { cloudIdentity, cloudLogin, cloudLogout, cloudSave, cloudLoad, validateCloudSnapshot, cloudFactoryList, cloudIntakeOrders, cloudCreateIntakeOrder } from './src/cloud-backup.mjs';
 import { buildIntakeOrder, intakeOrderTotal } from './src/cloud-intake.mjs';
 import { createProductionMatrix, productionBatches, addCuttingBundle, cuttingBundleStats, requireCuttingBundleBalance } from './src/production-planning.mjs';
@@ -23,11 +24,12 @@ const NAV_ICONS={
 };
 const navIcon=token=>'<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+(NAV_ICONS[token]||'')+'</svg>';
 
-const fresh=()=>({version:1,styles:[],materials:[],orders:[],ledger:[],finished:[],audit:[],workers:[],workLogs:[],fabricRolls:[],cuttingBundles:[],wholesaleOrders:[],finishedDispatches:[]});
+const fresh=()=>({version:1,styles:[],materials:[],orders:[],ledger:[],finished:[],audit:[],workers:[],workLogs:[],fabricRolls:[],cuttingBundles:[],wholesaleOrders:[],finishedDispatches:[],notifications:[]});
 let db;
-try{db=JSON.parse(localStorage.getItem(KEY)||'null')||fresh();if(db.version!==1)throw Error('نسخة غير متوافقة');ensureFactoryState(db);ensureWholesaleState(db);}
+try{db=JSON.parse(localStorage.getItem(KEY)||'null')||fresh();if(db.version!==1)throw Error('نسخة غير متوافقة');ensureFactoryState(db);ensureWholesaleState(db);ensureNotifications(db);}
 catch(e){db=fresh();}
 let cloudFactoriesState=[],cloudIntakeState=[],cloudFactorySelected='',cloudIntakeMessage='';
+let notificationCenterOpen=false;
 let page=(typeof location!=='undefined'?location.hash:'#/dashboard'||'#/dashboard').replace('#/','')||'dashboard',detail=null,modal=null,search='';
 const esc=x=>String(x??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
 const id=()=>crypto.randomUUID();
@@ -48,9 +50,60 @@ const status=s=>'<span class="pill '+(s==='completed'?'green':['quality','presen
 const btn=(label,action,value='',kind='')=>'<button class="btn '+kind+'" data-act="'+action+'" data-id="'+esc(value)+'">'+label+'</button>';
 const td=x=>'<td>'+x+'</td>';
 const empty=(title,subtitle)=>'<div class="empty">✧<b>'+title+'</b>'+subtitle+'</div>';
-function mutator(fn,success='تم الحفظ'){try{let d=structuredClone(db);ensureFactoryState(d);ensureWholesaleState(d);fn(d);localStorage.setItem(KEY,JSON.stringify(d));db=d;modal=null;render();toast(success);}catch(e){toast(e.message||'حدث خطأ',true);}}
+function persistNotifications(change){
+  try {
+    const next=structuredClone(db);
+    ensureNotifications(next);
+    change(next.notifications);
+    localStorage.setItem(KEY,JSON.stringify(next));
+    db=next;
+    render();
+  }catch(error){toast(error.message||'تعذر حفظ حالة الإشعارات',true);}
+}
+function showFlying(event){
+  if(typeof document==='undefined')return;
+  let stack=document.getElementById('wt-toast-stack');
+  if(!stack){stack=document.createElement('div');stack.id='wt-toast-stack';stack.className='wt-toast-stack';stack.setAttribute('aria-live','polite');stack.setAttribute('aria-atomic','false');document.body.append(stack);}
+  const type=Object.hasOwn(notificationIcons,event.type)?event.type:'info';
+  const box=document.createElement('div');
+  box.className='wt-fly wt-fly--'+type;
+  box.setAttribute('role',type==='warning'||type==='error'?'alert':'status');
+  box.innerHTML='<span class="wt-fly-icon" aria-hidden="true">'+notificationIcons[type]+'</span>'
+    +'<div class="wt-fly-copy"><strong>'+esc(event.title)+'</strong><small>'+esc(event.detail||'White tex • سجل التشغيل')+'</small></div>'
+    +'<button class="wt-fly-close" type="button" data-act="dismiss-toast" aria-label="إغلاق الإشعار">×</button><span class="wt-fly-timer" aria-hidden="true"></span>';
+  stack.prepend(box);
+  while(stack.children.length>3)stack.lastElementChild.remove();
+  window.setTimeout(()=>box.remove(),5700);
+}
+function toast(msg,error=false){showFlying(newNotification(error?'error':'info',msg));}
+function recordLocalNotice(event){
+  try{
+    const next=structuredClone(db);
+    appendNotifications(next,[event]);
+    localStorage.setItem(KEY,JSON.stringify(next));
+    db=next;
+    render();
+    showFlying(event);
+  }catch(error){toast(error.message||'تعذر حفظ التنبيه',true);}
+}
+function mutator(fn,success='تم الحفظ'){
+  try{
+    const d=structuredClone(db);
+    ensureFactoryState(d);ensureWholesaleState(d);ensureNotifications(d);
+    fn(d);
+    const events=(!db.demoMode&&d.demoMode)
+      ?[newNotification('info','تم تجهيز بيانات العرض','المعلومات المعروضة تجريبية ومحلية فقط')]
+      :buildNotifications(db,d);
+    appendNotifications(d,events);
+    localStorage.setItem(KEY,JSON.stringify(d));
+    db=d;modal=null;render();
+    if(events.length){
+      events.slice(0,2).forEach(showFlying);
+      if(events.length>2)toast('تم تسجيل '+events.length+' حركات في مركز الإشعارات');
+    }else toast(success);
+  }catch(e){toast(e.message||'حدث خطأ',true);}
+}
 function log(d,message){d.audit.unshift({id:id(),at:new Date().toISOString(),message});}
-function toast(msg,error=false){let e=document.getElementById('toast');e.classList.remove('hidden');e.classList.toggle('error',error);e.textContent=msg;clearTimeout(window.toastTimeout);window.toastTimeout=setTimeout(()=>e.classList.add('hidden'),4300);}
 function newStyle(d,f){let c=code(required(f.get('code'),'كود الموديل')),sizes=list(f.get('sizes')),colors=list(f.get('colors'));if(d.styles.some(x=>x.code===c))throw Error('كود الموديل موجود');if(!sizes.length||!colors.length)throw Error('أدخل مقاسات وألوان');if(sizes.length*colors.length>100)throw Error('الحد الأقصى 100 متغير');let variants=sizes.flatMap(sz=>colors.map(cl=>({id:id(),size:sz,color:cl,sku:c+'-'+code(sz)+'-'+code(cl)})));if(new Set(variants.map(x=>x.sku)).size!==variants.length)throw Error('أكواد المتغيرات متكررة');d.styles.unshift({id:id(),code:c,name:required(f.get('name'),'اسم الموديل'),season:str(f.get('season')),category:str(f.get('category'))||'ملابس',sellingPrice:nonnegative(f.get('price'),'السعر'),variants,sizes,colors,bom:[]});log(d,'إضافة موديل '+c);}
 function newMaterial(d,f){let c=code(required(f.get('code'),'كود الخامة'));if(d.materials.some(x=>x.code===c))throw Error('كود الخامة موجود');d.materials.unshift({id:id(),code:c,name:required(f.get('name'),'اسم الخامة'),category:str(f.get('category'))||'خامات',unit:str(f.get('unit')),stock:0,avgCost:0});log(d,'إضافة خامة '+c);}
 function receive(d,f){let m=d.materials.find(x=>x.id===f.get('materialId'));if(!m)throw Error('اختر خامة');let q=round(positive(f.get('quantity'),'الكمية')),cost=nonnegative(f.get('unitCost'),'السعر');m.avgCost=price((m.stock*m.avgCost+q*cost)/(m.stock+q));m.stock=round(m.stock+q);d.ledger.unshift({id:id(),at:new Date().toISOString(),materialId:m.id,qty:q,cost,kind:'receive',reference:str(f.get('reference'))||'استلام مخزن'});log(d,'استلام '+q+' '+m.unit+' من '+m.name);}
@@ -65,7 +118,92 @@ function ready(vId){return availableFinishedStock(db,vId);}
 function metric(label,value,desc){return '<div class="stat"><small>'+label+'</small><strong>'+value+'</strong><span>'+desc+'</span></div>';}
 function heading(title,desc,actions=''){return '<div class="header"><div><h1>'+title+'</h1><p>'+desc+'</p></div><div class="actions">'+actions+'</div></div>';}
 function table(headers,rows){return '<div class="table-wrap"><table><thead><tr>'+headers.map(x=>'<th>'+x+'</th>').join('')+'</tr></thead><tbody>'+rows+'</tbody></table></div>';}
-function dashboard(){let live=db.orders.filter(o=>!['completed','cancelled'].includes(o.status)),done=db.orders.filter(o=>o.status==='completed');return heading('لوحة تحكم المصنع','تابع نشاط المصنع والموديلات والخامات والإنتاج.',btn('＋ أمر تصنيع','new-order','','primary'))+'<div class="hero"><span class="eyebrow">WHITE TEX / TEXTILE OPERATIONS</span><h2>White <span class="hero-wordmark">tex</span> <span class="hero-divider">|</span> جودة في كل مرحلة.</h2><p>رحلة تصنيع واضحة من القص والفرز البدائي إلى الطباعة والمكواة وجودة البرزنتيشن والتعبئة.</p>'+btn('إضافة موديل جديد','new-style','','dark')+(isDemoEligible(db)?btn('ملء جميع الشاشات ببيانات تجربة','seed','','primary'):'')+'</div><div class="stats">'+metric('الموديلات',num(db.styles.length),'موديل مع متغيرات المقاس واللون')+metric('أوامر نشطة',num(live.length),'قطع قيد الإنتاج: '+num(live.reduce((n,o)=>n+o.qty,0)))+metric('قطع تامة متاحة',num(db.finished.reduce((n,x)=>n+x.qty,0)-wholesaleOverview(db).delivered),'رصيد بعد التسليم')+metric('قيمة مخزون الخام',cur(db.materials.reduce((n,m)=>n+m.stock*m.avgCost,0)),'تكلفة تقديرية')+'</div><div class="grid"><section class="card"><h3>أوامر تحت التشغيل</h3><p class="sub">آخر الأوامر والإنتاج الحالي</p>'+ (live.length?table(['رقم الأمر','الموديل','الكمية','المرحلة',''],live.slice(0,7).map(o=>'<tr>'+td('<span class="mono">'+esc(o.ref)+'</span>'+(o.batchRef?'<small class="batch-tag">'+esc(o.batchRef)+'</small>':'') )+td(esc(style(o.styleId)?.name))+td(num(o.qty))+td(status(o.status))+td('<button class="rowbtn" data-act="show-order" data-id="'+o.id+'">التفاصيل</button>')+'</tr>').join('')):empty('لا توجد أوامر مفتوحة','أضف موديلًا ومكونات وأمر تصنيع.'))+'</section><section class="card"><h3>تنبيهات الأرصدة</h3><p class="sub">خامات رصيدها أقل من 25 وحدة</p>'+(db.materials.length?db.materials.filter(m=>m.stock<25).map(m=>'<div class="data-line"><b>'+esc(m.name)+'</b><span class="bad">'+num(m.stock)+' '+esc(m.unit)+'</span></div>').join('')||'<p class="good">كل الأرصدة الحالية أعلى من مستوى التنبيه</p>':empty('لا توجد خامات','عرّف الخامات واستلم الرصيد أولًا.'))+'</section></div>';}
+function eventCard(event, compact=false){
+  const type=Object.hasOwn(notificationIcons,event.type)?event.type:'info';
+  const date=new Date(event.at);
+  const time=Number.isNaN(date.getTime())?'—':date.toLocaleString('ar-EG',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  const actionable=event.orderId&&db.orders.some(o=>o.id===event.orderId);
+  return '<div class="wt-event wt-event--'+type+(event.read?'':' wt-event--unread')+'">'
+    +'<span class="wt-event-icon" aria-hidden="true">'+notificationIcons[type]+'</span>'
+    +'<div class="wt-event-body"><strong>'+esc(event.title)+'</strong><p>'+esc(event.detail||'')+'</p>'
+    +'<small>'+esc(time)+'</small></div>'
+    +(actionable?'<button class="wt-event-link" type="button" data-act="event-order" data-id="'+esc(event.orderId)+'" aria-label="فتح أمر الإنتاج">↗</button>':'')
+    +'</div>';
+}
+function notificationMarkup(){
+  ensureNotifications(db);
+  const unread=unreadCount(db);
+  const content=db.notifications.slice(0,160).map(e=>eventCard(e)).join('')
+    ||'<div class="wt-notice-empty"><span aria-hidden="true">✦</span><strong>لا توجد إشعارات بعد</strong><p>ستظهر حركات المصنع الجديدة هنا بمجرد حفظها.</p></div>';
+  return '<div class="wt-bell-zone"><button class="wt-bell" type="button" data-act="notifications-toggle"'
+    +' aria-label="مركز الإشعارات؛ '+unread+' غير مقروء" aria-expanded="'+notificationCenterOpen+'" aria-controls="wt-notification-panel">'
+    +'<span aria-hidden="true">♧</span><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4"/></svg>'
+    +(unread?'<b class="wt-bell-count">'+(unread>99?'99+':unread)+'</b>':'')
+    +'</button>'
+    +(notificationCenterOpen?'<section id="wt-notification-panel" class="wt-notice-panel" role="region" aria-label="إشعارات المصنع">'
+    +'<div class="wt-notice-head"><div><strong>مركز إشعارات White tex</strong><p>حركات هذا المتصفح فقط · '+db.notifications.length+' حدث</p></div>'
+    +'<button class="wt-notice-close" type="button" data-act="notifications-toggle" aria-label="إغلاق مركز الإشعارات">×</button></div>'
+    +'<div class="wt-notice-actions"><button type="button" data-act="notifications-read-all" '+(unread?'':'disabled')+'>تحديد الكل كمقروء</button>'
+    +'<button type="button" data-act="notifications-clear" '+(db.notifications.length?'':'disabled')+'>مسح الإشعارات فقط</button></div>'
+    +'<div class="wt-notice-feed">'+content+'</div></section>':'')
+    +'</div>';
+}
+function dashboard(){
+  ensureNotifications(db);
+  const live=db.orders.filter(o=>!['completed','cancelled'].includes(o.status));
+  const finished=db.orders.filter(o=>o.status==='completed');
+  const pendingQuality=live.filter(o=>o.status==='quality').length;
+  const nearEnd=live.filter(o=>['printing','ironing','presentation_quality','packing'].includes(o.status)).length;
+  const low=db.materials.filter(m=>m.stock<LOW_STOCK_LEVEL);
+  const stockValue=db.materials.reduce((sum,m)=>sum+m.stock*m.avgCost,0);
+  const available=db.finished.reduce((sum,x)=>sum+x.qty,0)-wholesaleOverview(db).delivered;
+  const latest=db.notifications.slice(0,7);
+  const activity=latest.length
+    ?latest.map(e=>eventCard(e,true)).join('')
+    :db.audit.slice(0,7).map(row=>eventCard({type:'info',title:'حركة من السجل السابق',detail:row.message,at:row.at,read:true},true)).join('');
+  const stageRows=stages.filter(s=>!['planned','completed'].includes(s)).map(s=>{
+    const count=live.filter(o=>o.status===s).length;
+    const progress=live.length?Math.round(count/live.length*100):0;
+    return '<div class="wt-phase-row"><div class="wt-phase-title"><span>'+esc(labels[s])+'</span><b>'+num(count)+'</b></div>'
+      +'<div class="wt-phase-track"><span style="width:'+progress+'%"></span></div></div>';
+  }).join('');
+  return heading('مركز قيادة White tex','متابعة مراحل المصنع، الحركات التشغيلية وتنبيهات المخزون من بيانات هذا المتصفح.',
+      btn('＋ أمر تصنيع','new-order','','primary'))
+    +'<section class="wt-command-hero"><div class="wt-command-main">'
+    +'<span class="wt-command-kicker"><i aria-hidden="true"></i> WHITE TEX · PRODUCTION CONTROL</span>'
+    +'<h2>كل مرحلة تحت السيطرة<span class="wt-command-dot">.</span></h2>'
+    +'<p>من القص والفرز إلى جودة البرزنتيشن والتعبئة، تابع دورة الإنتاج وحركة الخامات لحظة تسجيلها.</p>'
+    +'<div class="wt-command-buttons">'+btn('عرض أوامر الإنتاج','nav','orders','primary')
+    +(isDemoEligible(db)?btn('تجربة بيانات المصنع','seed','','dark'):'')
+    +'</div></div><div class="wt-command-insights">'
+    +'<div><small>أوامر قيد التشغيل</small><strong>'+num(live.length)+'</strong><span>حالة تشغيلية حالية</span></div>'
+    +'<div><small>أوامر وصلت للتشغيل النهائي</small><strong>'+num(nearEnd)+'</strong><span>طباعة / مكواة / تعبئة</span></div>'
+    +'<div><small>سجل الإشعارات</small><strong>'+num(db.notifications.length)+'</strong><span>مخزن محليًا على الجهاز</span></div>'
+    +'</div></section>'
+    +'<section class="wt-kpis" aria-label="مؤشرات الأداء">'
+    +'<article class="wt-kpi wt-kpi--blue"><span class="wt-kpi-symbol">◈</span><small>أوامر إنتاج نشطة</small><strong>'+num(live.length)+'</strong><span>'+num(live.reduce((sum,o)=>sum+o.qty,0))+' قطعة قيد التشغيل</span></article>'
+    +'<article class="wt-kpi wt-kpi--cyan"><span class="wt-kpi-symbol">◉</span><small>بانتظار الجودة</small><strong>'+num(pendingQuality)+'</strong><span>أوامر تحتاج فحصًا</span></article>'
+    +'<article class="wt-kpi wt-kpi--green"><span class="wt-kpi-symbol">✓</span><small>مخزون تام متاح</small><strong>'+num(available)+'</strong><span>'+num(finished.length)+' أمر مكتمل</span></article>'
+    +'<article class="wt-kpi wt-kpi--amber"><span class="wt-kpi-symbol">!</span><small>خامات منخفضة الرصيد</small><strong>'+num(low.length)+'</strong><span>أقل من '+LOW_STOCK_LEVEL+' وحدة</span></article>'
+    +'</section>'
+    +'<div class="wt-dashboard-grid"><section class="card wt-phase-card"><div class="wt-section-head"><div><span class="wt-overline">PRODUCTION FLOW</span>'
+    +'<h3>خريطة مراحل التشغيل</h3><p>عدد أوامر التصنيع الموجودة حاليًا في كل مرحلة</p></div><span class="wt-running">'+num(live.length)+' نشط</span></div>'
+    +'<div class="wt-phase-list">'+stageRows+'</div></section>'
+    +'<section class="card wt-activity-card"><div class="wt-section-head"><div><span class="wt-overline">ACTIVITY FEED</span><h3>نبض المصنع</h3><p>آخر الحركات والإشعارات المسجلة محليًا</p></div>'
+    +'<button class="wt-text-button" data-act="notifications-open">عرض الكل ↗</button></div>'
+    +'<div class="wt-activity-list">'+(activity||'<div class="wt-notice-empty"><strong>لا توجد حركات مسجلة بعد</strong><p>أضف أمر إنتاج لبدء المتابعة.</p></div>')+'</div></section></div>'
+    +'<div class="wt-dashboard-grid wt-dashboard-grid--bottom"><section class="card wt-orders-card"><div class="wt-section-head"><div><h3>الأوامر الجاري تنفيذها</h3><p>الحالة الفعلية لكل أمر تصنيع</p></div>'
+    +'<button class="wt-text-button" data-act="nav" data-id="orders">كل الأوامر ↗</button></div>'
+    +(live.length?table(['رقم الأمر','الموديل','الكمية','المرحلة',''],live.slice(0,6).map(o=>'<tr>'
+      +td('<span class="mono">'+esc(o.ref)+'</span>')+td(esc(style(o.styleId)?.name))
+      +td(num(o.qty))+td(status(o.status))
+      +td('<button class="rowbtn" data-act="show-order" data-id="'+esc(o.id)+'">فتح</button>')+'</tr>').join(''))
+      :empty('لا توجد أوامر مفتوحة','أضف موديلًا وأمر إنتاج للبدء.'))+'</section>'
+    +'<section class="card wt-inventory-card"><div class="wt-section-head"><div><h3>رادار المخزون</h3><p>تنبيهات الخامات والأرصدة</p></div><span class="wt-stock-total">'+cur(stockValue)+'</span></div>'
+    +(low.length?low.slice(0,8).map(m=>'<div class="wt-stock-warning"><span aria-hidden="true">⚠</span><strong>'+esc(m.name)+'</strong><b>'+num(m.stock)+' '+esc(m.unit)+'</b></div>').join('')
+      :'<div class="wt-inventory-ok">✓ لا توجد خامات تحت مستوى التنبيه</div>')
+    +'<p class="wt-small-note">جميع المؤشرات مستمدة من بيانات الموقع المحلية؛ ليست مزامنة سحابية فورية.</p></section></div>';
+}
 function stylesPage(){let rows=db.styles.filter(s=>(s.name+s.code+s.category).toLowerCase().includes(search.toLowerCase()));return heading('الموديلات والمنتجات','موديلات ومقاسات وألوان مستقلة لكل SKU.',btn('＋ إضافة موديل','new-style','','primary'))+'<div class="toolbar"><input id="search" value="'+esc(search)+'" placeholder="ابحث باسم الموديل أو الكود..."><span class="muted">'+num(db.styles.length)+' موديل</span></div>'+(rows.length?'<div class="products">'+rows.map(s=>'<article class="product"><div class="product-head">♧</div><div class="product-body"><small class="eyebrow">'+esc(s.code)+' · '+esc(s.category)+'</small><h3>'+esc(s.name)+'</h3><p>'+num(s.variants.length)+' متغير · '+esc(s.season)+'</p><div class="product-footer"><strong>'+cur(s.sellingPrice)+'</strong>'+btn('التفاصيل','show-style',s.id)+'</div></div></article>').join('')+'</div>':empty('لا توجد موديلات','أضف أول موديل للتصنيع.'));}
 function materialsPage(){return heading('الأقمشة والخامات','تتبع مخزون الخام والاستلام وتكلفة الوحدة.',btn('＋ استلام خامات','new-receipt')+btn('＋ إضافة خامة','new-material','','primary'))+'<section class="card">'+(db.materials.length?table(['الكود','الخامة','التصنيف','الرصيد','متوسط التكلفة','القيمة',''],db.materials.map(m=>'<tr>'+td('<span class="mono">'+esc(m.code)+'</span>')+td('<b>'+esc(m.name)+'</b>')+td(esc(m.category))+td('<b class="'+(m.stock<25?'bad':'good')+'">'+num(m.stock)+' '+esc(m.unit)+'</b>')+td(cur(m.avgCost))+td(cur(m.stock*m.avgCost))+td('<button class="rowbtn" data-act="receipt-for" data-id="'+m.id+'">استلام</button>')+'</tr>').join('')):empty('لا توجد خامات','ابدأ بتعريف قماش أو خامة.'))+'</section>';}
 function ordersPage(){return heading('أوامر الإنتاج','تابع كل مراحل المصنع من القص والفرز البدائي حتى التعبئة.',btn('＋ دفعة مقاسات وألوان','matrix-order')+btn('＋ أمر جديد','new-order','','primary'))+'<section class="card">'+(db.orders.length?table(['المرجع','الموديل','المقاس/اللون','الكمية','العميل','المرحلة',''],db.orders.map(o=>'<tr>'+td('<span class="mono">'+esc(o.ref)+'</span>')+td(esc(style(o.styleId)?.name))+td(esc(variant(o)?.size)+' / '+esc(variant(o)?.color))+td(num(o.qty))+td(esc(o.customer||'—'))+td(status(o.status))+td('<button class="rowbtn" data-act="show-order" data-id="'+o.id+'">عرض</button>')+'</tr>').join('')):empty('لا توجد أوامر تصنيع','أضف موديلًا ومكونات ثم أنشئ أمر تصنيع.'))+'</section>';}
@@ -296,7 +434,7 @@ function cloudIntakePage(){
 }
 
 const views={dashboard,styles:stylesPage,materials:materialsPage,rolls:rollsPage,workers:workersPage,orders:ordersPage,batches:batchesPage,'batch-detail':batchDetail,quality:qualityPage,wholesale:wholesalePage,'wholesale-detail':wholesaleDetail,'cloud-intake':cloudIntakePage,reports:reportsPage,settings:settingsPage,'style-detail':styleDetail,'order-detail':orderDetail};
-function render(){const menus=[['dashboard','⌂','الرئيسية'],['styles','◈','الموديلات والمنتجات'],['materials','▤','الأقمشة والخامات'],['rolls','◧','رولات الأقمشة'],['workers','♙','العمال والإنتاجية'],['orders','▣','أوامر الإنتاج'],['batches','◈','دفعات المقاسات'],['quality','◉','مراقبة الجودة'],['wholesale','▧','بيع الجملة والتسليم'],['cloud-intake','▣','طلبات العملاء السحابية'],['reports','▥','التقارير'],['settings','⚙','النسخ الاحتياطي']];document.getElementById('app').innerHTML='<div class="layout"><aside class="side"><div class="logo"><span class="logo-icon" aria-hidden="true">WT</span><span class="logo-name">White<span class="logo-accent">tex</span><small>TEXTILE OPERATIONS</small></span></div>'+menus.map(v=>'<button class="nav '+(page===v[0]?'on':'')+'" data-act="nav" data-id="'+v[0]+'"><span class="nav-icon">'+navIcon(v[1])+'</span><span class="nav-label">'+v[2]+'</span></button>').join('')+'<div class="side-note">● وضع محلي<br>نسخ سحابي يدوي اختياري<br>لا يوجد تزامن فوري</div></aside><main class="main"><header class="top"><span class="top-crumb"><span class="brand-mini">WHITE TEX</span> <span class="top-separator">/</span> <strong>إدارة مصنع الملابس</strong></span><span class="status"><span class="status-dot"></span> '+(db.demoMode?'وضع عرض تجريبي':'نسخة تجريبية · نسخ سحابي يدوي')+'</span></header><div class="content">'+(db.demoMode?'<div class="demo-banner"><strong>بيانات افتراضية للعرض</strong> — جميع الموديلات والعملاء والعمال والطلبات المعروضة أمثلة غير حقيقية. لتجهيز عميل فعلي، احفظ النسخة المحلية ثم امسح بيانات العرض وأنشئ بياناته منفصلة.</div>':'')+(views[page]||dashboard)()+'<p class="foot">White tex · إدارة المصنع · Powered by PremierOS Garments</p></div></main></div>'+renderModal()+'<div id="toast" class="toast hidden"></div>';}
+function render(){const menus=[['dashboard','⌂','الرئيسية'],['styles','◈','الموديلات والمنتجات'],['materials','▤','الأقمشة والخامات'],['rolls','◧','رولات الأقمشة'],['workers','♙','العمال والإنتاجية'],['orders','▣','أوامر الإنتاج'],['batches','◈','دفعات المقاسات'],['quality','◉','مراقبة الجودة'],['wholesale','▧','بيع الجملة والتسليم'],['cloud-intake','▣','طلبات العملاء السحابية'],['reports','▥','التقارير'],['settings','⚙','النسخ الاحتياطي']];document.getElementById('app').innerHTML='<div class="layout"><aside class="side"><div class="logo"><span class="logo-icon" aria-hidden="true">WT</span><span class="logo-name">White<span class="logo-accent">tex</span><small>TEXTILE OPERATIONS</small></span></div>'+menus.map(v=>'<button class="nav '+(page===v[0]?'on':'')+'" data-act="nav" data-id="'+v[0]+'"><span class="nav-icon">'+navIcon(v[1])+'</span><span class="nav-label">'+v[2]+'</span></button>').join('')+'<div class="side-note">● وضع محلي<br>نسخ سحابي يدوي اختياري<br>لا يوجد تزامن فوري</div></aside><main class="main"><header class="top"><span class="top-crumb"><span class="brand-mini">WHITE TEX</span> <span class="top-separator">/</span> <strong>إدارة مصنع الملابس</strong></span><div class="wt-header-actions">'+notificationMarkup()+'<span class="status"><span class="status-dot"></span> '+(db.demoMode?'وضع عرض تجريبي':'نسخة تجريبية · نسخ سحابي يدوي')+'</span></div></header><div class="content">'+(db.demoMode?'<div class="demo-banner"><strong>بيانات افتراضية للعرض</strong> — جميع الموديلات والعملاء والعمال والطلبات المعروضة أمثلة غير حقيقية. لتجهيز عميل فعلي، احفظ النسخة المحلية ثم امسح بيانات العرض وأنشئ بياناته منفصلة.</div>':'')+(views[page]||dashboard)()+'<p class="foot">White tex · إدارة المصنع · Powered by PremierOS Garments</p></div></main></div>'+renderModal();}
 const inp=(label,name,type='text',value='',attrs='')=>'<label class="field">'+label+'<input name="'+name+'" type="'+type+'" value="'+esc(value)+'" '+attrs+'></label>';
 const sel=(label,name,options)=>'<label class="field">'+label+'<select name="'+name+'" required><option value="">اختر...</option>'+options.map(x=>'<option value="'+esc(x[0])+'">'+esc(x[1])+'</option>').join('')+'</select></label>';
 function renderModal(){if(!modal)return '';let kind=modal.type,t='',form='';
@@ -469,23 +607,43 @@ function handleCloudAction(action){
       validateWholesaleLedger(next);
       downloadSnapshot(db,'garments-before-cloud-restore.json');
       localStorage.setItem(KEY,JSON.stringify(next));
-      db=next;render();toast('تم استرجاع النسخة السحابية');
+      db=ensureNotifications(next);notificationCenterOpen=false;render();toast('تم استرجاع النسخة السحابية');
     }).catch(err=>toast(err.message||'تعذر استرجاع النسخة',true));
   }
 }
-document.addEventListener('click',e=>{let b=e.target.closest('[data-act]');if(!b){if(e.target.id==='backdrop'){modal=null;render();}return;}let a=b.dataset.act,oid=b.dataset.id;if(a==='nav'){navigate(oid);if(oid==='cloud-intake'&&cloudIdentity())refreshCloudIntake();}else if(a==='cloud-intake-refresh')refreshCloudIntake();else if(['new-style','new-material','new-receipt','new-roll','new-worker','stage-work','new-order','matrix-order','new-bundle','new-wholesale','ship-wholesale','new-cloud-intake','view-cloud-intake','bom','quality'].includes(a))open(a,oid);else if(a==='receipt-for')open('new-receipt',oid);else if(a==='close'){modal=null;render();}else if(a==='show-style'){detail=oid;page='style-detail';render();}else if(a==='show-order'){detail=oid;page='order-detail';render();}else if(a==='show-batch'){detail=oid;page='batch-detail';render();}else if(a==='show-wholesale'){detail=oid;page='wholesale-detail';render();}else if(a==='advance'){if(confirm(order(oid).status==='planned'?'سيتم خصم الخامات الآن، هل تؤكد؟':'تأكيد الانتقال للمرحلة التالية؟'))mutator(d=>advance(d,oid),'تم تحديث مرحلة الإنتاج');}else if(['cloud-login','cloud-logout','cloud-save','cloud-restore'].includes(a))handleCloudAction(a);else if(a==='seed')seed();else if(a==='reset'){if(confirm('سيتم حذف كل البيانات المحلية، هل تؤكد؟')&&confirm('تأكيد نهائي لحذف كل البيانات؟'))mutator(d=>{Object.assign(d,fresh());},'تم مسح البيانات');}else if(a==='export'){downloadSnapshot(db,'premieros-garments-backup.json');toast('تم بدء تنزيل نسخة البيانات');}});
-document.addEventListener('change',async e=>{if(e.target.matches('[name=styleId]')&&modal?.type==='new-order')setVariants();if(e.target.matches('[name=styleId]')&&['matrix-order','new-wholesale'].includes(modal?.type)){modal.id=e.target.value;render();}if(e.target.id==='import'&&e.target.files[0]){try{let value=JSON.parse(await e.target.files[0].text());if(value.version!==1||!['styles','materials','orders','ledger','finished','audit'].every(k=>Array.isArray(value[k])))throw Error('ملف غير متوافق');ensureFactoryState(value);ensureWholesaleState(value);validateWholesaleLedger(value);if(value.materials.some(m=>!Number.isFinite(m.stock)||m.stock<0)||value.fabricRolls.some(r=>!Number.isFinite(r.remaining)||r.remaining<0||r.remaining>r.received))throw Error('النسخة تحتوي على أرصدة غير صحيحة');if(confirm('استبدال جميع البيانات الحالية من النسخة الاحتياطية؟')){localStorage.setItem(KEY,JSON.stringify(value));db=value;render();toast('تم الاستيراد');}}catch(err){toast(err.message,true);}}});
+document.addEventListener('click',e=>{let b=e.target.closest('[data-act]');if(!b){if(e.target.id==='backdrop'){modal=null;render();}else if(notificationCenterOpen&&!e.target.closest('.wt-bell-zone')){notificationCenterOpen=false;render();}return;}let a=b.dataset.act,oid=b.dataset.id;
+if(a==='dismiss-toast'){b.closest('.wt-fly')?.remove();return;}
+if(a==='notifications-toggle'||a==='notifications-open'){notificationCenterOpen=a==='notifications-open'?true:!notificationCenterOpen;render();return;}
+if(a==='notifications-read-all'){persistNotifications(rows=>rows.forEach(row=>{row.read=true;}));return;}
+if(a==='notifications-clear'){
+  if(confirm('مسح سجل الإشعارات فقط؟ لن تُحذف أوامر الإنتاج أو المخزون أو سجل العمليات.'))
+    persistNotifications(rows=>rows.splice(0));
+  return;
+}
+if(a==='event-order'){
+  persistNotifications(rows=>{const event=rows.find(row=>row.orderId===oid&&!row.read);if(event)event.read=true;});
+  notificationCenterOpen=false;
+  detail=oid;page='order-detail';location.hash='#/order-detail';render();
+  return;
+}
+if(notificationCenterOpen)notificationCenterOpen=false;
+if(a==='nav'){navigate(oid);if(oid==='cloud-intake'&&cloudIdentity())refreshCloudIntake();}else if(a==='cloud-intake-refresh')refreshCloudIntake();else if(['new-style','new-material','new-receipt','new-roll','new-worker','stage-work','new-order','matrix-order','new-bundle','new-wholesale','ship-wholesale','new-cloud-intake','view-cloud-intake','bom','quality'].includes(a))open(a,oid);else if(a==='receipt-for')open('new-receipt',oid);else if(a==='close'){modal=null;render();}else if(a==='show-style'){detail=oid;page='style-detail';render();}else if(a==='show-order'){detail=oid;page='order-detail';render();}else if(a==='show-batch'){detail=oid;page='batch-detail';render();}else if(a==='show-wholesale'){detail=oid;page='wholesale-detail';render();}else if(a==='advance'){if(confirm(order(oid).status==='planned'?'سيتم خصم الخامات الآن، هل تؤكد؟':'تأكيد الانتقال للمرحلة التالية؟'))mutator(d=>advance(d,oid),'تم تحديث مرحلة الإنتاج');}else if(['cloud-login','cloud-logout','cloud-save','cloud-restore'].includes(a))handleCloudAction(a);else if(a==='seed')seed();else if(a==='reset'){if(confirm('سيتم حذف كل البيانات المحلية، هل تؤكد؟')&&confirm('تأكيد نهائي لحذف كل البيانات؟'))mutator(d=>{Object.assign(d,fresh());},'تم مسح البيانات');}else if(a==='export'){downloadSnapshot(db,'premieros-garments-backup.json');toast('تم بدء تنزيل نسخة البيانات');}});
+document.addEventListener('change',async e=>{if(e.target.matches('[name=styleId]')&&modal?.type==='new-order')setVariants();if(e.target.matches('[name=styleId]')&&['matrix-order','new-wholesale'].includes(modal?.type)){modal.id=e.target.value;render();}if(e.target.id==='import'&&e.target.files[0]){try{let value=JSON.parse(await e.target.files[0].text());if(value.version!==1||!['styles','materials','orders','ledger','finished','audit'].every(k=>Array.isArray(value[k])))throw Error('ملف غير متوافق');ensureFactoryState(value);ensureWholesaleState(value);validateWholesaleLedger(value);if(value.materials.some(m=>!Number.isFinite(m.stock)||m.stock<0)||value.fabricRolls.some(r=>!Number.isFinite(r.remaining)||r.remaining<0||r.remaining>r.received))throw Error('النسخة تحتوي على أرصدة غير صحيحة');if(confirm('استبدال جميع البيانات الحالية من النسخة الاحتياطية؟')){localStorage.setItem(KEY,JSON.stringify(value));db=ensureNotifications(value);notificationCenterOpen=false;render();toast('تم الاستيراد');}}catch(err){toast(err.message,true);}}});
 document.addEventListener('submit',e=>{if(e.target.id!=='entry')return;e.preventDefault();let f=new FormData(e.target),type=modal.type,oid=modal.id;if(type==='new-cloud-intake'){
   try{
     if(db.demoMode)throw Error('عطّل بيانات العرض المحلية قبل إدخال طلبات فعلية');
     if(!cloudFactorySelected)throw Error('يجب تحميل عضوية المصنع أولًا');
     const payload=buildIntakeOrder(f);
     cloudCreateIntakeOrder(cloudFactorySelected,payload).then(()=>{
-      modal=null;toast('تم حفظ طلب العميل في قاعدة المصنع');refreshCloudIntake();
+      modal=null;
+      recordLocalNotice(newNotification('order','تم حفظ طلب عميل سحابي',
+        payload.customer_name+' • البيانات محفوظة على Supabase المعتمد'));
+      refreshCloudIntake();
     }).catch(err=>toast(err.message||'فشل حفظ الطلب',true));
   }catch(err){toast(err.message||'بيانات طلب غير صحيحة',true);}
 }else if(type==='new-style')mutator(d=>newStyle(d,f),'تم إنشاء الموديل');else if(type==='new-material')mutator(d=>newMaterial(d,f),'تم تعريف الخامة');else if(type==='new-receipt')mutator(d=>receive(d,f),'تم استلام الخامات');else if(type==='new-order')mutator(d=>newOrder(d,f),'تم إنشاء أمر التصنيع');else if(type==='matrix-order')mutator(d=>createProductionMatrix(d,f),'تم إنشاء دفعة المقاسات والألوان');else if(type==='new-bundle')mutator(d=>addCuttingBundle(d,f),'تم تسجيل حزمة القص');else if(type==='new-wholesale')mutator(d=>createWholesaleOrder(d,f),'تم إنشاء طلب الجملة');else if(type==='ship-wholesale')mutator(d=>dispatchWholesaleOrder(d,f),'تم تسجيل إذن التسليم وخصم مخزون التام');else if(type==='bom')mutator(d=>setBom(d,oid,f),'تم حفظ قائمة المكونات');else if(type==='quality')mutator(d=>quality(d,oid,f),'تم تسجيل الجودة');else if(type==='new-worker')mutator(d=>addWorker(d,f),'تم تسجيل العامل');else if(type==='new-roll')mutator(d=>receiveFabricRoll(d,f),'تم استلام الرول');else if(type==='stage-work')mutator(d=>registerStageWork(d,f),'تم تسجيل إنتاج العامل');});
 document.addEventListener('input',e=>{if(e.target.id==='search'){let pos=e.target.selectionStart;search=e.target.value;render();let input=document.getElementById('search');input.focus();input.setSelectionRange(pos,pos);}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&notificationCenterOpen){notificationCenterOpen=false;render();}});
 window.addEventListener('hashchange',()=>{let newPage=location.hash.replace('#/','');if(newPage!==page&&views[newPage]){page=newPage;detail=null;render();}});
 render();
 }
