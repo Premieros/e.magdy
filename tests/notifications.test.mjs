@@ -129,3 +129,11 @@ test('existing Pages deployment packages notifications for every page and stays 
   assert.match(pages,/cp src\/workflow\.mjs src\/analytics\.mjs src\/notifications\.mjs/);
   assert.match(client,/yumeijsyiphzdsulsubf\.supabase\.co/);
 });
+
+test('floating notifications appear centered on both desktop and mobile screens',()=>{
+  const css=readFileSync(new URL('../styles.css',import.meta.url),'utf8');
+  assert.match(css,/\.wt-toast-stack\{position:fixed;z-index:180;top:50%;left:50%;right:auto;transform:translate\(-50%,-50%\)/);
+  assert.match(css,/@media\(max-width:760px\)\{[\s\S]*?\.wt-toast-stack\{top:50%;left:50%;right:auto;transform:translate\(-50%,-50%\)/);
+  assert.match(css,/\.wt-toast-stack\{[^}]*pointer-events:none/);
+  assert.match(css,/\.wt-fly\{[^}]*pointer-events:auto/);
+});
