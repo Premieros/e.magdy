@@ -130,16 +130,16 @@ test('existing Pages deployment packages notifications for every page and stays 
   assert.match(client,/yumeijsyiphzdsulsubf\.supabase\.co/);
 });
 
-test('floating notifications are large, anchored to the top and remain fixed while scrolling',()=>{
+test('floating notifications are slimmer, top anchored and remain fixed while scrolling',()=>{
   const css=readFileSync(new URL('../styles.css',import.meta.url),'utf8');
   const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
   const refined=css.split('WHITE TEX — COLLAPSIBLE SIDEBAR & TOP-ANCHORED FLOATING NOTIFICATIONS')[1];
   assert.ok(refined,'new responsive styles exist');
   assert.match(refined,/\.wt-toast-stack\{position:fixed;top:calc\(env\(safe-area-inset-top,0px\) \+ 16px\);left:50%/);
   assert.match(refined,/width:min\(620px,calc\(100vw - 28px\)\)/);
-  assert.match(refined,/\.wt-fly\{min-height:112px;padding:20px 22px 26px/);
+  assert.match(refined,/\.wt-fly\{min-height:76px;padding:10px 18px 14px/);
   assert.match(refined,/@media\(max-width:760px\)\{[\s\S]*?\.wt-toast-stack\{top:calc\(env\(safe-area-inset-top,0px\) \+ 10px\)/);
-  assert.match(refined,/\.wt-fly\{padding:17px 14px 22px;min-height:96px/);
+  assert.match(refined,/\.wt-fly\{padding:10px 12px 13px;min-height:70px/);
   assert.match(css,/\.wt-toast-stack\{[^}]*pointer-events:none/);
   assert.match(css,/\.wt-fly\{[^}]*pointer-events:auto/);
   assert.match(app,/document\.body\.append\(stack\)/);
