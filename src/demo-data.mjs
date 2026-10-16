@@ -2,6 +2,7 @@
  * Never inserted into Supabase or used as a source of customer records.
  * Use the exact same domain operations as the application.
  */
+import { stages } from './workflow.mjs';
 import { addWorker, receiveFabricRoll, registerStageWork } from './factory-ops.mjs';
 import { createProductionMatrix, addCuttingBundle } from './production-planning.mjs';
 import { createWholesaleOrder, dispatchWholesaleOrder, availableFinishedStock, validateWholesaleLedger } from './wholesale.mjs';
@@ -34,7 +35,7 @@ export function demoCoverage(db){
     orders:orders.length,
     lots:new Set(orders.filter(o=>o.batchId).map(o=>o.batchId)).size,
     bundles:db.cuttingBundles?.length||0,
-    statuses:Object.fromEntries(['planned','cutting','sewing','finishing','quality','completed']
+    statuses:Object.fromEntries(stages
       .map(status=>[status,orders.filter(o=>o.status===status).length])),
     finished:db.finished?.length||0,
     sales:db.wholesaleOrders?.length||0,
@@ -117,13 +118,17 @@ export function populateDemoData(db,ops){
     }
     advance(db,order.id);
   };
+  const advanceUntil=(order,target)=>{
+    if(!stages.includes(target))throw Error('مرحلة عرض غير معروفة');
+    while(order.status!==target){
+      if(order.status==='quality')quality(db,order.id,form({good:order.qty,reject:0,labor:2,overhead:0}));
+      next(order);
+    }
+  };
   const complete=(order,good,rejected)=>{
-    next(order); // planned -> cutting
-    next(order); // cutting -> sewing
-    next(order); // sewing -> finishing
-    next(order); // finishing -> quality
+    advanceUntil(order,'quality');
     quality(db,order.id,form({good,reject:rejected,labor:order.qty*2,overhead:50}));
-    advance(db,order.id); // quality -> completed (finished goods receipt)
+    advanceUntil(order,'completed'); // stock posts ONLY after packing
   };
   const lotFields={
     styleId:shirt.id,customer:'متجر الأفق — بيانات افتراضية',due:dueIn(28),
@@ -144,8 +149,7 @@ export function populateDemoData(db,ops){
   complete(shirtMedium,34,2);
   next(shirtLarge); // cutting with partial work record
   work(shirtLarge,8,'cutting');
-  next(shirtXL);
-  next(shirtXL);
+  advanceUntil(shirtXL,'sewing');
   work(shirtXL,5,'sewing');
   const individual=(s,size,color,qty,customer)=>{
     newOrder(db,form({styleId:s.id,variantId:vId(s,size,color),quantity:qty,customer,due:dueIn(25)}));
@@ -154,11 +158,16 @@ export function populateDemoData(db,ops){
   const teeComplete=individual(tshirt,'M','كحلي',30,'متجر السوق — تجريبي');
   complete(teeComplete,28,2);
   const teeQC=individual(tshirt,'L','رمادي',20,'عميل قيد الفحص — تجريبي');
-  next(teeQC);next(teeQC);next(teeQC);next(teeQC); // awaiting QC
+  advanceUntil(teeQC,'quality'); // awaiting QC
   const jacketFinish=individual(jacket,'M','أسود',16,'تاجر الأناقة — تجريبي');
-  next(jacketFinish);next(jacketFinish);next(jacketFinish);
+  advanceUntil(jacketFinish,'finishing');
   work(jacketFinish,6,'finishing'); // in progress
   individual(jacket,'L','بني',12,'عميل جديد — تجريبي'); // planned
+  // Every additional White tex operation appears in the opt-in demonstration.
+  for(const phase of ['initial_sorting','production_line','printing','ironing','presentation_quality','packing']){
+    const sample=individual(tshirt,'XL','رمادي',2,'مرحلة '+phase+' — عرض تجريبي');
+    advanceUntil(sample,phase);
+  }
   const sale=(s,customer,entries)=>{
     const fields={styleId:s.id,customer,due:dueIn(30)};
     for(const [size,color,qty] of entries)fields['sell_'+vId(s,size,color)]=qty;
@@ -183,7 +192,7 @@ export function populateDemoData(db,ops){
   if(!(coverage.styles>=3&&coverage.materials>=9&&coverage.rolls>=4&&coverage.workers>=5
        &&coverage.finished>=3&&coverage.sales>=3&&coverage.dispatches>=2
        &&coverage.bundles>=2&&coverage.lots>=1&&coverage.audit>=20
-       &&['planned','cutting','sewing','finishing','quality','completed'].every(s=>coverage.statuses[s]>0))){
+       &&stages.every(s=>coverage.statuses[s]>0))){
     throw Error('تعذر تجهيز بيانات عرض مكتملة لجميع الشاشات');
   }
   return coverage;

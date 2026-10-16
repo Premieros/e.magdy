@@ -86,9 +86,11 @@ test('one matrix does not cause a second SKU to issue or finish early',()=>{
   assert.equal(db.materials[0].stock,280);
   assert.equal(second.status,'planned');
   assert.equal(g.cuttingBundleStats(db,second.id).total,0);
-  for(let i=0;i<3;i++)g.advance(db,first.id);
+  while(first.status!=='quality')g.advance(db,first.id);
   g.quality(db,first.id,form({good:9,reject:1,labor:20,overhead:5}));
   g.advance(db,first.id);
+  assert.equal(db.finished.length,0);
+  while(first.status!=='completed')g.advance(db,first.id);
   assert.equal(g.productionBatches(db)[0].completed,1);
   assert.equal(db.finished.length,1);
   assert.equal(db.finished[0].variantId,first.variantId);

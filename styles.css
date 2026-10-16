@@ -443,3 +443,23 @@ a:hover{text-decoration:underline}
   .order-detail-summary{font-size:13px;padding:12px}
   .order-detail-totals{font-size:14px}
 }
+
+
+/* WHITE TEX corporate identity + accessible 12-step timeline. */
+.logo{gap:11px}
+.logo-icon{display:grid;place-items:center;flex:none;width:48px;height:48px;border:1px solid #30456c;border-radius:14px;background:linear-gradient(145deg,#0f172a 0%,#1d3d69 100%);box-shadow:0 5px 14px rgba(15,23,42,.17);color:#fff;font:800 16px/1 'Inter',sans-serif;letter-spacing:-1px}
+.logo-name{font-size:23px;letter-spacing:-.9px;color:#15243e;white-space:nowrap}
+.logo-accent{color:#2563eb;margin-inline-start:3px}
+.logo-name small{font-size:12px;letter-spacing:1.15px;line-height:1.7;color:#64748b}
+.brand-mini{font:800 12px/1.4 'Inter',sans-serif;letter-spacing:1.2px;color:#1d4ed8;direction:ltr}
+.hero{background:linear-gradient(120deg,#eff6ff 0%,#fff 60%,#f8fafc 100%);border:1px solid #c7dcf7}
+.hero .eyebrow{color:#1d4ed8;letter-spacing:1.4px}
+.hero h2{font-family:'Cairo','Inter',sans-serif;color:#102340}
+.hero-wordmark{font-family:'Inter','Cairo',sans-serif;color:#2563eb;font-weight:800}
+.hero-divider{font-weight:400;color:#93a9c8;padding-inline:6px}
+.hero p{color:#4b607a}
+.steps{display:flex;flex-wrap:wrap;justify-content:flex-start;gap:8px}
+.step{flex:1 1 130px;min-width:108px;max-width:220px;padding:10px 8px;border:1px solid #d7e1ef;line-height:1.65}
+.step.done{background:#eff8f4;border-color:#b6ddce;color:#16624c}
+.step.current{background:#e9f2ff;border:2px solid #2563eb;color:#1d4ed8;font-weight:800}
+@media(max-width:760px){.steps{gap:6px}.step{min-width:calc(50% - 6px);flex:1 1 calc(50% - 6px);max-width:none}.hero{padding:20px 18px}.brand-mini{font-size:12px;letter-spacing:.3px}}
