@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { DEFAULT_UI, UI_STORAGE_KEY, readUI, setUI, translateText, translateFragment, applyDocumentUI } from '../src/i18n.mjs';
+import { DEFAULT_UI, UI_STORAGE_KEY, readUI, setUI, translateText, translateFragment, applyDocumentUI, SIDEBAR_STORAGE_KEY, readSidebarCollapsed, saveSidebarCollapsed } from '../src/i18n.mjs';
 import { __test as factory } from '../app.js';
 
 const memory=()=>{
@@ -110,4 +110,36 @@ test('GitHub Pages packages localization and keeps no forced login',()=>{
   assert.match(pages,/src\/i18n\.mjs/);
   assert.match(index,/white-tex-display-v1/);
   assert.match(cloud,/yumeijsyiphzdsulsubf\.supabase\.co/);
+});
+
+test('sidebar can collapse and expand without modifying operational data or display preferences',()=>{
+  const storage=memory();
+  const operational='premieros-garments-local-v1';
+  storage.setItem(operational,JSON.stringify({version:1,orders:[{id:'A',status:'quality'}]}));
+  storage.setItem(UI_STORAGE_KEY,JSON.stringify({lang:'en',theme:'dark'}));
+  const originalData=storage.getItem(operational);
+  assert.equal(readSidebarCollapsed(storage),false);
+  assert.equal(saveSidebarCollapsed(true,storage),true);
+  assert.equal(readSidebarCollapsed(storage),true);
+  assert.equal(storage.getItem(SIDEBAR_STORAGE_KEY),'1');
+  assert.deepEqual(readUI(storage),{lang:'en',theme:'dark'});
+  assert.equal(saveSidebarCollapsed(false,storage),false);
+  assert.equal(readSidebarCollapsed(storage),false);
+  assert.equal(storage.getItem(operational),originalData);
+});
+test('sidebar toggle is accessible, stays visible in the header and supports both screen widths',()=>{
+  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+  const css=readFileSync(new URL('../styles.css',import.meta.url),'utf8');
+  const target=css.split('WHITE TEX — COLLAPSIBLE SIDEBAR & TOP-ANCHORED FLOATING NOTIFICATIONS')[1];
+  assert.ok(target);
+  assert.match(app,/data-act="toggle-sidebar"/);
+  assert.match(app,/aria-controls="wt-sidebar"/);
+  assert.match(app,/aria-expanded/);
+  assert.match(app,/sidebarCollapsed=saveSidebarCollapsed\(!sidebarCollapsed\)/);
+  assert.match(app,/layout '\+\(sidebarCollapsed\?'sidebar-collapsed':''\)/);
+  assert.match(target,/@media\(min-width:761px\)\{[\s\S]*?\.layout\.sidebar-collapsed \.side\{width:80px;min-width:80px\}/);
+  assert.match(target,/\.layout\.sidebar-collapsed \.nav-label\{display:none\}/);
+  assert.match(target,/@media\(max-width:760px\)\{[\s\S]*?\.layout\.sidebar-collapsed \.side\{transform:translateY\(110%\)/);
+  assert.match(target,/\.wt-sidebar-toggle\{width:40px;height:40px/);
+  assert.match(app,/title="'\+esc\(ui\.lang==='en'\?translateText\(v\[2\],ui\.lang\):v\[2\]\)/);
 });
