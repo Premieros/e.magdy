@@ -20,9 +20,9 @@ function produce(db,index,qty){
   const s=db.styles[0],v=s.variants[index];
   g.newOrder(db,form({styleId:s.id,variantId:v.id,quantity:qty}));
   const order=db.orders[0];
-  for(let i=0;i<4;i++)g.advance(db,order.id);
+  while(order.status!=='quality')g.advance(db,order.id);
   g.quality(db,order.id,form({good:qty,reject:0,labor:0,overhead:0}));
-  g.advance(db,order.id);
+  while(order.status!=='completed')g.advance(db,order.id);
   return v.id;
 }
 function sale(db,counts){
