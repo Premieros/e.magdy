@@ -139,3 +139,13 @@ test('Arabic accounts page, input and Pages deployment are wired together',()=>{
   assert.match(formHtml,/نوع الحركة/);
   assert.match(formHtml,/المبلغ/);
 });
+
+test('White tex headings avoid the removed phrases',()=>{
+  const accounting=readFileSync(new URL('../src/accounting-ui.mjs',import.meta.url),'utf8');
+  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+  assert.doesNotMatch(accounting,/صورة واضحة عن أموال المصنع/);
+  assert.doesNotMatch(app,/إدارة مصنع الملابس/);
+  assert.doesNotMatch(html,/مصنع الملابس|مصنع ملابس/);
+  assert.match(html,/White tex \| إدارة الإنتاج/);
+});
