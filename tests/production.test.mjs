@@ -44,13 +44,15 @@ test('cutting deducts BOM exactly once',()=>{
 });
 test('QC requires balancing quantity, and finished receipt is not duplicated',()=>{
   const db=prepared(),o=db.orders[0];
-  for(let i=0;i<4;i++)g.advance(db,o.id);
+  while(o.status!=='quality')g.advance(db,o.id);
   assert.equal(o.status,'quality');
   assert.throws(()=>g.advance(db,o.id),/المقبول/);
   assert.throws(()=>g.quality(db,o.id,form({good:11,reject:0,labor:0,overhead:0})),/غير صالحة/);
   g.quality(db,o.id,form({good:9,reject:1,labor:90,overhead:45}));
   g.advance(db,o.id);
-  assert.equal(o.status,'completed');
+  assert.equal(o.status,'printing');
+  assert.equal(db.finished.length,0);
+  while(o.status!=='completed')g.advance(db,o.id);
   assert.equal(db.finished[0].qty,9);
   assert.equal(db.finished[0].unitCost,59.44);
   assert.throws(()=>g.advance(db,o.id));
