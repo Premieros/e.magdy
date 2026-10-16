@@ -1,4 +1,5 @@
 import { test } from 'node:test';
+import { stages } from '../src/workflow.mjs';
 import assert from 'node:assert/strict';
 import { __test as g } from '../app.js';
 import { populateDemoData, isDemoEligible, demoCoverage } from '../src/demo-data.mjs';
@@ -44,7 +45,7 @@ test('full demonstration populates styles, materials, rolls, workers, every prod
   assert.ok(coverage.dispatches>=2);
   assert.ok(coverage.audit>=25);
   assert.ok(coverage.stock>0);
-  for(const stage of ['planned','cutting','sewing','finishing','quality','completed']){
+  for(const stage of stages){
     assert.ok(coverage.statuses[stage]>0,'missing '+stage);
   }
   assert.ok(db.materials.some(m=>m.stock<25));
