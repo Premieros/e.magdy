@@ -76,6 +76,10 @@ test('piecework recording is bounded by order and duplicate batch references are
   g.registerStageWork(db, form({ orderId, workerId, quantity: 7, batchRef: 'CUT2' }));
   assert.equal(g.pieceworkCost(db, orderId), 50);
   g.advance(db, orderId);
+  assert.equal(db.orders[0].status, 'initial_sorting');
+  g.advance(db, orderId);
+  assert.equal(db.orders[0].status, 'production_line');
+  g.advance(db, orderId);
   assert.equal(db.orders[0].status, 'sewing');
   assert.equal(g.stageProgress(db, orderId, 'cutting').quantity, 10);
 });
@@ -86,11 +90,13 @@ test('worker piecework is included exactly once in finished unit cost', () => {
   g.addWorker(db, form({ code: 'OP1', name: 'عامل', rate: 4 }));
   g.advance(db, order.id);
   g.registerStageWork(db, form({ orderId: order.id, workerId: db.workers[0].id, quantity: 10 }));
-  for (let i = 0; i < 3; i++) g.advance(db, order.id);
+  while (order.status !== 'quality') g.advance(db, order.id);
   assert.equal(order.status, 'quality');
   g.quality(db, order.id, form({ good: 9, reject: 1, labor: 90, overhead: 45 }));
   g.advance(db, order.id);
-  assert.equal(order.status, 'completed');
+  assert.equal(order.status, 'printing');
+  assert.equal(db.finished.length, 0);
+  while (order.status !== 'completed') g.advance(db, order.id);
   assert.equal(g.pieceworkCost(db, order.id), 40);
   assert.equal(db.finished[0].unitCost, 63.89);
   assert.throws(() => g.advance(db, order.id));
