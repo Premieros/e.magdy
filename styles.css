@@ -1038,14 +1038,14 @@ html[data-theme="dark"] ::selection{background:#3563b8;color:#fff}
 /* Alerts are portaled onto document.body and stay pinned while the page scrolls. */
 .wt-toast-stack{position:fixed;top:calc(env(safe-area-inset-top,0px) + 16px);left:50%;right:auto;
   transform:translateX(-50%);width:min(620px,calc(100vw - 28px));max-height:calc(100dvh - 30px);
-  overflow-y:auto;z-index:180;gap:12px;pointer-events:none}
-.wt-fly{min-height:112px;padding:20px 22px 26px;gap:16px;border-radius:19px;
+  overflow-y:auto;z-index:180;gap:8px;pointer-events:none}
+.wt-fly{min-height:76px;padding:10px 18px 14px;gap:11px;border-radius:14px;
   box-shadow:0 20px 50px rgba(6,14,32,.36)}
-.wt-fly-icon{width:54px;height:54px;border-radius:15px;font-size:27px}
-.wt-fly-copy strong{font-size:17px;line-height:1.6}
-.wt-fly-copy small{font-size:14px;line-height:1.85;margin-top:5px}
-.wt-fly-close{width:31px;height:31px;flex:none;font-size:25px}
-.wt-fly-timer{height:5px}
+.wt-fly-icon{width:40px;height:40px;border-radius:11px;font-size:21px}
+.wt-fly-copy strong{font-size:15px;line-height:1.5}
+.wt-fly-copy small{font-size:12px;line-height:1.6;margin-top:2px}
+.wt-fly-close{width:27px;height:28px;flex:none;font-size:23px}
+.wt-fly-timer{height:3px}
 html[data-theme="dark"] .wt-sidebar-toggle{background:#253651;border-color:#425879;color:#e1ecff}
 html[data-theme="dark"] .wt-sidebar-toggle:hover{background:#304967;color:#fff}
 @media(max-width:760px){
@@ -1059,16 +1059,16 @@ html[data-theme="dark"] .wt-sidebar-toggle:hover{background:#304967;color:#fff}
  .layout .side{transition:transform .22s ease,opacity .22s ease,visibility .22s}
  .wt-toast-stack{top:calc(env(safe-area-inset-top,0px) + 10px);left:50%;right:auto;
    transform:translateX(-50%);width:calc(100vw - 20px);max-height:calc(100dvh - 20px)}
- .wt-fly{padding:17px 14px 22px;min-height:96px;gap:11px;border-radius:16px}
- .wt-fly-icon{width:46px;height:46px;font-size:24px;flex:none}
- .wt-fly-copy strong{font-size:16px}
- .wt-fly-copy small{font-size:13px}
+ .wt-fly{padding:10px 12px 13px;min-height:70px;gap:10px;border-radius:12px}
+ .wt-fly-icon{width:36px;height:36px;font-size:20px;flex:none}
+ .wt-fly-copy strong{font-size:14px}
+ .wt-fly-copy small{font-size:12px}
 }
 @media(max-width:440px){
  .wt-top-leading .top-separator,.wt-top-leading .top-crumb strong{display:none}
  .wt-top-leading .brand-mini{font-size:12px}
  .wt-sidebar-toggle{min-width:38px;width:38px;height:38px}
- .wt-fly{min-height:90px}
+ .wt-fly{min-height:66px}
 }
 @media(prefers-reduced-motion:reduce){
  .layout .side,.wt-sidebar-toggle{transition:none}
