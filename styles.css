@@ -895,15 +895,15 @@ html[dir="ltr"] .top{gap:9px}
  .wt-display-btn b{font-size:12px}
  .wt-display-switches{gap:4px}
  .wt-header-actions{gap:7px}
- .top-crumb{font-size:11px}
+ .top-crumb{font-size:12px}
 }
 @media(max-width:490px){
  .top{gap:5px;padding-inline:9px}
  .wt-display-btn{gap:4px;min-width:38px}
  .wt-display-btn span{font-size:17px}
- .wt-display-btn b{font-size:11px}
+ .wt-display-btn b{font-size:12px}
  .wt-header-actions{gap:5px}
- .brand-mini{font-size:11px}
+ .brand-mini{font-size:12px}
  .wt-bell{width:38px;height:38px}
 }
 html[data-theme="dark"]{
