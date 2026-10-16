@@ -686,3 +686,15 @@ export function applyDocumentUI(prefs,doc=globalThis.document){
   const themeMeta=doc.querySelector('meta[name="theme-color"]');
   if(themeMeta)themeMeta.setAttribute('content',theme==='dark'?'#0b1220':'#f5f7fa');
 }
+
+/** UI-only sidebar preference. Kept outside factory records and Supabase. */
+export const SIDEBAR_STORAGE_KEY='white-tex-sidebar-collapsed-v1';
+export function readSidebarCollapsed(storage=globalThis.localStorage){
+  try{return storage?.getItem(SIDEBAR_STORAGE_KEY)==='1';}
+  catch{return false;}
+}
+export function saveSidebarCollapsed(collapsed,storage=globalThis.localStorage){
+  try{storage?.setItem(SIDEBAR_STORAGE_KEY,collapsed?'1':'0');}
+  catch{ /* Private or unavailable browser storage: apply for this session only. */ }
+  return Boolean(collapsed);
+}
