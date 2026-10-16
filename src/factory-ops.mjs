@@ -71,7 +71,7 @@ export function receiveFabricRoll(db, f) {
   ensureFactoryState(db);
   const material = db.materials.find(x => x.id === f.get('materialId'));
   if (!material || material.unit !== 'متر') throw Error('اختر خامة قماش بوحدة متر');
-  const rollNo = text(f.get('rollNo')).toUpperCase();
+  const rollNo = (text(f.get('rollNo'))||('ROLL-'+serial().slice(0,8))).toUpperCase();
   if (!rollNo) throw Error('رقم الرول مطلوب');
   if (db.fabricRolls.some(r => r.materialId === material.id && r.rollNo === rollNo)) throw Error('رقم الرول مكرر لنفس القماش');
   const received = units(number(f.get('quantity'), 'طول الرول'));
