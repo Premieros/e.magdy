@@ -518,13 +518,12 @@ if(kind==='matrix-order'){
   const chosen=db.styles.find(s=>s.id===(modal.id||db.styles[0]?.id))||db.styles[0];
   t='دفعة إنتاج للمقاسات والألوان';
   form='<label class="field">الموديل<select name="styleId" required><option value="">اختر...</option>'
-    +db.styles.map(s=>'<option value="'+esc(s.id)+'" '+(s.id===chosen?.id?'selected':'')+'>'+esc(s.code+' — '+s.name)+'</option>').join('')
+    +db.styles.map(s=>'<option value="'+esc(s.id)+'" '+(s.id===chosen?.id?'selected':'')+'>'+esc(s.name)+'</option>').join('')
     +'</select></label>'
     +'<p class="tips">حدد كمية كل مقاس ولون. الخانات الفارغة أو الصفرية لا تنشئ أوامر. تُنشأ أوامر مستقلة مرتبطة بدفعة واحدة.</p>'
     +(chosen
-      ?'<div class="table-wrap matrix-scroll"><table><thead><tr><th>SKU</th><th>المقاس</th><th>اللون</th><th>الكمية</th></tr></thead><tbody>'
-        +chosen.variants.map(v=>'<tr>'+td('<span class="mono">'+esc(v.sku)+'</span>')
-          +td(esc(v.size))+td(esc(v.color))+td('<input class="matrix-input" type="number" name="matrix_'+esc(v.id)+'" min="0" max="100000" step="1" value="" placeholder="0" aria-label="كمية '+esc(v.size+' '+v.color)+'">')+'</tr>').join('')
+      ?'<div class="table-wrap matrix-scroll"><table><thead><tr><th>المقاس</th><th>اللون</th><th>الكمية</th></tr></thead><tbody>'
+        +chosen.variants.map(v=>'<tr>'+td(esc(v.size))+td(esc(v.color))+td('<input class="matrix-input" type="number" name="matrix_'+esc(v.id)+'" min="0" max="100000" step="1" value="" placeholder="0" aria-label="كمية '+esc(v.size+' '+v.color)+'">')+'</tr>').join('')
         +'</tbody></table></div>'
       :'<p class="alert">يجب إضافة موديل أولًا</p>')
     +'<div class="form-grid">'+inp('العميل','customer')+inp('موعد التسليم','due','date')+'</div>';
@@ -544,13 +543,12 @@ if(kind==='new-wholesale'){
   const chosen=db.styles.find(s=>s.id===(modal.id||db.styles[0]?.id))||db.styles[0];
   t='إنشاء طلب بيع جملة';
   form='<label class="field">الموديل<select name="styleId" required><option value="">اختر...</option>'
-    +db.styles.map(s=>'<option value="'+esc(s.id)+'" '+(s.id===chosen?.id?'selected':'')+'>'+esc(s.code+' — '+s.name)+'</option>').join('')
+    +db.styles.map(s=>'<option value="'+esc(s.id)+'" '+(s.id===chosen?.id?'selected':'')+'>'+esc(s.name)+'</option>').join('')
     +'</select></label>'
     +'<p class="tips">حدد الكمية المطلوبة من كل مقاس ولون. لا يتم حجز مخزون التام عند إنشاء الطلب، بل عند إصدار إذن التسليم.</p>'
     +(chosen
-      ?'<div class="table-wrap matrix-scroll"><table><thead><tr><th>SKU</th><th>المقاس</th><th>اللون</th><th>الكمية</th><th>المتاح الآن</th></tr></thead><tbody>'
-        +chosen.variants.map(v=>'<tr>'+td('<span class="mono">'+esc(v.sku)+'</span>')
-          +td(esc(v.size))+td(esc(v.color))+td('<input class="matrix-input" type="number" name="sell_'+esc(v.id)+'" min="0" max="1000000" step="1" placeholder="0" aria-label="كمية '+esc(v.size+' '+v.color)+'">')
+      ?'<div class="table-wrap matrix-scroll"><table><thead><tr><th>المقاس</th><th>اللون</th><th>الكمية</th><th>المتاح الآن</th></tr></thead><tbody>'
+        +chosen.variants.map(v=>'<tr>'+td(esc(v.size))+td(esc(v.color))+td('<input class="matrix-input" type="number" name="sell_'+esc(v.id)+'" min="0" max="1000000" step="1" placeholder="0" aria-label="كمية '+esc(v.size+' '+v.color)+'">')
           +td(num(availableFinishedStock(db,v.id)))+'</tr>').join('')+'</tbody></table></div>'
       :'<p class="alert">عرّف موديلًا أولًا.</p>')
     +'<div class="form-grid">'+inp('اسم العميل','customer','text','','required maxlength="120"')
