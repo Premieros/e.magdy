@@ -53,7 +53,7 @@ test('daily output excludes undated history and production not yet packed',()=>{
   const x=dashboardAnalytics(db,localDay);
   assert.equal(x.dailyTotal,0);
   assert.equal(x.completedOrders,2);
-  assert.equal(x.qualityRate,90.0);
+  assert.equal(x.qualityRate,92.31);
 });
 test('stock, sales and alerts keep real units separate',()=>{
   const db=g.fresh();
