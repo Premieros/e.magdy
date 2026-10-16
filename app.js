@@ -248,7 +248,7 @@ function stylesPage(){let rows=db.styles.filter(s=>(s.name+s.code+s.category).to
 function materialsPage(){return heading('الأقمشة والخامات','تتبع مخزون الخام والاستلام وتكلفة الوحدة.',btn('＋ استلام خامات','new-receipt')+btn('＋ إضافة خامة','new-material','','primary'))+'<section class="card">'+(db.materials.length?table(['الخامة','النوع','الكمية المتوفرة','تكلفة الوحدة','قيمة المخزون',''],db.materials.map(m=>'<tr>'+td('<b>'+esc(m.name)+'</b>')+td(esc(m.category))+td('<b class="'+(m.stock<25?'bad':'good')+'">'+num(m.stock)+' '+esc(m.unit)+'</b>')+td(cur(m.avgCost))+td(cur(m.stock*m.avgCost))+td('<button class="rowbtn" data-act="receipt-for" data-id="'+m.id+'">استلام</button>')+'</tr>').join('')):empty('لا توجد خامات','ابدأ بتعريف قماش أو خامة.'))+'</section>';}
 function ordersPage(){return heading('أوامر الإنتاج','تابع كل مراحل المصنع من القص والفرز البدائي حتى التعبئة.',btn('＋ دفعة مقاسات وألوان','matrix-order')+btn('＋ أمر جديد','new-order','','primary'))+'<section class="card">'+(db.orders.length?table(['المنتج','المقاس واللون','الكمية','العميل','المرحلة',''],db.orders.map(o=>'<tr>'+td('<b>'+esc(style(o.styleId)?.name)+'</b>')+td(esc(variant(o)?.size)+' / '+esc(variant(o)?.color))+td(num(o.qty))+td(esc(o.customer||'—'))+td(status(o.status))+td('<button class="rowbtn" data-act="show-order" data-id="'+o.id+'">عرض</button>')+'</tr>').join('')):empty('لا توجد أوامر تصنيع','أضف موديلًا ومكونات ثم أنشئ أمر تصنيع.'))+'</section>';}
 function qualityPage(){let arr=db.orders.filter(o=>o.status==='quality');return heading('فحص الجودة','تسجيل المقبول والمرفوض قبل الطباعة، وترحيل التام بعد التعبئة.')+'<section class="card"><h3>بانتظار الجودة</h3><p class="sub">استكمال الفحص؛ الترحيل للمخزن بعد التعبئة</p>'+(arr.length?arr.map(o=>'<div class="data-line"><b>'+esc(style(o.styleId)?.name)+' — '+num(o.qty)+' قطعة'+'</b>'+btn('فحص','quality',o.id,'primary')+'</div>').join(''):empty('لا توجد أوامر تنتظر الفحص','تابع مراحل أمر الإنتاج حتى مرحلة الجودة.'))+'</section>';}
-function reportsPage(){let data=db.styles.flatMap(s=>s.variants.map(v=>({...v,name:s.name,qty:ready(v.id)}))).filter(x=>x.qty);return heading('التقارير وحركة المخزون','حركة الخامات ومخزون الملابس الجاهزة وسجل العمليات.')+'<div class="stats">'+metric('أوامر مكتملة',num(db.orders.filter(x=>x.status==='completed').length),'من جميع الأوامر')+metric('قطع تامة متاحة',num(db.finished.reduce((n,x)=>n+x.qty,0)-wholesaleOverview(db).delivered),'بعد تسليمات الجملة')+metric('قطع مرفوضة',num(db.orders.reduce((n,x)=>n+x.reject,0)),'في فحص الجودة')+metric('حركة مخزون',num(db.ledger.length),'صرف واستلام خامات')+'</div><section class="card"><h3>المخزون التام حسب SKU</h3><p class="sub">كل لون ومقاس مستقل</p>'+ (data.length?table(['المنتج','المقاس','اللون','المتوفر'],data.map(v=>'<tr>'+td(esc(v.name))+td(esc(v.size))+td(esc(v.color))+td(num(v.qty))+'</tr>').join('')):empty('مخزن التام فارغ','سيظهر المخزون بعد انتهاء التعبئة.'))+'</section><section class="card"><h3>حركة الأقمشة والخامات</h3><p class="sub">آخر 100 حركة</p>'+ (db.ledger.length?table(['الخامة','العملية','الكمية','التكلفة'],db.ledger.slice(0,100).map(x=>'<tr>'+td(esc(mat(x.materialId)?.name))+td('<span class="'+(x.qty>0?'receipt':'issue')+'">'+(x.qty>0?'استلام':'صرف')+'</span>')+td(num(x.qty))+td(cur(x.cost))+'</tr>').join('')):empty('لا توجد حركات مخزون','ستسجل كل عملية استلام أو صرف هنا.'))+'</section><section class="card"><h3>حركة تسليم الملابس التامة</h3><p class="sub">أحدث أذون التسليم — لا يشمل المرتجعات بعد</p>'+(db.finishedDispatches.length?table(['العميل','عدد القطع','قيمة التسليم'],db.finishedDispatches.slice(0,50).map(d=>'<tr>'+td(esc(d.customer))+td(num(d.lines.reduce((n,l)=>n+l.qty,0)))+td(cur(d.lines.reduce((n,l)=>n+l.qty*l.unitPrice,0)))+'</tr>').join('')):empty('لا توجد تسليمات جملة','سيظهر سجل التسليم بعد إصدار أول إذن.'))+'</section><section class="card"><h3>سجل العمليات</h3>'+db.audit.slice(0,30).map(x=>'<div class="data-line"><span>'+esc(x.message)+'</span><small>'+new Date(x.at).toLocaleDateString('ar-EG')+'</small></div>').join('')+'</section>';}
+function reportsPage(){let data=db.styles.flatMap(s=>s.variants.map(v=>({...v,name:s.name,qty:ready(v.id)}))).filter(x=>x.qty);return heading('التقارير وحركة المخزون','حركة الخامات ومخزون الملابس الجاهزة وسجل العمليات.')+'<div class="stats">'+metric('أوامر مكتملة',num(db.orders.filter(x=>x.status==='completed').length),'من جميع الأوامر')+metric('قطع تامة متاحة',num(db.finished.reduce((n,x)=>n+x.qty,0)-wholesaleOverview(db).delivered),'بعد تسليمات الجملة')+metric('قطع مرفوضة',num(db.orders.reduce((n,x)=>n+x.reject,0)),'في فحص الجودة')+metric('حركة مخزون',num(db.ledger.length),'صرف واستلام خامات')+'</div><section class="card"><h3>المخزون الجاهز حسب المقاس واللون</h3><p class="sub">كل لون ومقاس مستقل</p>'+ (data.length?table(['المنتج','المقاس','اللون','المتوفر'],data.map(v=>'<tr>'+td(esc(v.name))+td(esc(v.size))+td(esc(v.color))+td(num(v.qty))+'</tr>').join('')):empty('مخزن التام فارغ','سيظهر المخزون بعد انتهاء التعبئة.'))+'</section><section class="card"><h3>حركة الأقمشة والخامات</h3><p class="sub">آخر 100 حركة</p>'+ (db.ledger.length?table(['الخامة','العملية','الكمية','التكلفة'],db.ledger.slice(0,100).map(x=>'<tr>'+td(esc(mat(x.materialId)?.name))+td('<span class="'+(x.qty>0?'receipt':'issue')+'">'+(x.qty>0?'استلام':'صرف')+'</span>')+td(num(x.qty))+td(cur(x.cost))+'</tr>').join('')):empty('لا توجد حركات مخزون','ستسجل كل عملية استلام أو صرف هنا.'))+'</section><section class="card"><h3>حركة تسليم الملابس التامة</h3><p class="sub">أحدث أذون التسليم — لا يشمل المرتجعات بعد</p>'+(db.finishedDispatches.length?table(['العميل','عدد القطع','قيمة التسليم'],db.finishedDispatches.slice(0,50).map(d=>'<tr>'+td(esc(d.customer))+td(num(d.lines.reduce((n,l)=>n+l.qty,0)))+td(cur(d.lines.reduce((n,l)=>n+l.qty*l.unitPrice,0)))+'</tr>').join('')):empty('لا توجد تسليمات جملة','سيظهر سجل التسليم بعد إصدار أول إذن.'))+'</section><section class="card"><h3>سجل العمليات</h3>'+db.audit.slice(0,30).map(x=>'<div class="data-line"><span>'+esc(x.message)+'</span><small>'+new Date(x.at).toLocaleDateString('ar-EG')+'</small></div>').join('')+'</section>';}
 function settingsPage(){
   const account=cloudIdentity();
   const cloud=account
@@ -385,8 +385,7 @@ function batchDetail(){
           const o=byVariant.get(variant?.id);return td(o?'<b>'+num(o.qty)+'</b>':'—');}).join('')+'</tr>').join(''))
     +'</section><section class="card"><h3>أوامر الدفعة</h3>'
     +table(['المقاس','اللون','الكمية','المرحلة',''],
-      b.orders.map(o=>'<tr>'+td('<span class="mono">'+esc(o.ref)+'</span>')
-        +td(esc(variant(o)?.size))+td(esc(variant(o)?.color))+td(num(o.qty))
+      b.orders.map(o=>'<tr>'+td(esc(variant(o)?.size))+td(esc(variant(o)?.color))+td(num(o.qty))
         +td(status(o.status))+td('<button class="rowbtn" data-act="show-order" data-id="'+esc(o.id)+'">فتح الأمر</button>')+'</tr>').join(''))
     +'</section><p class="tips">كل أمر له صرف خامات وتكلفة وفحص جودة مستقل. الدفعة رابط للتخطيط والتجميع فقط، وليست حركة مخزنية إضافية.</p>';
 }
@@ -403,8 +402,7 @@ function wholesalePage(){
       ?table(['العميل','الموديل','المطلوب','المسلم','المتبقي','الحالة',''],
         db.wholesaleOrders.map(o=>{const p=wholesaleProgress(db,o);
           const state=p.status==='fulfilled'?'مكتمل':p.status==='partial'?'جزئي':'مفتوح';
-          return '<tr>'+td('<span class="mono">'+esc(o.ref)+'</span>')
-            +td(esc(o.customer))+td(esc(style(o.styleId)?.name))+td(num(p.ordered))
+          return '<tr>'+td(esc(o.customer))+td(esc(style(o.styleId)?.name))+td(num(p.ordered))
             +td(num(p.shipped))+td(num(p.remaining))
             +td('<span class="pill '+(p.status==='fulfilled'?'green':p.status==='partial'?'gold':'')+'">'+state+'</span>')
             +td('<button class="rowbtn" data-act="show-wholesale" data-id="'+esc(o.id)+'">التفاصيل</button>')+'</tr>';}).join(''))
@@ -412,8 +410,7 @@ function wholesalePage(){
     +'</section><section class="card"><h3>آخر أذون التسليم</h3>'
     +(db.finishedDispatches.length
       ?table(['العميل','التاريخ','القطع','القيمة'],
-        db.finishedDispatches.slice(0,25).map(x=>'<tr>'+td('<span class="mono">'+esc(x.reference)+'</span>')
-          +td(esc(x.customer))+td(new Date(x.at).toLocaleDateString('ar-EG'))
+        db.finishedDispatches.slice(0,25).map(x=>'<tr>'+td(esc(x.customer))+td(new Date(x.at).toLocaleDateString('ar-EG'))
           +td(num(x.lines.reduce((s,l)=>s+l.qty,0)))
           +td(cur(x.lines.reduce((s,l)=>s+l.qty*l.unitPrice,0)))+'</tr>').join(''))
       :empty('لا توجد أذون تسليم','سجّل التسليم بعد اكتمال الإنتاج واستلام مخزون التام.'))+'</section>';
@@ -432,15 +429,13 @@ function wholesaleDetail(){
     +metric('قيمة الطلب',cur(progress.amount),'إجمالي الكميات المطلوبة')+'</div>'
     +'<section class="card"><h3>المقاسات والألوان</h3>'
     +table(['المقاس','اللون','الطلب','تم التسليم','المتبقي','مخزون التام'],
-      progress.lines.map(l=>'<tr>'+td('<span class="mono">'+esc(l.sku)+'</span>')
-        +td(esc(l.size))+td(esc(l.color))+td(num(l.qty))+td(num(l.shipped))
+      progress.lines.map(l=>'<tr>'+td(esc(l.size))+td(esc(l.color))+td(num(l.qty))+td(num(l.shipped))
         +td('<b>'+num(l.remaining)+'</b>')
         +td(num(availableFinishedStock(db,l.variantId)))+'</tr>').join(''))
     +'<p class="tips">حفظ الطلب لا يحجز المخزون. عند إنشاء إذن تسليم يتم التحقق من رصيد كل مقاس ولون ومن الكمية المتبقية في الطلب.</p></section>'
     +'<section class="card"><h3>أذون التسليم الخاصة بالطلب</h3>'
     +(history.length?table(['التاريخ','القطع','القيمة'],
-      history.map(d=>'<tr>'+td('<span class="mono">'+esc(d.reference)+'</span>')
-        +td(new Date(d.at).toLocaleDateString('ar-EG'))
+      history.map(d=>'<tr>'+td(new Date(d.at).toLocaleDateString('ar-EG'))
         +td(num(d.lines.reduce((s,l)=>s+l.qty,0)))
         +td(cur(d.lines.reduce((s,l)=>s+l.qty*l.unitPrice,0)))+'</tr>').join(''))
       :empty('لم يتم التسليم بعد','يمكنك تسجيل إذن جزئي عند توفر المنتج التام.'))+'</section>';
@@ -569,21 +564,21 @@ if(kind==='ship-wholesale'){
   form='<input type="hidden" name="orderId" value="'+esc(o.id)+'">'
     +'<p class="tips">كل كمية تُخصم من مخزون التام بعد الحفظ. لا تتجاوز المتبقي من الطلب أو المتاح من الصنف.</p>'
     +'<input type="hidden" name="reference" value="'+('DEL-'+id().slice(0,8))+'">'
-    +'<div class="table-wrap matrix-scroll"><table><thead><tr><th>SKU</th><th>المتبقي من الطلب</th><th>المتاح بالمخزن</th><th>الكمية المسلمة</th></tr></thead><tbody>'
+    +'<div class="table-wrap matrix-scroll"><table><thead><tr><th>المقاس واللون</th><th>المتبقي من الطلب</th><th>المتاح بالمخزن</th><th>الكمية المسلمة</th></tr></thead><tbody>'
     +p.lines.filter(l=>l.remaining>0).map(l=>'<tr>'
-      +td('<span class="mono">'+esc(l.sku)+'</span>')
+      +td(esc(l.size)+' · '+esc(l.color))
       +td(num(l.remaining))+td(num(availableFinishedStock(db,l.variantId)))
-      +td('<input class="matrix-input" type="number" name="ship_'+esc(l.variantId)+'" min="0" max="'+Math.min(l.remaining,Math.max(0,availableFinishedStock(db,l.variantId)))+'" step="1" placeholder="0" aria-label="تسليم '+esc(l.sku)+'">')+'</tr>').join('')
+      +td('<input class="matrix-input" type="number" name="ship_'+esc(l.variantId)+'" min="0" max="'+Math.min(l.remaining,Math.max(0,availableFinishedStock(db,l.variantId)))+'" step="1" placeholder="0" aria-label="تسليم '+esc(l.size+' '+l.color)+'">')+'</tr>').join('')
     +'</tbody></table></div>';
 }
 
 if(kind==='new-cloud-intake'){
   t='طلب عميل سحابي جديد';
   form='<p class="tips">سيرسل هذا الطلب إلى قاعدة المصنع مباشرة، ولا يغيّر مخزون المتصفح. أدخل بندًا في كل سطر بالترتيب التالي:</p>'
-    +'<p class="notes"><code>SKU | المقاس | اللون | الكمية | السعر</code></p>'
+    +'<p class="notes"><span>اسم المنتج | المقاس | اللون | الكمية | السعر</span></p>'
     +'<div class="form-grid">'+inp('اسم العميل','customerName','text','','required maxlength="120"')
     +inp('الهاتف أو وسيلة التواصل','customerContact','text','','maxlength="160"')+'</div>'
-    +'<label class="field">بنود الطلب<textarea name="linesRaw" rows="6" class="intake-lines" required placeholder="SH-100-M-BLACK | M | أسود | 12 | 350\nSH-100-L-BLACK | L | أسود | 8 | 350"></textarea></label>'
+    +'<label class="field">بنود الطلب<textarea name="linesRaw" rows="6" class="intake-lines" required placeholder="قميص رجالي | M | أسود | 12 | 350\nقميص رجالي | L | أسود | 8 | 350"></textarea></label>'
     +'<label class="field">ملاحظات<textarea name="notes" rows="3" class="intake-lines" maxlength="1000"></textarea></label>';
 }
 if(kind==='new-order'){t='أمر إنتاج جديد';form='<div class="form-grid">'+sel('الموديل','styleId',db.styles.map(s=>[s.id,s.name]))+sel('المقاس واللون','variantId',[])+inp('عدد القطع','quantity','number','','required min="1" step="1"')+inp('العميل','customer')+inp('موعد التسليم','due','date')+'</div><p class="tips">لا يتم صرف الخامات إلا عند بدء القص.</p>';}
