@@ -20,7 +20,7 @@ export function ensureFactoryState(db) {
 }
 export function addWorker(db, f) {
   ensureFactoryState(db);
-  const code = text(f.get('code')).toUpperCase();
+  const code = (text(f.get('code')) || ('EMP-'+serial().slice(0,8))).toUpperCase();
   const name = text(f.get('name'));
   if (!code || !name) throw Error('كود العامل واسمه مطلوبان');
   if (db.workers.some(w => w.code === code)) throw Error('كود العامل مستخدم');
