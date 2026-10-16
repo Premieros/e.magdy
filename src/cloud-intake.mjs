@@ -15,7 +15,7 @@ export function parseIntakeLines(text){
   if(!rows.length || rows.length>50)throw Error('اكتب من 1 إلى 50 صنفًا');
   const lines=rows.map((line,i)=>{
     const parts=line.split('|').map(v=>v.trim());
-    if(parts.length!==5)throw Error('السطر '+(i+1)+': المطلوب SKU | المقاس | اللون | الكمية | السعر');
+    if(parts.length!==5)throw Error('السطر '+(i+1)+': المطلوب اسم المنتج | المقاس | اللون | الكمية | السعر');
     const [sku,size,color,units,unitPrice]=parts;
     if(!sku||sku.length>80||size.length>40||color.length>60)throw Error('السطر '+(i+1)+': بيانات الصنف أو المقاس أو اللون غير صالحة');
     return {sku,size,color,qty:qty(units),unitPrice:money(unitPrice)};

@@ -126,6 +126,6 @@ test('existing Pages deployment packages notifications for every page and stays 
   assert.match(app,/buildNotifications\(db,d\)/);
   assert.match(styles,/prefers-reduced-motion/);
   assert.match(styles,/\.wt-command-hero/);
-  assert.match(pages,/cp src\/workflow\.mjs src\/notifications\.mjs/);
+  assert.match(pages,/cp src\/workflow\.mjs src\/analytics\.mjs src\/notifications\.mjs/);
   assert.match(client,/yumeijsyiphzdsulsubf\.supabase\.co/);
 });

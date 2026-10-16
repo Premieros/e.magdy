@@ -1,5 +1,6 @@
 /* PremierOS Garments | independent, browser-local prototype | no remote database */
 import { stages, labels, workStages, stageTargetQuantity, nextStageAction } from './src/workflow.mjs';
+import { dashboardAnalytics } from './src/analytics.mjs';
 import { buildNotifications, newNotification, ensureNotifications, appendNotifications, unreadCount, notificationIcons, LOW_STOCK_LEVEL } from './src/notifications.mjs';
 import { cloudIdentity, cloudLogin, cloudLogout, cloudSave, cloudLoad, validateCloudSnapshot, cloudFactoryList, cloudIntakeOrders, cloudCreateIntakeOrder } from './src/cloud-backup.mjs';
 import { buildIntakeOrder, intakeOrderTotal } from './src/cloud-intake.mjs';
@@ -31,6 +32,7 @@ catch(e){db=fresh();}
 let cloudFactoriesState=[],cloudIntakeState=[],cloudFactorySelected='',cloudIntakeMessage='';
 let notificationCenterOpen=false;
 let page=(typeof location!=='undefined'?location.hash:'#/dashboard'||'#/dashboard').replace('#/','')||'dashboard',detail=null,modal=null,search='';
+const friendlyText=value=>String(value??'').replace(/\bWO-[A-Z0-9-]+\b/gi,'أمر تصنيع').replace(/\bSO-[A-Z0-9-]+\b/gi,'طلب جملة').replace(/\bDEL-[A-Z0-9-]+\b/gi,'إذن تسليم');
 const esc=x=>String(x??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
 const id=()=>crypto.randomUUID();
 const n=x=>Number(x||0);
@@ -104,8 +106,8 @@ function mutator(fn,success='تم الحفظ'){
   }catch(e){toast(e.message||'حدث خطأ',true);}
 }
 function log(d,message){d.audit.unshift({id:id(),at:new Date().toISOString(),message});}
-function newStyle(d,f){let c=code(required(f.get('code'),'كود الموديل')),sizes=list(f.get('sizes')),colors=list(f.get('colors'));if(d.styles.some(x=>x.code===c))throw Error('كود الموديل موجود');if(!sizes.length||!colors.length)throw Error('أدخل مقاسات وألوان');if(sizes.length*colors.length>100)throw Error('الحد الأقصى 100 متغير');let variants=sizes.flatMap(sz=>colors.map(cl=>({id:id(),size:sz,color:cl,sku:c+'-'+code(sz)+'-'+code(cl)})));if(new Set(variants.map(x=>x.sku)).size!==variants.length)throw Error('أكواد المتغيرات متكررة');d.styles.unshift({id:id(),code:c,name:required(f.get('name'),'اسم الموديل'),season:str(f.get('season')),category:str(f.get('category'))||'ملابس',sellingPrice:nonnegative(f.get('price'),'السعر'),variants,sizes,colors,bom:[]});log(d,'إضافة موديل '+c);}
-function newMaterial(d,f){let c=code(required(f.get('code'),'كود الخامة'));if(d.materials.some(x=>x.code===c))throw Error('كود الخامة موجود');d.materials.unshift({id:id(),code:c,name:required(f.get('name'),'اسم الخامة'),category:str(f.get('category'))||'خامات',unit:str(f.get('unit')),stock:0,avgCost:0});log(d,'إضافة خامة '+c);}
+function newStyle(d,f){let c=code(str(f.get('code'))||('MODEL-'+id().slice(0,8))),sizes=list(f.get('sizes')),colors=list(f.get('colors'));if(d.styles.some(x=>x.code===c))throw Error('كود الموديل موجود');if(!sizes.length||!colors.length)throw Error('أدخل مقاسات وألوان');if(sizes.length*colors.length>100)throw Error('الحد الأقصى 100 متغير');let variants=sizes.flatMap(sz=>colors.map(cl=>({id:id(),size:sz,color:cl,sku:c+'-'+code(sz)+'-'+code(cl)})));if(new Set(variants.map(x=>x.sku)).size!==variants.length)throw Error('أكواد المتغيرات متكررة');d.styles.unshift({id:id(),code:c,name:required(f.get('name'),'اسم الموديل'),season:str(f.get('season')),category:str(f.get('category'))||'ملابس',sellingPrice:nonnegative(f.get('price'),'السعر'),variants,sizes,colors,bom:[]});log(d,'إضافة موديل '+c);}
+function newMaterial(d,f){let c=code(str(f.get('code'))||('MAT-'+id().slice(0,8)));if(d.materials.some(x=>x.code===c))throw Error('كود الخامة موجود');d.materials.unshift({id:id(),code:c,name:required(f.get('name'),'اسم الخامة'),category:str(f.get('category'))||'خامات',unit:str(f.get('unit')),stock:0,avgCost:0});log(d,'إضافة خامة '+c);}
 function receive(d,f){let m=d.materials.find(x=>x.id===f.get('materialId'));if(!m)throw Error('اختر خامة');let q=round(positive(f.get('quantity'),'الكمية')),cost=nonnegative(f.get('unitCost'),'السعر');m.avgCost=price((m.stock*m.avgCost+q*cost)/(m.stock+q));m.stock=round(m.stock+q);d.ledger.unshift({id:id(),at:new Date().toISOString(),materialId:m.id,qty:q,cost,kind:'receive',reference:str(f.get('reference'))||'استلام مخزن'});log(d,'استلام '+q+' '+m.unit+' من '+m.name);}
 function setBom(d,styleId,f){let s=d.styles.find(x=>x.id===styleId);if(!s)throw Error('الموديل غير موجود');let rows=[];d.materials.forEach(m=>{let v=str(f.get('bom_'+m.id));if(v){let q=Number(v);if(q<0||!Number.isFinite(q))throw Error('كمية غير صالحة');if(q>0)rows.push({materialId:m.id,qty:round(q)});}});if(!rows.length)throw Error('اختر خامة واحدة على الأقل');s.bom=rows;log(d,'تحديث BOM الموديل '+s.code);}
 function newOrder(d,f){let s=d.styles.find(x=>x.id===f.get('styleId'));if(!s)throw Error('اختر موديلًا');let v=s.variants.find(x=>x.id===f.get('variantId'));if(!v)throw Error('اختر المقاس واللون');let q=positive(f.get('quantity'),'عدد القطع');if(!Number.isInteger(q))throw Error('عدد القطع يجب أن يكون صحيحًا');let oid=id();let ref='WO-'+new Date().toISOString().slice(0,10).replaceAll('-','')+'-'+oid.slice(0,6).toUpperCase();d.orders.unshift({id:oid,ref,styleId:s.id,variantId:v.id,qty:q,customer:str(f.get('customer')),due:str(f.get('due')),status:'planned',materialCost:0,labor:0,overhead:0,good:0,reject:0,history:[{at:new Date().toISOString(),stage:'planned'}],used:[]});log(d,'إنشاء أمر '+ref);}
@@ -125,7 +127,7 @@ function eventCard(event, compact=false){
   const actionable=event.orderId&&db.orders.some(o=>o.id===event.orderId);
   return '<div class="wt-event wt-event--'+type+(event.read?'':' wt-event--unread')+'">'
     +'<span class="wt-event-icon" aria-hidden="true">'+notificationIcons[type]+'</span>'
-    +'<div class="wt-event-body"><strong>'+esc(event.title)+'</strong><p>'+esc(event.detail||'')+'</p>'
+    +'<div class="wt-event-body"><strong>'+esc(event.title)+'</strong><p>'+esc(friendlyText(event.detail||''))+'</p>'
     +'<small>'+esc(time)+'</small></div>'
     +(actionable?'<button class="wt-event-link" type="button" data-act="event-order" data-id="'+esc(event.orderId)+'" aria-label="فتح أمر الإنتاج">↗</button>':'')
     +'</div>';
@@ -148,67 +150,106 @@ function notificationMarkup(){
     +'<div class="wt-notice-feed">'+content+'</div></section>':'')
     +'</div>';
 }
+function dashboardBarGraph(stats){
+  if(!stats.totalOrders)return '<div class="wt-chart-empty">أضف أول أمر تصنيع لتظهر مقارنة مراحل الإنتاج.</div>';
+  const max=Math.max(1,...stats.stages.map(s=>s.value));
+  return '<div class="wt-bar-graph" role="img" aria-label="عدد أوامر التصنيع حسب مرحلة العمل">'
+    +stats.stages.map(row=>'<div class="wt-bar-row"><span class="wt-bar-label">'+esc(row.label)+'</span>'
+      +'<div class="wt-bar-line" aria-hidden="true"><span style="width:'+(row.value/max*100).toFixed(2)+'%"></span></div>'
+      +'<b>'+num(row.value)+'</b></div>').join('')+'</div>';
+}
+function dashboardWeekChart(stats){
+  if(!stats.dailyTotal)return '<div class="wt-chart-empty">لم يكتمل إنتاج أي قطعة خلال الأيام السبعة الماضية. سيظهر الرسم عندما تُستكمل التعبئة.</div>';
+  const max=Math.max(...stats.daily.map(row=>row.completed),1);
+  return '<div class="wt-week-graph" role="img" aria-label="القطع التي اكتمل تصنيعها خلال آخر سبعة أيام">'
+    +stats.daily.map((row,i)=>'<div class="wt-week-day" title="'+esc(row.label+' — '+num(row.completed)+' قطعة')+'">'
+      +'<span class="wt-week-value">'+(row.completed?num(row.completed):'—')+'</span>'
+      +'<div class="wt-week-track"><span style="height:'+(row.completed?Math.max(7,row.completed/max*100):0)+'%" aria-hidden="true"></span></div>'
+      +'<strong>'+esc(row.label)+'</strong></div>').join('')+'</div>'
+    +'<p class="wt-chart-caption">إجمالي آخر 7 أيام: <b>'+num(stats.dailyTotal)+' قطعة مكتملة</b> — حسب تاريخ انتهاء التعبئة.</p>';
+}
+function dashboardQualityChart(stats){
+  if(!stats.inspected)return '<div class="wt-chart-empty">لا توجد نتائج جودة مكتملة بعد. ستظهر نسبة المقبول والمرفوض بمجرد اعتماد الفحص.</div>';
+  const percent=stats.qualityRate;
+  return '<div class="wt-donut-layout"><div class="wt-quality-donut" role="img" aria-label="نسبة القطع المقبولة '+num(percent)+' بالمئة" style="--wt-quality:'+percent+'">'
+    +'<div class="wt-donut-center"><strong>'+num(percent)+'٪</strong><span>اجتازت الجودة</span></div></div>'
+    +'<div class="wt-quality-legend"><div><i class="wt-legend-good" aria-hidden="true"></i><span>قطع مقبولة</span><b>'+num(stats.good)+'</b></div>'
+    +'<div><i class="wt-legend-reject" aria-hidden="true"></i><span>قطع مرفوضة</span><b>'+num(stats.rejected)+'</b></div>'
+    +'<p>من إجمالي '+num(stats.inspected)+' قطعة تم فحصها بالكامل.</p></div></div>';
+}
+function dashboardModelsChart(stats){
+  if(!stats.topModels.length)return '<div class="wt-chart-empty">بعد إضافة موديلات وأوامر تصنيع، ستظهر الموديلات الأكثر إنتاجًا هنا.</div>';
+  const max=Math.max(1,...stats.topModels.map(row=>row.qty));
+  return '<div class="wt-model-bars" role="img" aria-label="أكثر الموديلات من حيث عدد القطع المطلوبة للإنتاج">'
+    +stats.topModels.map(row=>'<div class="wt-model-entry"><div><strong>'+esc(row.name)+'</strong>'
+      +'<small>'+num(row.qty)+' قطعة</small></div><div class="wt-model-track"><span style="width:'+(row.qty/max*100).toFixed(2)+'%"></span></div></div>').join('')+'</div>'
+    +'<p class="wt-chart-caption">المقارنة حسب كميات أوامر الإنتاج المسجلة، وليست المبيعات.</p>';
+}
+function dashboardInsights(stats){
+  return '<section class="wt-insight-strip" aria-label="قراءة مبسطة لبيانات المصنع"><div class="wt-insight-title">'
+    +'<span aria-hidden="true">✦</span><div><strong>ماذا تقول الأرقام؟</strong><small>استنتاجات مباشرة من الحركات المسجلة</small></div></div>'
+    +'<div class="wt-insight-list">'+stats.insights.map(item=>'<p><span aria-hidden="true">✓</span>'+esc(item)+'</p>').join('')+'</div></section>';
+}
 function dashboard(){
-  ensureNotifications(db);
+  const stats=dashboardAnalytics(db);
   const live=db.orders.filter(o=>!['completed','cancelled'].includes(o.status));
-  const finished=db.orders.filter(o=>o.status==='completed');
-  const pendingQuality=live.filter(o=>o.status==='quality').length;
-  const nearEnd=live.filter(o=>['printing','ironing','presentation_quality','packing'].includes(o.status)).length;
   const low=db.materials.filter(m=>m.stock<LOW_STOCK_LEVEL);
-  const stockValue=db.materials.reduce((sum,m)=>sum+m.stock*m.avgCost,0);
-  const available=db.finished.reduce((sum,x)=>sum+x.qty,0)-wholesaleOverview(db).delivered;
-  const latest=db.notifications.slice(0,7);
+  const latest=db.notifications.slice(0,6);
   const activity=latest.length
     ?latest.map(e=>eventCard(e,true)).join('')
-    :db.audit.slice(0,7).map(row=>eventCard({type:'info',title:'حركة من السجل السابق',detail:row.message,at:row.at,read:true},true)).join('');
-  const stageRows=stages.filter(s=>!['planned','completed'].includes(s)).map(s=>{
-    const count=live.filter(o=>o.status===s).length;
-    const progress=live.length?Math.round(count/live.length*100):0;
-    return '<div class="wt-phase-row"><div class="wt-phase-title"><span>'+esc(labels[s])+'</span><b>'+num(count)+'</b></div>'
-      +'<div class="wt-phase-track"><span style="width:'+progress+'%"></span></div></div>';
-  }).join('');
-  return heading('مركز قيادة White tex','متابعة مراحل المصنع، الحركات التشغيلية وتنبيهات المخزون من بيانات هذا المتصفح.',
+    :db.audit.slice(0,6).map(row=>eventCard({type:'info',title:'عملية مسجلة سابقًا',detail:row.message,at:row.at,read:true},true)).join('');
+  const completionLabel=stats.completionRate===null?'—':num(stats.completionRate)+'٪';
+  const qualityLabel=stats.qualityRate===null?'—':num(stats.qualityRate)+'٪';
+  return heading('لوحة تحكم White tex','الأرقام والرسوم البيانية تشرح أداء المصنع ببساطة، دون تفاصيل تقنية.',
       btn('＋ أمر تصنيع','new-order','','primary'))
     +'<section class="wt-command-hero"><div class="wt-command-main">'
     +'<span class="wt-command-kicker"><i aria-hidden="true"></i> WHITE TEX · PRODUCTION CONTROL</span>'
-    +'<h2>كل مرحلة تحت السيطرة<span class="wt-command-dot">.</span></h2>'
-    +'<p>من القص والفرز إلى جودة البرزنتيشن والتعبئة، تابع دورة الإنتاج وحركة الخامات لحظة تسجيلها.</p>'
-    +'<div class="wt-command-buttons">'+btn('عرض أوامر الإنتاج','nav','orders','primary')
-    +(isDemoEligible(db)?btn('تجربة بيانات المصنع','seed','','dark'):'')
+    +'<h2>صورة واضحة عن أداء مصنعك<span class="wt-command-dot">.</span></h2>'
+    +'<p>تعرف ما أُنجز، وما ينتظر الجودة، وأين تحتاج الخامات إلى متابعة، من شاشة واحدة.</p>'
+    +'<div class="wt-command-buttons">'+btn('متابعة أوامر الإنتاج','nav','orders','primary')
+    +(isDemoEligible(db)?btn('عرض بيانات تجريبية','seed','','dark'):'')
     +'</div></div><div class="wt-command-insights">'
-    +'<div><small>أوامر قيد التشغيل</small><strong>'+num(live.length)+'</strong><span>حالة تشغيلية حالية</span></div>'
-    +'<div><small>أوامر وصلت للتشغيل النهائي</small><strong>'+num(nearEnd)+'</strong><span>طباعة / مكواة / تعبئة</span></div>'
-    +'<div><small>سجل الإشعارات</small><strong>'+num(db.notifications.length)+'</strong><span>مخزن محليًا على الجهاز</span></div>'
+    +'<div><small>أوامر جارية</small><strong>'+num(stats.activeOrders)+'</strong><span>قيد التصنيع</span></div>'
+    +'<div><small>أوامر مكتملة</small><strong>'+num(stats.completedOrders)+'</strong><span>انتهت التعبئة</span></div>'
+    +'<div><small>تحتاج متابعة</small><strong>'+num(stats.lowCount)+'</strong><span>خامات قليلة أو نافدة</span></div>'
     +'</div></section>'
-    +'<section class="wt-kpis" aria-label="مؤشرات الأداء">'
-    +'<article class="wt-kpi wt-kpi--blue"><span class="wt-kpi-symbol">◈</span><small>أوامر إنتاج نشطة</small><strong>'+num(live.length)+'</strong><span>'+num(live.reduce((sum,o)=>sum+o.qty,0))+' قطعة قيد التشغيل</span></article>'
-    +'<article class="wt-kpi wt-kpi--cyan"><span class="wt-kpi-symbol">◉</span><small>بانتظار الجودة</small><strong>'+num(pendingQuality)+'</strong><span>أوامر تحتاج فحصًا</span></article>'
-    +'<article class="wt-kpi wt-kpi--green"><span class="wt-kpi-symbol">✓</span><small>مخزون تام متاح</small><strong>'+num(available)+'</strong><span>'+num(finished.length)+' أمر مكتمل</span></article>'
-    +'<article class="wt-kpi wt-kpi--amber"><span class="wt-kpi-symbol">!</span><small>خامات منخفضة الرصيد</small><strong>'+num(low.length)+'</strong><span>أقل من '+LOW_STOCK_LEVEL+' وحدة</span></article>'
+    +'<section class="wt-kpis wt-kpis--analytics" aria-label="مؤشرات أداء المصنع">'
+    +'<article class="wt-kpi wt-kpi--blue"><span class="wt-kpi-symbol" aria-hidden="true">◈</span><small>أوامر قيد التصنيع</small><strong>'+num(stats.activeOrders)+'</strong><span>من '+num(stats.totalOrders)+' أمر مسجل</span></article>'
+    +'<article class="wt-kpi wt-kpi--cyan"><span class="wt-kpi-symbol" aria-hidden="true">✓</span><small>نسبة إنجاز الأوامر</small><strong>'+completionLabel+'</strong><span>الأوامر المكتملة من الإجمالي</span></article>'
+    +'<article class="wt-kpi wt-kpi--green"><span class="wt-kpi-symbol" aria-hidden="true">★</span><small>نسبة اجتياز الجودة</small><strong>'+qualityLabel+'</strong><span>القطع المقبولة من القطع المفحوصة</span></article>'
+    +'<article class="wt-kpi wt-kpi--amber"><span class="wt-kpi-symbol" aria-hidden="true">◉</span><small>قطع جاهزة للتسليم</small><strong>'+num(stats.onHand)+'</strong><span>بعد خصم ما تم تسليمه</span></article>'
+    +'<article class="wt-kpi wt-kpi--violet"><span class="wt-kpi-symbol" aria-hidden="true">↗</span><small>قطع مكتملة هذا الأسبوع</small><strong>'+num(stats.dailyTotal)+'</strong><span>خلال آخر 7 أيام</span></article>'
+    +'<article class="wt-kpi wt-kpi--red"><span class="wt-kpi-symbol" aria-hidden="true">!</span><small>خامات تحتاج متابعة</small><strong>'+num(stats.lowCount)+'</strong><span>أقل من 25 وحدة من نوعها</span></article>'
     +'</section>'
-    +'<div class="wt-dashboard-grid"><section class="card wt-phase-card"><div class="wt-section-head"><div><span class="wt-overline">PRODUCTION FLOW</span>'
-    +'<h3>خريطة مراحل التشغيل</h3><p>عدد أوامر التصنيع الموجودة حاليًا في كل مرحلة</p></div><span class="wt-running">'+num(live.length)+' نشط</span></div>'
-    +'<div class="wt-phase-list">'+stageRows+'</div></section>'
-    +'<section class="card wt-activity-card"><div class="wt-section-head"><div><span class="wt-overline">ACTIVITY FEED</span><h3>نبض المصنع</h3><p>آخر الحركات والإشعارات المسجلة محليًا</p></div>'
-    +'<button class="wt-text-button" data-act="notifications-open">عرض الكل ↗</button></div>'
-    +'<div class="wt-activity-list">'+(activity||'<div class="wt-notice-empty"><strong>لا توجد حركات مسجلة بعد</strong><p>أضف أمر إنتاج لبدء المتابعة.</p></div>')+'</div></section></div>'
-    +'<div class="wt-dashboard-grid wt-dashboard-grid--bottom"><section class="card wt-orders-card"><div class="wt-section-head"><div><h3>الأوامر الجاري تنفيذها</h3><p>الحالة الفعلية لكل أمر تصنيع</p></div>'
-    +'<button class="wt-text-button" data-act="nav" data-id="orders">كل الأوامر ↗</button></div>'
-    +(live.length?table(['رقم الأمر','الموديل','الكمية','المرحلة',''],live.slice(0,6).map(o=>'<tr>'
-      +td('<span class="mono">'+esc(o.ref)+'</span>')+td(esc(style(o.styleId)?.name))
-      +td(num(o.qty))+td(status(o.status))
+    +dashboardInsights(stats)
+    +'<div class="wt-analytics-grid">'
+    +'<section class="card wt-graph-card"><div class="wt-section-head"><div><h3>أين وصلت أوامر الإنتاج؟</h3><p>عدد الأوامر في كل مجموعة مراحل</p></div><span class="wt-running">'+num(stats.totalOrders)+' أمر</span></div>'+dashboardBarGraph(stats)+'</section>'
+    +'<section class="card wt-graph-card"><div class="wt-section-head"><div><h3>كيف تسير جودة المنتجات؟</h3><p>نسبة المقبول إلى المرفوض بعد اكتمال الفحص</p></div></div>'+dashboardQualityChart(stats)+'</section>'
+    +'<section class="card wt-graph-card"><div class="wt-section-head"><div><h3>كم قطعة اكتملت خلال الأسبوع؟</h3><p>القطع التي انتهت تعبئتها، يومًا بيوم</p></div></div>'+dashboardWeekChart(stats)+'</section>'
+    +'<section class="card wt-graph-card"><div class="wt-section-head"><div><h3>ما أكثر الموديلات طلبًا للإنتاج؟</h3><p>مقارنة كميات أوامر التصنيع لكل موديل</p></div></div>'+dashboardModelsChart(stats)+'</section>'
+    +'</div>'
+    +'<div class="wt-dashboard-grid wt-dashboard-grid--bottom">'
+    +'<section class="card wt-orders-card"><div class="wt-section-head"><div><h3>أوامر المصنع الجارية</h3><p>اسم المنتج والمرحلة الحالية، دون أكواد</p></div>'
+    +'<button class="wt-text-button" data-act="nav" data-id="orders">عرض جميع الأوامر ↗</button></div>'
+    +(live.length?table(['المنتج','الكمية','المرحلة',''],live.slice(0,6).map(o=>'<tr>'
+      +td('<strong>'+esc(style(o.styleId)?.name||'منتج ملابس')+'</strong><small class="wt-order-variant">'+esc(variant(o)?.size||'')+' · '+esc(variant(o)?.color||'')+'</small>')
+      +td(num(o.qty)+' قطعة')+td(status(o.status))
       +td('<button class="rowbtn" data-act="show-order" data-id="'+esc(o.id)+'">فتح</button>')+'</tr>').join(''))
-      :empty('لا توجد أوامر مفتوحة','أضف موديلًا وأمر إنتاج للبدء.'))+'</section>'
-    +'<section class="card wt-inventory-card"><div class="wt-section-head"><div><h3>رادار المخزون</h3><p>تنبيهات الخامات والأرصدة</p></div><span class="wt-stock-total">'+cur(stockValue)+'</span></div>'
+      :empty('لا توجد أوامر مفتوحة','يمكنك إضافة أمر إنتاج جديد.'))+'</section>'
+    +'<section class="card wt-activity-card"><div class="wt-section-head"><div><h3>آخر ما حدث في المصنع</h3><p>تنبيهات واضحة عن العمل والمخزون</p></div>'
+    +'<button class="wt-text-button" data-act="notifications-open">جميع الإشعارات ↗</button></div>'
+    +'<div class="wt-activity-list">'+(activity||'<div class="wt-notice-empty"><strong>لا توجد حركات بعد</strong><p>ستظهر بعد إضافة أو تحديث البيانات.</p></div>')+'</div></section></div>'
+    +'<section class="card wt-simple-stock"><div class="wt-section-head"><div><h3>الخامات التي تحتاج إلى إعادة توريد</h3><p>كل خامة تعرض الكمية بوحدتها الصحيحة</p></div>'
+    +'<button class="wt-text-button" data-act="nav" data-id="materials">عرض المخزون ↗</button></div>'
     +(low.length?low.slice(0,8).map(m=>'<div class="wt-stock-warning"><span aria-hidden="true">⚠</span><strong>'+esc(m.name)+'</strong><b>'+num(m.stock)+' '+esc(m.unit)+'</b></div>').join('')
       :'<div class="wt-inventory-ok">✓ لا توجد خامات تحت مستوى التنبيه</div>')
-    +'<p class="wt-small-note">جميع المؤشرات مستمدة من بيانات الموقع المحلية؛ ليست مزامنة سحابية فورية.</p></section></div>';
+    +'<p class="wt-small-note">تُحسب الرسوم والمؤشرات من بيانات هذا المتصفح فقط، ولا تعني وجود مزامنة مباشرة مع الأجهزة الأخرى.</p></section>';
 }
-function stylesPage(){let rows=db.styles.filter(s=>(s.name+s.code+s.category).toLowerCase().includes(search.toLowerCase()));return heading('الموديلات والمنتجات','موديلات ومقاسات وألوان مستقلة لكل SKU.',btn('＋ إضافة موديل','new-style','','primary'))+'<div class="toolbar"><input id="search" value="'+esc(search)+'" placeholder="ابحث باسم الموديل أو الكود..."><span class="muted">'+num(db.styles.length)+' موديل</span></div>'+(rows.length?'<div class="products">'+rows.map(s=>'<article class="product"><div class="product-head">♧</div><div class="product-body"><small class="eyebrow">'+esc(s.code)+' · '+esc(s.category)+'</small><h3>'+esc(s.name)+'</h3><p>'+num(s.variants.length)+' متغير · '+esc(s.season)+'</p><div class="product-footer"><strong>'+cur(s.sellingPrice)+'</strong>'+btn('التفاصيل','show-style',s.id)+'</div></div></article>').join('')+'</div>':empty('لا توجد موديلات','أضف أول موديل للتصنيع.'));}
-function materialsPage(){return heading('الأقمشة والخامات','تتبع مخزون الخام والاستلام وتكلفة الوحدة.',btn('＋ استلام خامات','new-receipt')+btn('＋ إضافة خامة','new-material','','primary'))+'<section class="card">'+(db.materials.length?table(['الكود','الخامة','التصنيف','الرصيد','متوسط التكلفة','القيمة',''],db.materials.map(m=>'<tr>'+td('<span class="mono">'+esc(m.code)+'</span>')+td('<b>'+esc(m.name)+'</b>')+td(esc(m.category))+td('<b class="'+(m.stock<25?'bad':'good')+'">'+num(m.stock)+' '+esc(m.unit)+'</b>')+td(cur(m.avgCost))+td(cur(m.stock*m.avgCost))+td('<button class="rowbtn" data-act="receipt-for" data-id="'+m.id+'">استلام</button>')+'</tr>').join('')):empty('لا توجد خامات','ابدأ بتعريف قماش أو خامة.'))+'</section>';}
-function ordersPage(){return heading('أوامر الإنتاج','تابع كل مراحل المصنع من القص والفرز البدائي حتى التعبئة.',btn('＋ دفعة مقاسات وألوان','matrix-order')+btn('＋ أمر جديد','new-order','','primary'))+'<section class="card">'+(db.orders.length?table(['المرجع','الموديل','المقاس/اللون','الكمية','العميل','المرحلة',''],db.orders.map(o=>'<tr>'+td('<span class="mono">'+esc(o.ref)+'</span>')+td(esc(style(o.styleId)?.name))+td(esc(variant(o)?.size)+' / '+esc(variant(o)?.color))+td(num(o.qty))+td(esc(o.customer||'—'))+td(status(o.status))+td('<button class="rowbtn" data-act="show-order" data-id="'+o.id+'">عرض</button>')+'</tr>').join('')):empty('لا توجد أوامر تصنيع','أضف موديلًا ومكونات ثم أنشئ أمر تصنيع.'))+'</section>';}
-function qualityPage(){let arr=db.orders.filter(o=>o.status==='quality');return heading('فحص الجودة','تسجيل المقبول والمرفوض قبل الطباعة، وترحيل التام بعد التعبئة.')+'<section class="card"><h3>بانتظار الجودة</h3><p class="sub">استكمال الفحص؛ الترحيل للمخزن بعد التعبئة</p>'+(arr.length?arr.map(o=>'<div class="data-line"><b>'+esc(o.ref)+' · '+esc(style(o.styleId)?.name)+'</b>'+btn('فحص','quality',o.id,'primary')+'</div>').join(''):empty('لا توجد أوامر تنتظر الفحص','تابع مراحل أمر الإنتاج حتى مرحلة الجودة.'))+'</section>';}
-function reportsPage(){let data=db.styles.flatMap(s=>s.variants.map(v=>({...v,name:s.name,qty:ready(v.id)}))).filter(x=>x.qty);return heading('التقارير وحركة المخزون','حركة الخامات ومخزون الملابس الجاهزة وسجل العمليات.')+'<div class="stats">'+metric('أوامر مكتملة',num(db.orders.filter(x=>x.status==='completed').length),'من جميع الأوامر')+metric('قطع تامة متاحة',num(db.finished.reduce((n,x)=>n+x.qty,0)-wholesaleOverview(db).delivered),'بعد تسليمات الجملة')+metric('قطع مرفوضة',num(db.orders.reduce((n,x)=>n+x.reject,0)),'في فحص الجودة')+metric('حركة مخزون',num(db.ledger.length),'صرف واستلام خامات')+'</div><section class="card"><h3>المخزون التام حسب SKU</h3><p class="sub">كل لون ومقاس مستقل</p>'+ (data.length?table(['كود SKU','الموديل','المقاس','اللون','المتوفر'],data.map(v=>'<tr>'+td('<span class="mono">'+esc(v.sku)+'</span>')+td(esc(v.name))+td(esc(v.size))+td(esc(v.color))+td(num(v.qty))+'</tr>').join('')):empty('مخزن التام فارغ','سيظهر المخزون بعد انتهاء التعبئة.'))+'</section><section class="card"><h3>حركة الأقمشة والخامات</h3><p class="sub">آخر 100 حركة</p>'+ (db.ledger.length?table(['الخامة','العملية','الكمية','التكلفة','المرجع'],db.ledger.slice(0,100).map(x=>'<tr>'+td(esc(mat(x.materialId)?.name))+td('<span class="'+(x.qty>0?'receipt':'issue')+'">'+(x.qty>0?'استلام':'صرف')+'</span>')+td(num(x.qty))+td(cur(x.cost))+td(esc(x.reference))+'</tr>').join('')):empty('لا توجد حركات مخزون','ستسجل كل عملية استلام أو صرف هنا.'))+'</section><section class="card"><h3>حركة تسليم الملابس التامة</h3><p class="sub">أحدث أذون التسليم — لا يشمل المرتجعات بعد</p>'+(db.finishedDispatches.length?table(['مرجع التسليم','العميل','عدد القطع','قيمة التسليم'],db.finishedDispatches.slice(0,50).map(d=>'<tr>'+td('<span class="mono">'+esc(d.reference)+'</span>')+td(esc(d.customer))+td(num(d.lines.reduce((n,l)=>n+l.qty,0)))+td(cur(d.lines.reduce((n,l)=>n+l.qty*l.unitPrice,0)))+'</tr>').join('')):empty('لا توجد تسليمات جملة','سيظهر سجل التسليم بعد إصدار أول إذن.'))+'</section><section class="card"><h3>سجل العمليات</h3>'+db.audit.slice(0,30).map(x=>'<div class="data-line"><span>'+esc(x.message)+'</span><small>'+new Date(x.at).toLocaleDateString('ar-EG')+'</small></div>').join('')+'</section>';}
+function stylesPage(){let rows=db.styles.filter(s=>(s.name+s.code+s.category).toLowerCase().includes(search.toLowerCase()));return heading('الموديلات والمنتجات','كل موديل مرتب حسب المقاس واللون.',btn('＋ إضافة موديل','new-style','','primary'))+'<div class="toolbar"><input id="search" value="'+esc(search)+'" placeholder="ابحث باسم المنتج..."><span class="muted">'+num(db.styles.length)+' موديل</span></div>'+(rows.length?'<div class="products">'+rows.map(s=>'<article class="product"><div class="product-head">♧</div><div class="product-body"><small class="eyebrow">'+esc(s.category)+'</small><h3>'+esc(s.name)+'</h3><p>'+num(s.variants.length)+' متغير · '+esc(s.season)+'</p><div class="product-footer"><strong>'+cur(s.sellingPrice)+'</strong>'+btn('التفاصيل','show-style',s.id)+'</div></div></article>').join('')+'</div>':empty('لا توجد موديلات','أضف أول موديل للتصنيع.'));}
+function materialsPage(){return heading('الأقمشة والخامات','تتبع مخزون الخام والاستلام وتكلفة الوحدة.',btn('＋ استلام خامات','new-receipt')+btn('＋ إضافة خامة','new-material','','primary'))+'<section class="card">'+(db.materials.length?table(['الخامة','النوع','الكمية المتوفرة','تكلفة الوحدة','قيمة المخزون',''],db.materials.map(m=>'<tr>'+td('<b>'+esc(m.name)+'</b>')+td(esc(m.category))+td('<b class="'+(m.stock<25?'bad':'good')+'">'+num(m.stock)+' '+esc(m.unit)+'</b>')+td(cur(m.avgCost))+td(cur(m.stock*m.avgCost))+td('<button class="rowbtn" data-act="receipt-for" data-id="'+m.id+'">استلام</button>')+'</tr>').join('')):empty('لا توجد خامات','ابدأ بتعريف قماش أو خامة.'))+'</section>';}
+function ordersPage(){return heading('أوامر الإنتاج','تابع كل مراحل المصنع من القص والفرز البدائي حتى التعبئة.',btn('＋ دفعة مقاسات وألوان','matrix-order')+btn('＋ أمر جديد','new-order','','primary'))+'<section class="card">'+(db.orders.length?table(['المنتج','المقاس واللون','الكمية','العميل','المرحلة',''],db.orders.map(o=>'<tr>'+td('<b>'+esc(style(o.styleId)?.name)+'</b>')+td(esc(variant(o)?.size)+' / '+esc(variant(o)?.color))+td(num(o.qty))+td(esc(o.customer||'—'))+td(status(o.status))+td('<button class="rowbtn" data-act="show-order" data-id="'+o.id+'">عرض</button>')+'</tr>').join('')):empty('لا توجد أوامر تصنيع','أضف موديلًا ومكونات ثم أنشئ أمر تصنيع.'))+'</section>';}
+function qualityPage(){let arr=db.orders.filter(o=>o.status==='quality');return heading('فحص الجودة','تسجيل المقبول والمرفوض قبل الطباعة، وترحيل التام بعد التعبئة.')+'<section class="card"><h3>بانتظار الجودة</h3><p class="sub">استكمال الفحص؛ الترحيل للمخزن بعد التعبئة</p>'+(arr.length?arr.map(o=>'<div class="data-line"><b>'+esc(style(o.styleId)?.name)+' — '+num(o.qty)+' قطعة'+'</b>'+btn('فحص','quality',o.id,'primary')+'</div>').join(''):empty('لا توجد أوامر تنتظر الفحص','تابع مراحل أمر الإنتاج حتى مرحلة الجودة.'))+'</section>';}
+function reportsPage(){let data=db.styles.flatMap(s=>s.variants.map(v=>({...v,name:s.name,qty:ready(v.id)}))).filter(x=>x.qty);return heading('التقارير وحركة المخزون','حركة الخامات ومخزون الملابس الجاهزة وسجل العمليات.')+'<div class="stats">'+metric('أوامر مكتملة',num(db.orders.filter(x=>x.status==='completed').length),'من جميع الأوامر')+metric('قطع تامة متاحة',num(db.finished.reduce((n,x)=>n+x.qty,0)-wholesaleOverview(db).delivered),'بعد تسليمات الجملة')+metric('قطع مرفوضة',num(db.orders.reduce((n,x)=>n+x.reject,0)),'في فحص الجودة')+metric('حركة مخزون',num(db.ledger.length),'صرف واستلام خامات')+'</div><section class="card"><h3>المخزون الجاهز حسب المقاس واللون</h3><p class="sub">كل لون ومقاس مستقل</p>'+ (data.length?table(['المنتج','المقاس','اللون','المتوفر'],data.map(v=>'<tr>'+td(esc(v.name))+td(esc(v.size))+td(esc(v.color))+td(num(v.qty))+'</tr>').join('')):empty('مخزن التام فارغ','سيظهر المخزون بعد انتهاء التعبئة.'))+'</section><section class="card"><h3>حركة الأقمشة والخامات</h3><p class="sub">آخر 100 حركة</p>'+ (db.ledger.length?table(['الخامة','العملية','الكمية','التكلفة'],db.ledger.slice(0,100).map(x=>'<tr>'+td(esc(mat(x.materialId)?.name))+td('<span class="'+(x.qty>0?'receipt':'issue')+'">'+(x.qty>0?'استلام':'صرف')+'</span>')+td(num(x.qty))+td(cur(x.cost))+'</tr>').join('')):empty('لا توجد حركات مخزون','ستسجل كل عملية استلام أو صرف هنا.'))+'</section><section class="card"><h3>حركة تسليم الملابس التامة</h3><p class="sub">أحدث أذون التسليم — لا يشمل المرتجعات بعد</p>'+(db.finishedDispatches.length?table(['العميل','عدد القطع','قيمة التسليم'],db.finishedDispatches.slice(0,50).map(d=>'<tr>'+td(esc(d.customer))+td(num(d.lines.reduce((n,l)=>n+l.qty,0)))+td(cur(d.lines.reduce((n,l)=>n+l.qty*l.unitPrice,0)))+'</tr>').join('')):empty('لا توجد تسليمات جملة','سيظهر سجل التسليم بعد إصدار أول إذن.'))+'</section><section class="card"><h3>سجل العمليات</h3>'+db.audit.slice(0,30).map(x=>'<div class="data-line"><span>'+esc(friendlyText(x.message))+'</span><small>'+new Date(x.at).toLocaleDateString('ar-EG')+'</small></div>').join('')+'</section>';}
 function settingsPage(){
   const account=cloudIdentity();
   const cloud=account
@@ -235,7 +276,7 @@ function settingsPage(){
     +btn('إعادة ضبط النظام','reset','','danger')+'</section></div>'
     +'<div class="tips">هذه النسخة ليست مزامنة متعددة المستخدمين؛ التغييرات على جهاز آخر لن تظهر تلقائيًا. لا تستخدم بيانات حساسة أو حقيقية قبل اكتمال الصلاحيات والمعاملات الخادمية والتدقيق.</div>';
 }
-function styleDetail(){let s=style(detail);if(!s)return empty('موديل غير موجود','');let req=s.bom.map(b=>{let m=mat(b.materialId);return '<tr>'+td(esc(m?.name))+td(num(b.qty)+' '+esc(m?.unit))+td(num(m?.stock))+td(cur((m?.avgCost||0)*b.qty))+'</tr>';}).join('');return heading('موديل '+esc(s.code),esc(s.name),btn('＋ دفعة مقاسات وألوان','matrix-order',s.id,'primary')+btn('تعديل BOM','bom',s.id)+btn('رجوع','nav','styles'))+'<div class="stats">'+metric('المقاسات',s.sizes.length,s.sizes.map(esc).join(' · '))+metric('الألوان',s.colors.length,s.colors.map(esc).join(' · '))+metric('عدد SKU',s.variants.length,'متغير مستقل')+metric('تكلفة مواد/قطعة',cur(s.bom.reduce((n,b)=>n+b.qty*(mat(b.materialId)?.avgCost||0),0)),'تقديرية')+'</div><section class="card"><h3>قائمة المكونات BOM</h3>'+table(['الخامة','الاستهلاك/قطعة','الرصيد','التكلفة'],req||'<tr><td colspan="4">لا توجد مكونات بعد</td></tr>')+'</section><section class="card"><h3>أكواد المقاسات والألوان</h3>'+table(['SKU','المقاس','اللون','الرصيد التام'],s.variants.map(v=>'<tr>'+td('<span class="mono">'+esc(v.sku)+'</span>')+td(esc(v.size))+td(esc(v.color))+td(num(ready(v.id)))+'</tr>').join(''))+'</section>';}
+function styleDetail(){let s=style(detail);if(!s)return empty('موديل غير موجود','');let req=s.bom.map(b=>{let m=mat(b.materialId);return '<tr>'+td(esc(m?.name))+td(num(b.qty)+' '+esc(m?.unit))+td(num(m?.stock))+td(cur((m?.avgCost||0)*b.qty))+'</tr>';}).join('');return heading(esc(s.name),'تفاصيل المقاسات والألوان والخامات',btn('＋ دفعة مقاسات وألوان','matrix-order',s.id,'primary')+btn('تعديل خامات التصنيع','bom',s.id)+btn('رجوع','nav','styles'))+'<div class="stats">'+metric('المقاسات',s.sizes.length,s.sizes.map(esc).join(' · '))+metric('الألوان',s.colors.length,s.colors.map(esc).join(' · '))+metric('الخيارات المتاحة',s.variants.length,'من المقاسات والألوان')+metric('تكلفة مواد/قطعة',cur(s.bom.reduce((n,b)=>n+b.qty*(mat(b.materialId)?.avgCost||0),0)),'تقديرية')+'</div><section class="card"><h3>الخامات المستخدمة لكل قطعة</h3>'+table(['الخامة','الاستهلاك/قطعة','الرصيد','التكلفة'],req||'<tr><td colspan="4">لا توجد مكونات بعد</td></tr>')+'</section><section class="card"><h3>المقاسات والألوان المتوفرة</h3>'+table(['المقاس','اللون','القطع الجاهزة'],s.variants.map(v=>'<tr>'+td(esc(v.size))+td(esc(v.color))+td(num(ready(v.id)))+'</tr>').join(''))+'</section>';}
 
 function workersPage() {
   const total = db.workLogs.reduce((sum, row) => sum + row.cost, 0);
@@ -244,21 +285,21 @@ function workersPage() {
     + metric('حركات التشغيل', num(db.workLogs.length), 'حزمة إنتاج مسجلة')
     + metric('أجور القطعة', cur(total), 'الأجور الفعلية المسجلة') + '</div>'
     + '<section class="card"><h3>العمال</h3>'
-    + (db.workers.length ? table(['الكود', 'العامل', 'التخصص', 'أجر القطعة'],
-      db.workers.map(w => '<tr>' + td(esc(w.code)) + td(esc(w.name)) + td(esc(w.role)) + td(cur(w.rate)) + '</tr>').join(''))
+    + (db.workers.length ? table(['العامل', 'التخصص', 'أجر القطعة'],
+      db.workers.map(w => '<tr>' + td(esc(w.name)) + td(esc(w.role)) + td(cur(w.rate)) + '</tr>').join(''))
       : empty('لا يوجد عمال', 'أضف عاملًا لتسجيل إنتاجه.')) + '</section>'
     + '<section class="card"><h3>إنتاج المراحل</h3>'
-    + (db.workLogs.length ? table(['الأمر', 'العامل', 'المرحلة', 'الكمية', 'الأجر', 'الدفعة'],
-      db.workLogs.slice(0, 100).map(w => '<tr>' + td(esc(order(w.orderId)?.ref)) + td(esc(db.workers.find(x => x.id === w.workerId)?.name))
-        + td(esc(labels[w.stage])) + td(num(w.qty)) + td(cur(w.cost)) + td(esc(w.batchRef || '—')) + '</tr>').join(''))
+    + (db.workLogs.length ? table(['المنتج', 'العامل', 'المرحلة', 'الكمية', 'الأجر'],
+      db.workLogs.slice(0, 100).map(w => '<tr>' + td(esc(style(order(w.orderId)?.styleId)?.name||'منتج')) + td(esc(db.workers.find(x => x.id === w.workerId)?.name))
+        + td(esc(labels[w.stage])) + td(num(w.qty)) + td(cur(w.cost)) + '</tr>').join(''))
       : empty('لا توجد حركات تشغيل', 'افتح أمر تصنيع في إحدى مراحل التشغيل لتسجيل الإنتاج.')) + '</section>';
 }
 function rollsPage() {
   return heading('رولات الأقمشة', 'متابعة درجة الصبغة والعرض ورصيد كل رول.', btn('＋ استلام رول', 'new-roll', '', 'primary'))
     + '<div class="stats">' + metric('رولات مسجلة', num(db.fabricRolls.length), 'رول')
     + metric('رصيد الرولات', num(db.fabricRolls.reduce((sum, r) => sum + r.remaining, 0)) + ' متر', 'الرصيد المتبقي') + '</div>'
-    + '<section class="card">' + (db.fabricRolls.length ? table(['الرول', 'القماش', 'الصبغة', 'العرض', 'المستلم', 'المتبقي'],
-      db.fabricRolls.map(r => '<tr>' + td(esc(r.rollNo)) + td(esc(mat(r.materialId)?.name)) + td(esc(r.shade || '—'))
+    + '<section class="card">' + (db.fabricRolls.length ? table(['القماش', 'لون القماش', 'العرض', 'المستلم', 'المتبقي'],
+      db.fabricRolls.map(r => '<tr>' + td(esc(mat(r.materialId)?.name)) + td(esc(r.shade || '—'))
         + td(r.width ? num(r.width) + ' سم' : '—') + td(num(r.received) + ' متر') + td(num(r.remaining) + ' متر') + '</tr>').join(''))
       : empty('لا توجد رولات', 'ابدأ بتسجيل استلام رول قماش بوحدة متر.')) + '</section>'
     + '<p class="tips">عند القص، يتم صرف الأرصدة المسجلة بالرولات أولًا بترتيب الاستلام، وتظهر الكميات القديمة كرصيد بدون رول.</p>';
@@ -270,7 +311,7 @@ function orderDetail() {
   const next = nextStageAction[o.status];
   const labor = pieceworkCost(db, o.id);
   const progress = stageProgress(db, o.id, o.status);
-  let output = heading('أمر ' + esc(o.ref), esc(style(o.styleId)?.name) + ' · ' + esc(variant(o)?.sku), (o.batchId ? btn('فتح الدفعة','show-batch',o.batchId) : '') + btn('رجوع', 'nav', 'orders'))
+  let output = heading('تصنيع: ' + esc(style(o.styleId)?.name||'منتج ملابس'), esc(variant(o)?.size)+' · '+esc(variant(o)?.color), (o.batchId ? btn('فتح الدفعة','show-batch',o.batchId) : '') + btn('رجوع', 'nav', 'orders'))
     + '<div class="steps">' + stages.map((s, i) => '<div class="step ' + (i < current ? 'done' : i === current ? 'current' : '') + '">' + esc(labels[s]) + '</div>').join('') + '</div>'
     + '<div class="stats">' + metric('كمية الأمر', num(o.qty), 'قطعة')
     + metric('تكلفة الخامات', cur(o.materialCost), 'بعد بدء القص')
@@ -300,8 +341,8 @@ function orderDetail() {
     output += '<section class="card"><h3>حزم القص</h3><p class="sub">حزم مخططة: '+num(cut.total)+' من '+num(o.qty)+' قطعة.'
       +(cut.rows.length && cut.total !== o.qty ? ' يجب استكمال حزم القص قبل صرف الخامات.' : '')
       +'</p>'+(o.status === 'planned' ? btn('＋ حزمة قص','new-bundle',o.id,'primary') : '')
-      +(cut.rows.length ? table(['رقم الحزمة','SKU','الكمية','ملاحظات'],cut.rows.map(r=>'<tr>'
-        +td('<span class="mono">'+esc(r.bundleNo)+'</span>')+td(esc(variant(o)?.sku))
+      +(cut.rows.length ? table(['المقاس واللون','الكمية','ملاحظات'],cut.rows.map(r=>'<tr>'
+        +td(esc(variant(o)?.size)+' · '+esc(variant(o)?.color))
         +td(num(r.qty))+td(esc(r.notes||'—'))+'</tr>').join(''))
         : '<p class="notes">اختياري: يمكنك بدء القص مباشرة دون تسجيل حزم، أو تسجيل حزم يجب أن يساوي مجموعها كمية الأمر.</p>')
       +'</section>';
@@ -322,8 +363,8 @@ function batchesPage(){
     +metric('قطع مخططة',num(arr.reduce((sum,b)=>sum+b.qty,0)),'إجمالي القطع')
     +metric('أوامر مكتملة',num(arr.reduce((sum,b)=>sum+b.completed,0)),'بعد التعبئة والترحيل')+'</div>'
     +'<section class="card"><h3>دفعات الموديلات</h3>'
-    +(arr.length?table(['الدفعة','الموديل','عدد SKU','الإجمالي','المكتمل','العميل',''],
-      arr.map(b=>'<tr>'+td('<span class="mono">'+esc(b.ref)+'</span>')+td(esc(style(b.styleId)?.name))
+    +(arr.length?table(['الموديل','عدد المقاسات والألوان','الإجمالي','المكتمل','العميل',''],
+      arr.map(b=>'<tr>'+td(esc(style(b.styleId)?.name))
       +td(num(b.orders.length))+td(num(b.qty))+td(num(b.completed)+' / '+num(b.orders.length))
       +td(esc(b.customer||'—'))+td('<button class="rowbtn" data-act="show-batch" data-id="'+esc(b.id)+'">عرض التفاصيل</button>')+'</tr>').join(''))
       :empty('لا توجد دفعات إنتاج بعد','اختر موديلًا وحدد كميات المقاسات والألوان لإنشاء دفعة.'))+'</section>';
@@ -333,7 +374,7 @@ function batchDetail(){
   if(!b)return empty('الدفعة غير موجودة','');
   const s=style(b.styleId);
   const byVariant=new Map(b.orders.map(o=>[o.variantId,o]));
-  return heading('دفعة '+esc(b.ref),esc(s?.name)+' · '+esc(b.customer||'بدون عميل'),btn('رجوع','nav','batches'))
+  return heading('دفعة إنتاج: '+esc(s?.name),esc(s?.name)+' · '+esc(b.customer||'بدون عميل'),btn('رجوع','nav','batches'))
     +'<div class="stats">'+metric('إجمالي القطع',num(b.qty),'قطعة مخططة')
     +metric('عدد المتغيرات',num(b.orders.length),'مقاس ولون')
     +metric('الأوامر المكتملة',num(b.completed),'من '+num(b.orders.length))
@@ -344,9 +385,8 @@ function batchDetail(){
         +(s.colors||[]).map(color=>{const variant=s.variants.find(v=>v.size===size&&v.color===color);
           const o=byVariant.get(variant?.id);return td(o?'<b>'+num(o.qty)+'</b>':'—');}).join('')+'</tr>').join(''))
     +'</section><section class="card"><h3>أوامر الدفعة</h3>'
-    +table(['رقم الأمر','المقاس','اللون','الكمية','المرحلة',''],
-      b.orders.map(o=>'<tr>'+td('<span class="mono">'+esc(o.ref)+'</span>')
-        +td(esc(variant(o)?.size))+td(esc(variant(o)?.color))+td(num(o.qty))
+    +table(['المقاس','اللون','الكمية','المرحلة',''],
+      b.orders.map(o=>'<tr>'+td(esc(variant(o)?.size))+td(esc(variant(o)?.color))+td(num(o.qty))
         +td(status(o.status))+td('<button class="rowbtn" data-act="show-order" data-id="'+esc(o.id)+'">فتح الأمر</button>')+'</tr>').join(''))
     +'</section><p class="tips">كل أمر له صرف خامات وتكلفة وفحص جودة مستقل. الدفعة رابط للتخطيط والتجميع فقط، وليست حركة مخزنية إضافية.</p>';
 }
@@ -360,20 +400,18 @@ function wholesalePage(){
     +metric('قيمة التسليمات',cur(stats.value),'قيمة بيع تقديرية')+'</div>'
     +'<section class="card"><h3>طلبات العملاء</h3><p class="sub">يمكن تسليم الطلب على عدة أذون تسليم جزئية، ويتم خصم مخزون التام عند تأكيد الإذن فقط.</p>'
     +(db.wholesaleOrders.length
-      ?table(['رقم الطلب','العميل','الموديل','المطلوب','المسلم','المتبقي','الحالة',''],
+      ?table(['العميل','الموديل','المطلوب','المسلم','المتبقي','الحالة',''],
         db.wholesaleOrders.map(o=>{const p=wholesaleProgress(db,o);
           const state=p.status==='fulfilled'?'مكتمل':p.status==='partial'?'جزئي':'مفتوح';
-          return '<tr>'+td('<span class="mono">'+esc(o.ref)+'</span>')
-            +td(esc(o.customer))+td(esc(style(o.styleId)?.name))+td(num(p.ordered))
+          return '<tr>'+td(esc(o.customer))+td(esc(style(o.styleId)?.name))+td(num(p.ordered))
             +td(num(p.shipped))+td(num(p.remaining))
             +td('<span class="pill '+(p.status==='fulfilled'?'green':p.status==='partial'?'gold':'')+'">'+state+'</span>')
             +td('<button class="rowbtn" data-act="show-wholesale" data-id="'+esc(o.id)+'">التفاصيل</button>')+'</tr>';}).join(''))
       :empty('لا توجد طلبات جملة','أنشئ طلبًا بمقاسات وألوان ثم سلّم المنتجات من مخزون التام.'))
     +'</section><section class="card"><h3>آخر أذون التسليم</h3>'
     +(db.finishedDispatches.length
-      ?table(['رقم الإذن','العميل','التاريخ','القطع','القيمة'],
-        db.finishedDispatches.slice(0,25).map(x=>'<tr>'+td('<span class="mono">'+esc(x.reference)+'</span>')
-          +td(esc(x.customer))+td(new Date(x.at).toLocaleDateString('ar-EG'))
+      ?table(['العميل','التاريخ','القطع','القيمة'],
+        db.finishedDispatches.slice(0,25).map(x=>'<tr>'+td(esc(x.customer))+td(new Date(x.at).toLocaleDateString('ar-EG'))
           +td(num(x.lines.reduce((s,l)=>s+l.qty,0)))
           +td(cur(x.lines.reduce((s,l)=>s+l.qty*l.unitPrice,0)))+'</tr>').join(''))
       :empty('لا توجد أذون تسليم','سجّل التسليم بعد اكتمال الإنتاج واستلام مخزون التام.'))+'</section>';
@@ -384,23 +422,21 @@ function wholesaleDetail(){
   const progress=wholesaleProgress(db,o);
   const state=progress.status==='fulfilled'?'مكتمل':progress.status==='partial'?'تم التسليم جزئيًا':'لم يبدأ التسليم';
   const history=db.finishedDispatches.filter(x=>x.orderId===o.id);
-  return heading('طلب جملة '+esc(o.ref),esc(o.customer)+' · '+esc(style(o.styleId)?.name),
+  return heading('طلب جملة — '+esc(o.customer),esc(style(o.styleId)?.name),
     (progress.remaining>0?btn('＋ إذن تسليم','ship-wholesale',o.id,'primary'):'')+btn('رجوع','nav','wholesale'))
     +'<div class="stats">'+metric('المطلوب',num(progress.ordered),'قطعة')
     +metric('الذي تم تسليمه',num(progress.shipped),'قطعة')
     +metric('المتبقي',num(progress.remaining),state)
     +metric('قيمة الطلب',cur(progress.amount),'إجمالي الكميات المطلوبة')+'</div>'
     +'<section class="card"><h3>المقاسات والألوان</h3>'
-    +table(['SKU','المقاس','اللون','الطلب','تم التسليم','المتبقي','مخزون التام'],
-      progress.lines.map(l=>'<tr>'+td('<span class="mono">'+esc(l.sku)+'</span>')
-        +td(esc(l.size))+td(esc(l.color))+td(num(l.qty))+td(num(l.shipped))
+    +table(['المقاس','اللون','الطلب','تم التسليم','المتبقي','مخزون التام'],
+      progress.lines.map(l=>'<tr>'+td(esc(l.size))+td(esc(l.color))+td(num(l.qty))+td(num(l.shipped))
         +td('<b>'+num(l.remaining)+'</b>')
         +td(num(availableFinishedStock(db,l.variantId)))+'</tr>').join(''))
-    +'<p class="tips">حفظ الطلب لا يحجز المخزون. عند إنشاء إذن تسليم يتم التحقق من رصيد كل SKU ومن الكمية المتبقية في الطلب.</p></section>'
+    +'<p class="tips">حفظ الطلب لا يحجز المخزون. عند إنشاء إذن تسليم يتم التحقق من رصيد كل مقاس ولون ومن الكمية المتبقية في الطلب.</p></section>'
     +'<section class="card"><h3>أذون التسليم الخاصة بالطلب</h3>'
-    +(history.length?table(['المرجع','التاريخ','القطع','القيمة'],
-      history.map(d=>'<tr>'+td('<span class="mono">'+esc(d.reference)+'</span>')
-        +td(new Date(d.at).toLocaleDateString('ar-EG'))
+    +(history.length?table(['التاريخ','القطع','القيمة'],
+      history.map(d=>'<tr>'+td(new Date(d.at).toLocaleDateString('ar-EG'))
         +td(num(d.lines.reduce((s,l)=>s+l.qty,0)))
         +td(cur(d.lines.reduce((s,l)=>s+l.qty*l.unitPrice,0)))+'</tr>').join(''))
       :empty('لم يتم التسليم بعد','يمكنك تسجيل إذن جزئي عند توفر المنتج التام.'))+'</section>';
@@ -416,7 +452,7 @@ function cloudIntakePage(){
     +btn('تسجيل الدخول','cloud-login','','primary')+'</section>';
   const factory=cloudFactoriesState.find(x=>x.id===cloudFactorySelected);
   const canCreate=['owner','manager','sales'].includes(factory?.role);
-  return heading('طلبات العملاء المركزية','حفظ طلبات جديدة مباشرة في Supabase بصلاحيات المصنع، منفصلة عن بيانات التشغيل المحلية.',
+  return heading('طلبات العملاء المركزية','تسجيل طلبات العملاء وحفظها على حساب المصنع، بعيدًا عن بيانات التشغيل على الجهاز.',
     btn('تحديث من السحابة','cloud-intake-refresh')+(canCreate&&!db.demoMode?btn('＋ طلب عميل جديد','new-cloud-intake','','primary'):''))
     +'<div class="tips">هذه شاشة استقبال الطلبات السحابية الأولية فقط. تعديل الطلب أو اعتماده أو حجز المخزون وإرساله للإنتاج لم يكتمل بعد.</div>'
     +(db.demoMode?'<div class="demo-banner">وضع العرض التجريبي مفعل؛ تم تعطيل إرسال الطلبات الحقيقية من هذا المتصفح. احفظ بيانات العرض وامسحها أولًا.</div>':'')
@@ -426,7 +462,7 @@ function cloudIntakePage(){
     +'</section><section class="card"><h3>طلبات العملاء — آخر 100 طلب</h3>'
     +(cloudIntakeState.length?table(['العميل','التواصل','القطع','القيمة','التاريخ','الحالة',''],
       cloudIntakeState.map(o=>{const t=intakeOrderTotal(o);return '<tr>'
-        +td('<b>'+esc(o.customer_name)+'</b><small class="batch-tag">'+num(o.lines.length)+' أصناف · '+esc(o.id.slice(0,8))+'</small>')
+        +td('<b>'+esc(o.customer_name)+'</b><small class="batch-tag">'+num(o.lines.length)+' أصناف'+'</small>')
         +td(esc(o.customer_contact||'—'))+td(num(t.quantity))+td(cur(t.amount))
         +td(new Date(o.created_at).toLocaleString('ar-EG'))+td('<span class="pill gold">● طلب جديد</span>')+td('<button type="button" class="rowbtn" data-act="view-cloud-intake" data-id="'+esc(o.id)+'">عرض التفاصيل</button>')+'</tr>';}).join(''))
       :empty('لا توجد طلبات محمّلة','بعد تسجيل الدخول اضغط تحديث، أو أنشئ أول طلب عميل.'))
@@ -442,8 +478,8 @@ if(kind==='view-cloud-intake'){
   const o=cloudIntakeState.find(x=>x.id===modal.id&&x.factory_id===cloudFactorySelected);
   if(!o)return '';
   const totals=intakeOrderTotal(o);
-  const rows=table(['SKU','المقاس','اللون','الكمية','السعر','الإجمالي'],
-    o.lines.map(l=>'<tr>'+td('<span class="mono">'+esc(l.sku)+'</span>')+td(esc(l.size||'—'))
+  const rows=table(['المنتج','المقاس','اللون','الكمية','السعر','الإجمالي'],
+    o.lines.map(l=>'<tr>'+td('<strong>'+esc(l.sku)+'</strong>')+td(esc(l.size||'—'))
       +td(esc(l.color||'—'))+td(num(l.qty))+td(cur(l.unitPrice))
       +td('<b>'+cur(l.qty*l.unitPrice)+'</b>')+'</tr>').join(''));
   return '<div class="modal-bg" id="backdrop"><div class="modal intake-detail" role="dialog" aria-modal="true" aria-label="تفاصيل طلب العميل">'
@@ -460,36 +496,35 @@ if(kind==='view-cloud-intake'){
     +'<p class="tips">بيانات محفوظة على الخادم للعرض فقط. الاعتماد والتعديل وحجز المخزون لم تُفعّل بعد.</p>'
     +'</div><div class="modal-f">'+btn('إغلاق','close')+'</div></div></div>';
 }
-if(kind==='new-style'){t='موديل ملابس جديد';form='<div class="form-grid">'+inp('كود الموديل','code','text','','required placeholder="SH-101"')+inp('اسم الموديل','name','text','','required')+inp('التصنيف','category')+inp('الموسم','season')+inp('المقاسات بفاصلة','sizes','text','S, M, L, XL','required')+inp('الألوان بفاصلة','colors','text','أسود, أبيض','required')+inp('سعر البيع','price','number',0,'step="0.01" min="0"')+'</div>';}
-if(kind==='new-material'){t='خامة جديدة';form='<div class="form-grid">'+inp('كود الخامة','code','text','','required')+inp('اسم الخامة','name','text','','required')+inp('التصنيف','category')+sel('الوحدة','unit',['متر','كيلو','قطعة','رول'].map(x=>[x,x]))+'</div>';}
-if(kind==='new-receipt'){t='استلام خامة';form='<div class="form-grid">'+sel('الخامة','materialId',db.materials.map(m=>[m.id,m.name+' ('+m.code+')']))+inp('الكمية','quantity','number','','required min="0.0001" step="0.0001"')+inp('تكلفة الوحدة','unitCost','number','','required min="0" step="0.01"')+inp('مرجع التوريد','reference')+'</div>';}
+if(kind==='new-style'){t='موديل ملابس جديد';form='<div class="form-grid">'+inp('اسم الموديل','name','text','','required')+inp('التصنيف','category')+inp('الموسم','season')+inp('المقاسات بفاصلة','sizes','text','S, M, L, XL','required')+inp('الألوان بفاصلة','colors','text','أسود, أبيض','required')+inp('سعر البيع','price','number',0,'step="0.01" min="0"')+'</div>';}
+if(kind==='new-material'){t='خامة جديدة';form='<div class="form-grid">'+inp('اسم الخامة','name','text','','required')+inp('التصنيف','category')+sel('الوحدة','unit',['متر','كيلو','قطعة','رول'].map(x=>[x,x]))+'</div>';}
+if(kind==='new-receipt'){t='استلام خامة';form='<div class="form-grid">'+sel('الخامة','materialId',db.materials.map(m=>[m.id,m.name]))+inp('الكمية','quantity','number','','required min="0.0001" step="0.0001"')+inp('تكلفة الوحدة','unitCost','number','','required min="0" step="0.01"')+inp('ملاحظة الاستلام (اختياري)','reference')+'</div>';}
 if(kind==='new-worker'){t='عامل جديد';form='<div class="form-grid">'
-  +inp('كود العامل','code','text','','required')+inp('الاسم','name','text','','required')
+  +inp('الاسم','name','text','','required')
   +inp('التخصص','role','text','خياطة')+inp('أجر القطعة','rate','number',0,'required min="0" step="0.01"')+'</div>';}
 if(kind==='new-roll'){t='استلام رول قماش';form='<div class="form-grid">'
-  +sel('القماش','materialId',db.materials.filter(m=>m.unit==='متر').map(m=>[m.id,m.name+' ('+m.code+')']))
-  +inp('رقم الرول','rollNo','text','','required')+inp('درجة الصبغة / اللون','shade')
+  +sel('القماش','materialId',db.materials.filter(m=>m.unit==='متر').map(m=>[m.id,m.name]))
+  +inp('علامة الرول (اختياري)','rollNo')+inp('درجة الصبغة / اللون','shade')
   +inp('عرض القماش (سم)','width','number','','min="0.01" step="0.01"')
   +inp('الطول (متر)','quantity','number','','required min="0.0001" step="0.0001"')
   +inp('تكلفة المتر','unitCost','number',0,'required min="0" step="0.01"')+'</div>';}
 if(kind==='stage-work'){let o=order(modal.id);t='تسجيل دفعة: '+esc(labels[o?.status]);
   form='<input type="hidden" name="orderId" value="'+esc(o?.id)+'"><div class="form-grid">'
-  +sel('العامل','workerId',db.workers.filter(w=>w.active).map(w=>[w.id,w.name+' ('+w.code+')']))
+  +sel('العامل','workerId',db.workers.filter(w=>w.active).map(w=>[w.id,w.name]))
   +inp('عدد القطع','quantity','number','','required min="1" step="1"')
-  +inp('مرجع دفعة المرحلة','batchRef')+'</div>'
+  +inp('اسم مجموعة التشغيل (اختياري)','batchRef')+'</div>'
   +'<p class="tips">تم تسجيل '+num(stageProgress(db,o.id,o.status).quantity)+' من '+num(stageTargetQuantity(o))
   +' قطعة، والتكلفة تحسب من أجر القطعة المحدد للعامل.</p>';}
 if(kind==='matrix-order'){
   const chosen=db.styles.find(s=>s.id===(modal.id||db.styles[0]?.id))||db.styles[0];
   t='دفعة إنتاج للمقاسات والألوان';
   form='<label class="field">الموديل<select name="styleId" required><option value="">اختر...</option>'
-    +db.styles.map(s=>'<option value="'+esc(s.id)+'" '+(s.id===chosen?.id?'selected':'')+'>'+esc(s.code+' — '+s.name)+'</option>').join('')
+    +db.styles.map(s=>'<option value="'+esc(s.id)+'" '+(s.id===chosen?.id?'selected':'')+'>'+esc(s.name)+'</option>').join('')
     +'</select></label>'
     +'<p class="tips">حدد كمية كل مقاس ولون. الخانات الفارغة أو الصفرية لا تنشئ أوامر. تُنشأ أوامر مستقلة مرتبطة بدفعة واحدة.</p>'
     +(chosen
-      ?'<div class="table-wrap matrix-scroll"><table><thead><tr><th>SKU</th><th>المقاس</th><th>اللون</th><th>الكمية</th></tr></thead><tbody>'
-        +chosen.variants.map(v=>'<tr>'+td('<span class="mono">'+esc(v.sku)+'</span>')
-          +td(esc(v.size))+td(esc(v.color))+td('<input class="matrix-input" type="number" name="matrix_'+esc(v.id)+'" min="0" max="100000" step="1" value="" placeholder="0" aria-label="كمية '+esc(v.size+' '+v.color)+'">')+'</tr>').join('')
+      ?'<div class="table-wrap matrix-scroll"><table><thead><tr><th>المقاس</th><th>اللون</th><th>الكمية</th></tr></thead><tbody>'
+        +chosen.variants.map(v=>'<tr>'+td(esc(v.size))+td(esc(v.color))+td('<input class="matrix-input" type="number" name="matrix_'+esc(v.id)+'" min="0" max="100000" step="1" value="" placeholder="0" aria-label="كمية '+esc(v.size+' '+v.color)+'">')+'</tr>').join('')
         +'</tbody></table></div>'
       :'<p class="alert">يجب إضافة موديل أولًا</p>')
     +'<div class="form-grid">'+inp('العميل','customer')+inp('موعد التسليم','due','date')+'</div>';
@@ -497,10 +532,10 @@ if(kind==='matrix-order'){
 if(kind==='new-bundle'){
   const o=order(modal.id);
   const progress=o?cuttingBundleStats(db,o.id):{total:0};
-  t='إضافة حزمة قص — '+esc(o?.ref);
+  t='إضافة مجموعة قص — '+esc(style(o?.styleId)?.name||'منتج');
   form='<input type="hidden" name="orderId" value="'+esc(o?.id)+'">'
     +'<p class="tips">الإجمالي '+num(progress.total)+' من '+num(o?.qty)+' قطعة. يجب استكمال حزم القص قبل بدء صرف الخامات.</p>'
-    +'<div class="form-grid">'+inp('رقم الحزمة','bundleNo','text','','required maxlength="50"')
+    +'<div class="form-grid">'+inp('اسم الحزمة (اختياري)','bundleNo','text','','maxlength="50"')
     +inp('عدد القطع','quantity','number','','required min="1" step="1"')
     +inp('ملاحظات','notes')+'</div>';
 }
@@ -509,13 +544,12 @@ if(kind==='new-wholesale'){
   const chosen=db.styles.find(s=>s.id===(modal.id||db.styles[0]?.id))||db.styles[0];
   t='إنشاء طلب بيع جملة';
   form='<label class="field">الموديل<select name="styleId" required><option value="">اختر...</option>'
-    +db.styles.map(s=>'<option value="'+esc(s.id)+'" '+(s.id===chosen?.id?'selected':'')+'>'+esc(s.code+' — '+s.name)+'</option>').join('')
+    +db.styles.map(s=>'<option value="'+esc(s.id)+'" '+(s.id===chosen?.id?'selected':'')+'>'+esc(s.name)+'</option>').join('')
     +'</select></label>'
     +'<p class="tips">حدد الكمية المطلوبة من كل مقاس ولون. لا يتم حجز مخزون التام عند إنشاء الطلب، بل عند إصدار إذن التسليم.</p>'
     +(chosen
-      ?'<div class="table-wrap matrix-scroll"><table><thead><tr><th>SKU</th><th>المقاس</th><th>اللون</th><th>الكمية</th><th>المتاح الآن</th></tr></thead><tbody>'
-        +chosen.variants.map(v=>'<tr>'+td('<span class="mono">'+esc(v.sku)+'</span>')
-          +td(esc(v.size))+td(esc(v.color))+td('<input class="matrix-input" type="number" name="sell_'+esc(v.id)+'" min="0" max="1000000" step="1" placeholder="0" aria-label="كمية '+esc(v.size+' '+v.color)+'">')
+      ?'<div class="table-wrap matrix-scroll"><table><thead><tr><th>المقاس</th><th>اللون</th><th>الكمية</th><th>المتاح الآن</th></tr></thead><tbody>'
+        +chosen.variants.map(v=>'<tr>'+td(esc(v.size))+td(esc(v.color))+td('<input class="matrix-input" type="number" name="sell_'+esc(v.id)+'" min="0" max="1000000" step="1" placeholder="0" aria-label="كمية '+esc(v.size+' '+v.color)+'">')
           +td(num(availableFinishedStock(db,v.id)))+'</tr>').join('')+'</tbody></table></div>'
       :'<p class="alert">عرّف موديلًا أولًا.</p>')
     +'<div class="form-grid">'+inp('اسم العميل','customer','text','','required maxlength="120"')
@@ -525,30 +559,30 @@ if(kind==='ship-wholesale'){
   const o=db.wholesaleOrders.find(x=>x.id===modal.id);
   if(!o)return '';
   const p=wholesaleProgress(db,o);
-  t='إذن تسليم — '+esc(o.ref);
+  t='تسليم منتجات — '+esc(o.customer);
   form='<input type="hidden" name="orderId" value="'+esc(o.id)+'">'
     +'<p class="tips">كل كمية تُخصم من مخزون التام بعد الحفظ. لا تتجاوز المتبقي من الطلب أو المتاح من الصنف.</p>'
-    +inp('مرجع إذن التسليم','reference','text','','required maxlength="60"')
-    +'<div class="table-wrap matrix-scroll"><table><thead><tr><th>SKU</th><th>المتبقي من الطلب</th><th>المتاح بالمخزن</th><th>الكمية المسلمة</th></tr></thead><tbody>'
+    +'<input type="hidden" name="reference" value="'+('DEL-'+id().slice(0,8))+'">'
+    +'<div class="table-wrap matrix-scroll"><table><thead><tr><th>المقاس واللون</th><th>المتبقي من الطلب</th><th>المتاح بالمخزن</th><th>الكمية المسلمة</th></tr></thead><tbody>'
     +p.lines.filter(l=>l.remaining>0).map(l=>'<tr>'
-      +td('<span class="mono">'+esc(l.sku)+'</span>')
+      +td(esc(l.size)+' · '+esc(l.color))
       +td(num(l.remaining))+td(num(availableFinishedStock(db,l.variantId)))
-      +td('<input class="matrix-input" type="number" name="ship_'+esc(l.variantId)+'" min="0" max="'+Math.min(l.remaining,Math.max(0,availableFinishedStock(db,l.variantId)))+'" step="1" placeholder="0" aria-label="تسليم '+esc(l.sku)+'">')+'</tr>').join('')
+      +td('<input class="matrix-input" type="number" name="ship_'+esc(l.variantId)+'" min="0" max="'+Math.min(l.remaining,Math.max(0,availableFinishedStock(db,l.variantId)))+'" step="1" placeholder="0" aria-label="تسليم '+esc(l.size+' '+l.color)+'">')+'</tr>').join('')
     +'</tbody></table></div>';
 }
 
 if(kind==='new-cloud-intake'){
   t='طلب عميل سحابي جديد';
   form='<p class="tips">سيرسل هذا الطلب إلى قاعدة المصنع مباشرة، ولا يغيّر مخزون المتصفح. أدخل بندًا في كل سطر بالترتيب التالي:</p>'
-    +'<p class="notes"><code>SKU | المقاس | اللون | الكمية | السعر</code></p>'
+    +'<p class="notes"><span>اسم المنتج | المقاس | اللون | الكمية | السعر</span></p>'
     +'<div class="form-grid">'+inp('اسم العميل','customerName','text','','required maxlength="120"')
     +inp('الهاتف أو وسيلة التواصل','customerContact','text','','maxlength="160"')+'</div>'
-    +'<label class="field">بنود الطلب<textarea name="linesRaw" rows="6" class="intake-lines" required placeholder="SH-100-M-BLACK | M | أسود | 12 | 350\nSH-100-L-BLACK | L | أسود | 8 | 350"></textarea></label>'
+    +'<label class="field">بنود الطلب<textarea name="linesRaw" rows="6" class="intake-lines" required placeholder="قميص رجالي | M | أسود | 12 | 350\nقميص رجالي | L | أسود | 8 | 350"></textarea></label>'
     +'<label class="field">ملاحظات<textarea name="notes" rows="3" class="intake-lines" maxlength="1000"></textarea></label>';
 }
-if(kind==='new-order'){t='أمر إنتاج جديد';form='<div class="form-grid">'+sel('الموديل','styleId',db.styles.map(s=>[s.id,s.code+' - '+s.name]))+sel('المقاس واللون','variantId',[])+inp('عدد القطع','quantity','number','','required min="1" step="1"')+inp('العميل','customer')+inp('موعد التسليم','due','date')+'</div><p class="tips">لا يتم صرف الخامات إلا عند بدء القص.</p>';}
-if(kind==='bom'){let s=style(modal.id);t='مكونات BOM - '+s.code;form='<p class="notes">أدخل الاستهلاك المطلوب لكل قطعة</p>'+db.materials.map(m=>'<label class="bom-line"><span>'+esc(m.name)+' · '+esc(m.unit)+'</span><input type="number" name="bom_'+m.id+'" step="0.0001" min="0" value="'+(s.bom.find(b=>b.materialId===m.id)?.qty||'')+'"></label>').join('');}
-if(kind==='quality'){let o=order(modal.id);t='فحص جودة - '+o.ref;form='<p class="tips">كمية الأمر '+num(o.qty)+' قطعة. لا يكتمل إلا بمساواة المقبول + المرفوض للكمية.</p><div class="form-grid">'+inp('مقبول','good','number',o.good,'min="0" step="1" required')+inp('مرفوض','reject','number',o.reject,'min="0" step="1" required')+inp('أجور تشغيل إضافية','labor','number',o.labor,'min="0" step="0.01"')+inp('تكاليف إضافية','overhead','number',o.overhead,'min="0" step="0.01"')+'</div>';}
+if(kind==='new-order'){t='أمر إنتاج جديد';form='<div class="form-grid">'+sel('الموديل','styleId',db.styles.map(s=>[s.id,s.name]))+sel('المقاس واللون','variantId',[])+inp('عدد القطع','quantity','number','','required min="1" step="1"')+inp('العميل','customer')+inp('موعد التسليم','due','date')+'</div><p class="tips">لا يتم صرف الخامات إلا عند بدء القص.</p>';}
+if(kind==='bom'){let s=style(modal.id);t='الخامات المستخدمة — '+s.name;form='<p class="notes">أدخل الاستهلاك المطلوب لكل قطعة</p>'+db.materials.map(m=>'<label class="bom-line"><span>'+esc(m.name)+' · '+esc(m.unit)+'</span><input type="number" name="bom_'+m.id+'" step="0.0001" min="0" value="'+(s.bom.find(b=>b.materialId===m.id)?.qty||'')+'"></label>').join('');}
+if(kind==='quality'){let o=order(modal.id);t='فحص جودة — '+(style(o.styleId)?.name||'منتج');form='<p class="tips">كمية الأمر '+num(o.qty)+' قطعة. لا يكتمل إلا بمساواة المقبول + المرفوض للكمية.</p><div class="form-grid">'+inp('مقبول','good','number',o.good,'min="0" step="1" required')+inp('مرفوض','reject','number',o.reject,'min="0" step="1" required')+inp('أجور تشغيل إضافية','labor','number',o.labor,'min="0" step="0.01"')+inp('تكاليف إضافية','overhead','number',o.overhead,'min="0" step="0.01"')+'</div>';}
 return '<div class="modal-bg" id="backdrop"><div class="modal" role="dialog" aria-modal="true"><div class="modal-h"><h2>'+t+'</h2>'+btn('×','close')+'</div><form id="entry"><div class="modal-b">'+form+'</div><div class="modal-f">'+btn('إلغاء','close')+'<button type="submit" class="btn primary">حفظ البيانات</button></div></form></div></div>';}
 function navigate(id){page=id;detail=null;modal=null;search='';location.hash='#/'+id;render();}
 function open(type,oid=''){modal={type,id:oid};render();if(type==='new-order')setVariants();if(type==='new-receipt'&&oid){let field=document.querySelector('[name=materialId]');if(field)field.value=oid;}}
