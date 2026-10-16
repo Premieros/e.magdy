@@ -1,5 +1,5 @@
 import { validateAccountingState } from './accounting.mjs';
-import { validateAccessConfig } from './access-control.mjs';
+import { ensureAccessConfig, validateAccessConfig } from './access-control.mjs';
 /* PremierOS Garments manual cloud backup only.
  * AMMCO is a shared Supabase instance; no access to AMMCO business tables.
  * Publishable key is safe for client distribution; RLS is enforced by database.
@@ -21,6 +21,8 @@ export function validateCloudSnapshot(payload) {
     throw Error('بيانات غير صحيحة: ' + key);
   }
   const parsed = structuredClone(payload);
+  // Legacy snapshots must receive default roles BEFORE optional arrays are initialized.
+  ensureAccessConfig(parsed);
   for (const key of OPTIONAL_ARRAYS) parsed[key] ??= [];
   for (const m of parsed.materials) {
     if (typeof m !== 'object' || !m || !Number.isFinite(m.stock) || m.stock < 0) {
