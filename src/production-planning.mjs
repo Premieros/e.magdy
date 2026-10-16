@@ -71,7 +71,7 @@ export function addCuttingBundle(db,form) {
   if(!Array.isArray(db.cuttingBundles))db.cuttingBundles=[];
   const order=db.orders.find(x=>x.id===form.get('orderId'));
   if(!order||order.status!=='planned')throw Error('تسجيل حزم القص متاح قبل بدء القص فقط');
-  const bundleNo=name(form.get('bundleNo')).toUpperCase();
+  const bundleNo=(name(form.get('bundleNo'))||('BUNDLE-'+makeId().slice(0,8))).toUpperCase();
   if(!bundleNo||bundleNo.length>50)throw Error('رقم حزمة القص مطلوب وبحد أقصى 50 حرفًا');
   const qty=asInt(form.get('quantity'),'كمية حزمة القص');
   if(db.cuttingBundles.some(x=>x.orderId===order.id&&x.bundleNo===bundleNo))
