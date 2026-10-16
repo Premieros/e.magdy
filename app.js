@@ -248,7 +248,7 @@ function stylesPage(){let rows=db.styles.filter(s=>(s.name+s.code+s.category).to
 function materialsPage(){return heading('الأقمشة والخامات','تتبع مخزون الخام والاستلام وتكلفة الوحدة.',btn('＋ استلام خامات','new-receipt')+btn('＋ إضافة خامة','new-material','','primary'))+'<section class="card">'+(db.materials.length?table(['الخامة','النوع','الكمية المتوفرة','تكلفة الوحدة','قيمة المخزون',''],db.materials.map(m=>'<tr>'+td('<b>'+esc(m.name)+'</b>')+td(esc(m.category))+td('<b class="'+(m.stock<25?'bad':'good')+'">'+num(m.stock)+' '+esc(m.unit)+'</b>')+td(cur(m.avgCost))+td(cur(m.stock*m.avgCost))+td('<button class="rowbtn" data-act="receipt-for" data-id="'+m.id+'">استلام</button>')+'</tr>').join('')):empty('لا توجد خامات','ابدأ بتعريف قماش أو خامة.'))+'</section>';}
 function ordersPage(){return heading('أوامر الإنتاج','تابع كل مراحل المصنع من القص والفرز البدائي حتى التعبئة.',btn('＋ دفعة مقاسات وألوان','matrix-order')+btn('＋ أمر جديد','new-order','','primary'))+'<section class="card">'+(db.orders.length?table(['المنتج','المقاس واللون','الكمية','العميل','المرحلة',''],db.orders.map(o=>'<tr>'+td('<b>'+esc(style(o.styleId)?.name)+'</b>')+td(esc(variant(o)?.size)+' / '+esc(variant(o)?.color))+td(num(o.qty))+td(esc(o.customer||'—'))+td(status(o.status))+td('<button class="rowbtn" data-act="show-order" data-id="'+o.id+'">عرض</button>')+'</tr>').join('')):empty('لا توجد أوامر تصنيع','أضف موديلًا ومكونات ثم أنشئ أمر تصنيع.'))+'</section>';}
 function qualityPage(){let arr=db.orders.filter(o=>o.status==='quality');return heading('فحص الجودة','تسجيل المقبول والمرفوض قبل الطباعة، وترحيل التام بعد التعبئة.')+'<section class="card"><h3>بانتظار الجودة</h3><p class="sub">استكمال الفحص؛ الترحيل للمخزن بعد التعبئة</p>'+(arr.length?arr.map(o=>'<div class="data-line"><b>'+esc(style(o.styleId)?.name)+' — '+num(o.qty)+' قطعة'+'</b>'+btn('فحص','quality',o.id,'primary')+'</div>').join(''):empty('لا توجد أوامر تنتظر الفحص','تابع مراحل أمر الإنتاج حتى مرحلة الجودة.'))+'</section>';}
-function reportsPage(){let data=db.styles.flatMap(s=>s.variants.map(v=>({...v,name:s.name,qty:ready(v.id)}))).filter(x=>x.qty);return heading('التقارير وحركة المخزون','حركة الخامات ومخزون الملابس الجاهزة وسجل العمليات.')+'<div class="stats">'+metric('أوامر مكتملة',num(db.orders.filter(x=>x.status==='completed').length),'من جميع الأوامر')+metric('قطع تامة متاحة',num(db.finished.reduce((n,x)=>n+x.qty,0)-wholesaleOverview(db).delivered),'بعد تسليمات الجملة')+metric('قطع مرفوضة',num(db.orders.reduce((n,x)=>n+x.reject,0)),'في فحص الجودة')+metric('حركة مخزون',num(db.ledger.length),'صرف واستلام خامات')+'</div><section class="card"><h3>المخزون التام حسب SKU</h3><p class="sub">كل لون ومقاس مستقل</p>'+ (data.length?table(['كود SKU','الموديل','المقاس','اللون','المتوفر'],data.map(v=>'<tr>'+td('<span class="mono">'+esc(v.sku)+'</span>')+td(esc(v.name))+td(esc(v.size))+td(esc(v.color))+td(num(v.qty))+'</tr>').join('')):empty('مخزن التام فارغ','سيظهر المخزون بعد انتهاء التعبئة.'))+'</section><section class="card"><h3>حركة الأقمشة والخامات</h3><p class="sub">آخر 100 حركة</p>'+ (db.ledger.length?table(['الخامة','العملية','الكمية','التكلفة','المرجع'],db.ledger.slice(0,100).map(x=>'<tr>'+td(esc(mat(x.materialId)?.name))+td('<span class="'+(x.qty>0?'receipt':'issue')+'">'+(x.qty>0?'استلام':'صرف')+'</span>')+td(num(x.qty))+td(cur(x.cost))+td(esc(x.reference))+'</tr>').join('')):empty('لا توجد حركات مخزون','ستسجل كل عملية استلام أو صرف هنا.'))+'</section><section class="card"><h3>حركة تسليم الملابس التامة</h3><p class="sub">أحدث أذون التسليم — لا يشمل المرتجعات بعد</p>'+(db.finishedDispatches.length?table(['مرجع التسليم','العميل','عدد القطع','قيمة التسليم'],db.finishedDispatches.slice(0,50).map(d=>'<tr>'+td('<span class="mono">'+esc(d.reference)+'</span>')+td(esc(d.customer))+td(num(d.lines.reduce((n,l)=>n+l.qty,0)))+td(cur(d.lines.reduce((n,l)=>n+l.qty*l.unitPrice,0)))+'</tr>').join('')):empty('لا توجد تسليمات جملة','سيظهر سجل التسليم بعد إصدار أول إذن.'))+'</section><section class="card"><h3>سجل العمليات</h3>'+db.audit.slice(0,30).map(x=>'<div class="data-line"><span>'+esc(x.message)+'</span><small>'+new Date(x.at).toLocaleDateString('ar-EG')+'</small></div>').join('')+'</section>';}
+function reportsPage(){let data=db.styles.flatMap(s=>s.variants.map(v=>({...v,name:s.name,qty:ready(v.id)}))).filter(x=>x.qty);return heading('التقارير وحركة المخزون','حركة الخامات ومخزون الملابس الجاهزة وسجل العمليات.')+'<div class="stats">'+metric('أوامر مكتملة',num(db.orders.filter(x=>x.status==='completed').length),'من جميع الأوامر')+metric('قطع تامة متاحة',num(db.finished.reduce((n,x)=>n+x.qty,0)-wholesaleOverview(db).delivered),'بعد تسليمات الجملة')+metric('قطع مرفوضة',num(db.orders.reduce((n,x)=>n+x.reject,0)),'في فحص الجودة')+metric('حركة مخزون',num(db.ledger.length),'صرف واستلام خامات')+'</div><section class="card"><h3>المخزون التام حسب SKU</h3><p class="sub">كل لون ومقاس مستقل</p>'+ (data.length?table(['المنتج','المقاس','اللون','المتوفر'],data.map(v=>'<tr>'+td(esc(v.name))+td(esc(v.size))+td(esc(v.color))+td(num(v.qty))+'</tr>').join('')):empty('مخزن التام فارغ','سيظهر المخزون بعد انتهاء التعبئة.'))+'</section><section class="card"><h3>حركة الأقمشة والخامات</h3><p class="sub">آخر 100 حركة</p>'+ (db.ledger.length?table(['الخامة','العملية','الكمية','التكلفة'],db.ledger.slice(0,100).map(x=>'<tr>'+td(esc(mat(x.materialId)?.name))+td('<span class="'+(x.qty>0?'receipt':'issue')+'">'+(x.qty>0?'استلام':'صرف')+'</span>')+td(num(x.qty))+td(cur(x.cost))+'</tr>').join('')):empty('لا توجد حركات مخزون','ستسجل كل عملية استلام أو صرف هنا.'))+'</section><section class="card"><h3>حركة تسليم الملابس التامة</h3><p class="sub">أحدث أذون التسليم — لا يشمل المرتجعات بعد</p>'+(db.finishedDispatches.length?table(['العميل','عدد القطع','قيمة التسليم'],db.finishedDispatches.slice(0,50).map(d=>'<tr>'+td(esc(d.customer))+td(num(d.lines.reduce((n,l)=>n+l.qty,0)))+td(cur(d.lines.reduce((n,l)=>n+l.qty*l.unitPrice,0)))+'</tr>').join('')):empty('لا توجد تسليمات جملة','سيظهر سجل التسليم بعد إصدار أول إذن.'))+'</section><section class="card"><h3>سجل العمليات</h3>'+db.audit.slice(0,30).map(x=>'<div class="data-line"><span>'+esc(x.message)+'</span><small>'+new Date(x.at).toLocaleDateString('ar-EG')+'</small></div>').join('')+'</section>';}
 function settingsPage(){
   const account=cloudIdentity();
   const cloud=account
@@ -275,7 +275,7 @@ function settingsPage(){
     +btn('إعادة ضبط النظام','reset','','danger')+'</section></div>'
     +'<div class="tips">هذه النسخة ليست مزامنة متعددة المستخدمين؛ التغييرات على جهاز آخر لن تظهر تلقائيًا. لا تستخدم بيانات حساسة أو حقيقية قبل اكتمال الصلاحيات والمعاملات الخادمية والتدقيق.</div>';
 }
-function styleDetail(){let s=style(detail);if(!s)return empty('موديل غير موجود','');let req=s.bom.map(b=>{let m=mat(b.materialId);return '<tr>'+td(esc(m?.name))+td(num(b.qty)+' '+esc(m?.unit))+td(num(m?.stock))+td(cur((m?.avgCost||0)*b.qty))+'</tr>';}).join('');return heading(esc(s.name),'تفاصيل المقاسات والألوان والخامات',btn('＋ دفعة مقاسات وألوان','matrix-order',s.id,'primary')+btn('تعديل خامات التصنيع','bom',s.id)+btn('رجوع','nav','styles'))+'<div class="stats">'+metric('المقاسات',s.sizes.length,s.sizes.map(esc).join(' · '))+metric('الألوان',s.colors.length,s.colors.map(esc).join(' · '))+metric('الخيارات المتاحة',s.variants.length,'من المقاسات والألوان')+metric('تكلفة مواد/قطعة',cur(s.bom.reduce((n,b)=>n+b.qty*(mat(b.materialId)?.avgCost||0),0)),'تقديرية')+'</div><section class="card"><h3>الخامات المستخدمة لكل قطعة</h3>'+table(['الخامة','الاستهلاك/قطعة','الرصيد','التكلفة'],req||'<tr><td colspan="4">لا توجد مكونات بعد</td></tr>')+'</section><section class="card"><h3>المقاسات والألوان المتوفرة</h3>'+table(['SKU','المقاس','اللون','الرصيد التام'],s.variants.map(v=>'<tr>'+td('<span class="mono">'+esc(v.sku)+'</span>')+td(esc(v.size))+td(esc(v.color))+td(num(ready(v.id)))+'</tr>').join(''))+'</section>';}
+function styleDetail(){let s=style(detail);if(!s)return empty('موديل غير موجود','');let req=s.bom.map(b=>{let m=mat(b.materialId);return '<tr>'+td(esc(m?.name))+td(num(b.qty)+' '+esc(m?.unit))+td(num(m?.stock))+td(cur((m?.avgCost||0)*b.qty))+'</tr>';}).join('');return heading(esc(s.name),'تفاصيل المقاسات والألوان والخامات',btn('＋ دفعة مقاسات وألوان','matrix-order',s.id,'primary')+btn('تعديل خامات التصنيع','bom',s.id)+btn('رجوع','nav','styles'))+'<div class="stats">'+metric('المقاسات',s.sizes.length,s.sizes.map(esc).join(' · '))+metric('الألوان',s.colors.length,s.colors.map(esc).join(' · '))+metric('الخيارات المتاحة',s.variants.length,'من المقاسات والألوان')+metric('تكلفة مواد/قطعة',cur(s.bom.reduce((n,b)=>n+b.qty*(mat(b.materialId)?.avgCost||0),0)),'تقديرية')+'</div><section class="card"><h3>الخامات المستخدمة لكل قطعة</h3>'+table(['الخامة','الاستهلاك/قطعة','الرصيد','التكلفة'],req||'<tr><td colspan="4">لا توجد مكونات بعد</td></tr>')+'</section><section class="card"><h3>المقاسات والألوان المتوفرة</h3>'+table(['المقاس','اللون','القطع الجاهزة'],s.variants.map(v=>'<tr>'+td(esc(v.size))+td(esc(v.color))+td(num(ready(v.id)))+'</tr>').join(''))+'</section>';}
 
 function workersPage() {
   const total = db.workLogs.reduce((sum, row) => sum + row.cost, 0);
@@ -362,8 +362,8 @@ function batchesPage(){
     +metric('قطع مخططة',num(arr.reduce((sum,b)=>sum+b.qty,0)),'إجمالي القطع')
     +metric('أوامر مكتملة',num(arr.reduce((sum,b)=>sum+b.completed,0)),'بعد التعبئة والترحيل')+'</div>'
     +'<section class="card"><h3>دفعات الموديلات</h3>'
-    +(arr.length?table(['الدفعة','الموديل','عدد SKU','الإجمالي','المكتمل','العميل',''],
-      arr.map(b=>'<tr>'+td('<span class="mono">'+esc(b.ref)+'</span>')+td(esc(style(b.styleId)?.name))
+    +(arr.length?table(['الموديل','عدد المقاسات والألوان','الإجمالي','المكتمل','العميل',''],
+      arr.map(b=>'<tr>'+td(esc(style(b.styleId)?.name))
       +td(num(b.orders.length))+td(num(b.qty))+td(num(b.completed)+' / '+num(b.orders.length))
       +td(esc(b.customer||'—'))+td('<button class="rowbtn" data-act="show-batch" data-id="'+esc(b.id)+'">عرض التفاصيل</button>')+'</tr>').join(''))
       :empty('لا توجد دفعات إنتاج بعد','اختر موديلًا وحدد كميات المقاسات والألوان لإنشاء دفعة.'))+'</section>';
@@ -384,7 +384,7 @@ function batchDetail(){
         +(s.colors||[]).map(color=>{const variant=s.variants.find(v=>v.size===size&&v.color===color);
           const o=byVariant.get(variant?.id);return td(o?'<b>'+num(o.qty)+'</b>':'—');}).join('')+'</tr>').join(''))
     +'</section><section class="card"><h3>أوامر الدفعة</h3>'
-    +table(['رقم الأمر','المقاس','اللون','الكمية','المرحلة',''],
+    +table(['المقاس','اللون','الكمية','المرحلة',''],
       b.orders.map(o=>'<tr>'+td('<span class="mono">'+esc(o.ref)+'</span>')
         +td(esc(variant(o)?.size))+td(esc(variant(o)?.color))+td(num(o.qty))
         +td(status(o.status))+td('<button class="rowbtn" data-act="show-order" data-id="'+esc(o.id)+'">فتح الأمر</button>')+'</tr>').join(''))
@@ -400,7 +400,7 @@ function wholesalePage(){
     +metric('قيمة التسليمات',cur(stats.value),'قيمة بيع تقديرية')+'</div>'
     +'<section class="card"><h3>طلبات العملاء</h3><p class="sub">يمكن تسليم الطلب على عدة أذون تسليم جزئية، ويتم خصم مخزون التام عند تأكيد الإذن فقط.</p>'
     +(db.wholesaleOrders.length
-      ?table(['رقم الطلب','العميل','الموديل','المطلوب','المسلم','المتبقي','الحالة',''],
+      ?table(['العميل','الموديل','المطلوب','المسلم','المتبقي','الحالة',''],
         db.wholesaleOrders.map(o=>{const p=wholesaleProgress(db,o);
           const state=p.status==='fulfilled'?'مكتمل':p.status==='partial'?'جزئي':'مفتوح';
           return '<tr>'+td('<span class="mono">'+esc(o.ref)+'</span>')
@@ -411,7 +411,7 @@ function wholesalePage(){
       :empty('لا توجد طلبات جملة','أنشئ طلبًا بمقاسات وألوان ثم سلّم المنتجات من مخزون التام.'))
     +'</section><section class="card"><h3>آخر أذون التسليم</h3>'
     +(db.finishedDispatches.length
-      ?table(['رقم الإذن','العميل','التاريخ','القطع','القيمة'],
+      ?table(['العميل','التاريخ','القطع','القيمة'],
         db.finishedDispatches.slice(0,25).map(x=>'<tr>'+td('<span class="mono">'+esc(x.reference)+'</span>')
           +td(esc(x.customer))+td(new Date(x.at).toLocaleDateString('ar-EG'))
           +td(num(x.lines.reduce((s,l)=>s+l.qty,0)))
@@ -424,21 +424,21 @@ function wholesaleDetail(){
   const progress=wholesaleProgress(db,o);
   const state=progress.status==='fulfilled'?'مكتمل':progress.status==='partial'?'تم التسليم جزئيًا':'لم يبدأ التسليم';
   const history=db.finishedDispatches.filter(x=>x.orderId===o.id);
-  return heading('طلب جملة '+esc(o.ref),esc(o.customer)+' · '+esc(style(o.styleId)?.name),
+  return heading('طلب جملة — '+esc(o.customer),esc(style(o.styleId)?.name),
     (progress.remaining>0?btn('＋ إذن تسليم','ship-wholesale',o.id,'primary'):'')+btn('رجوع','nav','wholesale'))
     +'<div class="stats">'+metric('المطلوب',num(progress.ordered),'قطعة')
     +metric('الذي تم تسليمه',num(progress.shipped),'قطعة')
     +metric('المتبقي',num(progress.remaining),state)
     +metric('قيمة الطلب',cur(progress.amount),'إجمالي الكميات المطلوبة')+'</div>'
     +'<section class="card"><h3>المقاسات والألوان</h3>'
-    +table(['SKU','المقاس','اللون','الطلب','تم التسليم','المتبقي','مخزون التام'],
+    +table(['المقاس','اللون','الطلب','تم التسليم','المتبقي','مخزون التام'],
       progress.lines.map(l=>'<tr>'+td('<span class="mono">'+esc(l.sku)+'</span>')
         +td(esc(l.size))+td(esc(l.color))+td(num(l.qty))+td(num(l.shipped))
         +td('<b>'+num(l.remaining)+'</b>')
         +td(num(availableFinishedStock(db,l.variantId)))+'</tr>').join(''))
-    +'<p class="tips">حفظ الطلب لا يحجز المخزون. عند إنشاء إذن تسليم يتم التحقق من رصيد كل SKU ومن الكمية المتبقية في الطلب.</p></section>'
+    +'<p class="tips">حفظ الطلب لا يحجز المخزون. عند إنشاء إذن تسليم يتم التحقق من رصيد كل مقاس ولون ومن الكمية المتبقية في الطلب.</p></section>'
     +'<section class="card"><h3>أذون التسليم الخاصة بالطلب</h3>'
-    +(history.length?table(['المرجع','التاريخ','القطع','القيمة'],
+    +(history.length?table(['التاريخ','القطع','القيمة'],
       history.map(d=>'<tr>'+td('<span class="mono">'+esc(d.reference)+'</span>')
         +td(new Date(d.at).toLocaleDateString('ar-EG'))
         +td(num(d.lines.reduce((s,l)=>s+l.qty,0)))
