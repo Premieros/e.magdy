@@ -110,7 +110,7 @@ test('UI exposes roster and permission editing while leaving app open',()=>{
   assert.match(html,/المستخدمون والصلاحيات/);
   assert.match(html,/الموقع مفتوح للجميع حاليًا/);
   assert.match(html,/الأدوار ومسؤولياتها/);
-  assert.match(html,/إضافة مستخدم/);
+  assert.match(html,/＋ مستخدم/);
   assert.doesNotMatch(html,/<form[^>]*action=["']\/login/);
   assert.match(accessUserForm(db,ctx.esc),/name="roleId"/);
   assert.doesNotMatch(accessUserForm(db,ctx.esc),/type="password"/);
