@@ -624,6 +624,10 @@ Object.assign(EN,{
   "الملغي": "Canceled",
   "عرض تجريبي": "Demo preview",
   "لا توجد إشعارات بعد": "No notifications yet",
+  "تم تسجيل": "Recorded",
+  "حركات في مركز الإشعارات": "events in Notification Center",
+  "حركة في مركز الإشعارات": "event in Notification Center",
+  "مركز الإشعارات": "Notification Center",
   "المظهر واللغة": "Appearance & Language",
   "نهاري": "Light",
   "ليلي": "Dark"
