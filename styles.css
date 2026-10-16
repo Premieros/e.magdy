@@ -743,3 +743,53 @@ a:hover{text-decoration:underline}
 @media(prefers-reduced-motion:reduce){
  .wt-bar-line span,.wt-week-track>span,.wt-model-track span{transition:none;animation:none}
 }
+
+
+/* WHITE TEX ACCOUNTS — plain-language cash, delivery and expenses */
+.ac-hero{display:flex;justify-content:space-between;align-items:center;gap:22px;
+  background:linear-gradient(125deg,#122849,#1b4c79);color:#fff;border-radius:19px;padding:24px 28px;margin-bottom:18px;
+  box-shadow:0 10px 32px rgba(18,43,81,.13)}
+.ac-hero small{font:800 12px/1.5 'Inter','Cairo',sans-serif;letter-spacing:1px;color:#b3d5ff}
+.ac-hero h2{font-size:23px;line-height:1.6;color:#fff;margin:5px 0}
+.ac-hero p{font-size:14px;line-height:1.9;color:#d1e3ff;margin:0}
+.ac-hero>span{border-radius:16px;display:grid;place-items:center;background:rgba(255,255,255,.1);
+  border:1px solid rgba(255,255,255,.18);width:78px;height:70px;font:800 23px/1.4 'Cairo',sans-serif;flex:none}
+.ac-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px;margin-bottom:19px}
+.ac-metrics .stat{margin:0;border-radius:15px;border-top:3px solid #3b82f6}
+.ac-metrics .stat:nth-child(2){border-top-color:#059669}
+.ac-metrics .stat:nth-child(3){border-top-color:#f59e0b}
+.ac-metrics .stat:nth-child(4){border-top-color:#7c3aed}
+.ac-metrics .stat:nth-child(5){border-top-color:#d97706}
+.ac-metrics .stat:nth-child(6){border-top-color:#0f766e}
+.ac-metrics .stat strong{font-size:23px;overflow-wrap:anywhere;line-height:1.5}
+.ac-metrics .stat span{font-size:12px;line-height:1.75}
+.ac-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:17px}
+.ac-grid .card{min-width:0;border-radius:16px}
+.ac-grid h3{font-size:17px}
+.ac-cash-summary{background:#edf5ff;border-radius:12px;display:flex;justify-content:space-between;flex-wrap:wrap;
+  gap:9px;padding:13px 15px;margin-bottom:18px;color:#183b67}
+.ac-cash-summary b{font-size:15px}
+.ac-cash-summary span{font-size:12px}
+.ac-cash-row{margin:16px 0}
+.ac-cash-row>div:first-child{display:flex;justify-content:space-between;gap:10px;margin-bottom:8px}
+.ac-cash-row b{font-size:13px;color:#304863}
+.ac-cash-row span{font-size:13px;color:#385d86}
+.ac-track{height:13px;background:#e7eef8;border-radius:15px;overflow:hidden}
+.ac-fill{display:block;height:100%;border-radius:15px;transition:width .5s ease}
+.ac-fill-in{background:linear-gradient(90deg,#34d399,#059669)}
+.ac-fill-out{background:linear-gradient(90deg,#fbbf24,#ea580c)}
+.ac-hint{font-size:12px;color:#58708b;line-height:1.95;margin:16px 0 0}
+.ac-expense-row{display:flex;justify-content:space-between;gap:12px;align-items:center;
+  padding:12px 2px;border-bottom:1px solid #e4eaf2;color:#284362}
+.ac-expense-row strong,.ac-expense-row b{font-size:13px;line-height:1.6}
+.ac-expense-row b{color:#1d4ed8}
+.ac-list-title{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}
+.ac-list-title h3{margin:0}
+.ac-note{display:block;color:#536987;font-size:12px;line-height:1.75;margin-top:3px}
+@media(max-width:1020px){.ac-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.ac-grid{grid-template-columns:1fr}}
+@media(max-width:600px){.ac-hero{padding:19px 17px}.ac-hero h2{font-size:20px}
+  .ac-hero>span{width:55px;height:55px;font-size:17px}
+  .ac-metrics{gap:10px}.ac-metrics .stat{padding:13px}.ac-metrics .stat strong{font-size:19px}
+  .ac-list-title{align-items:flex-start;flex-wrap:wrap}
+}
+@media(prefers-reduced-motion:reduce){.ac-fill{transition:none}}
