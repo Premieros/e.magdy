@@ -23,7 +23,7 @@ export function dashboardAnalytics(db,today=new Date()){
   const active=orders.filter(o=>!['completed','cancelled'].includes(o.status));
   const validOrders=orders.filter(o=>o.status!=='cancelled');
   const complete=validOrders.filter(o=>o.status==='completed');
-  const examined=validOrders.filter(o=>finite(o.qty)>0 && finite(o.good)>0 &&
+  const examined=validOrders.filter(o=>finite(o.qty)>0 && finite(o.good)>=0 && finite(o.reject)>=0 &&
     finite(o.good)+finite(o.reject)===finite(o.qty));
   const good=examined.reduce((sum,o)=>sum+finite(o.good),0);
   const rejected=examined.reduce((sum,o)=>sum+finite(o.reject),0);
