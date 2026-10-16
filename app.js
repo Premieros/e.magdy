@@ -98,8 +98,8 @@ function mutator(fn,success='تم الحفظ'){
     localStorage.setItem(KEY,JSON.stringify(d));
     db=d;modal=null;render();
     if(events.length){
-      events.slice(0,3).forEach(showFlying);
-      if(events.length>3)toast('تم تسجيل '+events.length+' حركات في مركز الإشعارات');
+      events.slice(0,2).forEach(showFlying);
+      if(events.length>2)toast('تم تسجيل '+events.length+' حركات في مركز الإشعارات');
     }else toast(success);
   }catch(e){toast(e.message||'حدث خطأ',true);}
 }
@@ -133,7 +133,7 @@ function eventCard(event, compact=false){
 function notificationMarkup(){
   ensureNotifications(db);
   const unread=unreadCount(db);
-  const content=db.notifications.slice(0,40).map(e=>eventCard(e)).join('')
+  const content=db.notifications.slice(0,160).map(e=>eventCard(e)).join('')
     ||'<div class="wt-notice-empty"><span aria-hidden="true">✦</span><strong>لا توجد إشعارات بعد</strong><p>ستظهر حركات المصنع الجديدة هنا بمجرد حفظها.</p></div>';
   return '<div class="wt-bell-zone"><button class="wt-bell" type="button" data-act="notifications-toggle"'
     +' aria-label="مركز الإشعارات؛ '+unread+' غير مقروء" aria-expanded="'+notificationCenterOpen+'" aria-controls="wt-notification-panel">'
@@ -626,6 +626,7 @@ if(a==='event-order'){
   detail=oid;page='order-detail';location.hash='#/order-detail';render();
   return;
 }
+if(notificationCenterOpen)notificationCenterOpen=false;
 if(a==='nav'){navigate(oid);if(oid==='cloud-intake'&&cloudIdentity())refreshCloudIntake();}else if(a==='cloud-intake-refresh')refreshCloudIntake();else if(['new-style','new-material','new-receipt','new-roll','new-worker','stage-work','new-order','matrix-order','new-bundle','new-wholesale','ship-wholesale','new-cloud-intake','view-cloud-intake','bom','quality'].includes(a))open(a,oid);else if(a==='receipt-for')open('new-receipt',oid);else if(a==='close'){modal=null;render();}else if(a==='show-style'){detail=oid;page='style-detail';render();}else if(a==='show-order'){detail=oid;page='order-detail';render();}else if(a==='show-batch'){detail=oid;page='batch-detail';render();}else if(a==='show-wholesale'){detail=oid;page='wholesale-detail';render();}else if(a==='advance'){if(confirm(order(oid).status==='planned'?'سيتم خصم الخامات الآن، هل تؤكد؟':'تأكيد الانتقال للمرحلة التالية؟'))mutator(d=>advance(d,oid),'تم تحديث مرحلة الإنتاج');}else if(['cloud-login','cloud-logout','cloud-save','cloud-restore'].includes(a))handleCloudAction(a);else if(a==='seed')seed();else if(a==='reset'){if(confirm('سيتم حذف كل البيانات المحلية، هل تؤكد؟')&&confirm('تأكيد نهائي لحذف كل البيانات؟'))mutator(d=>{Object.assign(d,fresh());},'تم مسح البيانات');}else if(a==='export'){downloadSnapshot(db,'premieros-garments-backup.json');toast('تم بدء تنزيل نسخة البيانات');}});
 document.addEventListener('change',async e=>{if(e.target.matches('[name=styleId]')&&modal?.type==='new-order')setVariants();if(e.target.matches('[name=styleId]')&&['matrix-order','new-wholesale'].includes(modal?.type)){modal.id=e.target.value;render();}if(e.target.id==='import'&&e.target.files[0]){try{let value=JSON.parse(await e.target.files[0].text());if(value.version!==1||!['styles','materials','orders','ledger','finished','audit'].every(k=>Array.isArray(value[k])))throw Error('ملف غير متوافق');ensureFactoryState(value);ensureWholesaleState(value);validateWholesaleLedger(value);if(value.materials.some(m=>!Number.isFinite(m.stock)||m.stock<0)||value.fabricRolls.some(r=>!Number.isFinite(r.remaining)||r.remaining<0||r.remaining>r.received))throw Error('النسخة تحتوي على أرصدة غير صحيحة');if(confirm('استبدال جميع البيانات الحالية من النسخة الاحتياطية؟')){localStorage.setItem(KEY,JSON.stringify(value));db=ensureNotifications(value);notificationCenterOpen=false;render();toast('تم الاستيراد');}}catch(err){toast(err.message,true);}}});
 document.addEventListener('submit',e=>{if(e.target.id!=='entry')return;e.preventDefault();let f=new FormData(e.target),type=modal.type,oid=modal.id;if(type==='new-cloud-intake'){
