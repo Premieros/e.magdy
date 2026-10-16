@@ -1,5 +1,6 @@
 /* PremierOS Garments | independent, browser-local prototype | no remote database */
 import { stages, labels, workStages, stageTargetQuantity, nextStageAction } from './src/workflow.mjs';
+import { buildNotifications, newNotification, ensureNotifications, appendNotifications, unreadCount, notificationIcons, LOW_STOCK_LEVEL } from './src/notifications.mjs';
 import { cloudIdentity, cloudLogin, cloudLogout, cloudSave, cloudLoad, validateCloudSnapshot, cloudFactoryList, cloudIntakeOrders, cloudCreateIntakeOrder } from './src/cloud-backup.mjs';
 import { buildIntakeOrder, intakeOrderTotal } from './src/cloud-intake.mjs';
 import { createProductionMatrix, productionBatches, addCuttingBundle, cuttingBundleStats, requireCuttingBundleBalance } from './src/production-planning.mjs';
@@ -23,11 +24,12 @@ const NAV_ICONS={
 };
 const navIcon=token=>'<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+(NAV_ICONS[token]||'')+'</svg>';
 
-const fresh=()=>({version:1,styles:[],materials:[],orders:[],ledger:[],finished:[],audit:[],workers:[],workLogs:[],fabricRolls:[],cuttingBundles:[],wholesaleOrders:[],finishedDispatches:[]});
+const fresh=()=>({version:1,styles:[],materials:[],orders:[],ledger:[],finished:[],audit:[],workers:[],workLogs:[],fabricRolls:[],cuttingBundles:[],wholesaleOrders:[],finishedDispatches:[],notifications:[]});
 let db;
-try{db=JSON.parse(localStorage.getItem(KEY)||'null')||fresh();if(db.version!==1)throw Error('نسخة غير متوافقة');ensureFactoryState(db);ensureWholesaleState(db);}
+try{db=JSON.parse(localStorage.getItem(KEY)||'null')||fresh();if(db.version!==1)throw Error('نسخة غير متوافقة');ensureFactoryState(db);ensureWholesaleState(db);ensureNotifications(db);}
 catch(e){db=fresh();}
 let cloudFactoriesState=[],cloudIntakeState=[],cloudFactorySelected='',cloudIntakeMessage='';
+let notificationCenterOpen=false;
 let page=(typeof location!=='undefined'?location.hash:'#/dashboard'||'#/dashboard').replace('#/','')||'dashboard',detail=null,modal=null,search='';
 const esc=x=>String(x??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
 const id=()=>crypto.randomUUID();
@@ -48,9 +50,60 @@ const status=s=>'<span class="pill '+(s==='completed'?'green':['quality','presen
 const btn=(label,action,value='',kind='')=>'<button class="btn '+kind+'" data-act="'+action+'" data-id="'+esc(value)+'">'+label+'</button>';
 const td=x=>'<td>'+x+'</td>';
 const empty=(title,subtitle)=>'<div class="empty">✧<b>'+title+'</b>'+subtitle+'</div>';
-function mutator(fn,success='تم الحفظ'){try{let d=structuredClone(db);ensureFactoryState(d);ensureWholesaleState(d);fn(d);localStorage.setItem(KEY,JSON.stringify(d));db=d;modal=null;render();toast(success);}catch(e){toast(e.message||'حدث خطأ',true);}}
+function persistNotifications(change){
+  try {
+    const next=structuredClone(db);
+    ensureNotifications(next);
+    change(next.notifications);
+    localStorage.setItem(KEY,JSON.stringify(next));
+    db=next;
+    render();
+  }catch(error){toast(error.message||'تعذر حفظ حالة الإشعارات',true);}
+}
+function showFlying(event){
+  if(typeof document==='undefined')return;
+  let stack=document.getElementById('wt-toast-stack');
+  if(!stack){stack=document.createElement('div');stack.id='wt-toast-stack';stack.className='wt-toast-stack';stack.setAttribute('aria-live','polite');stack.setAttribute('aria-atomic','false');document.body.append(stack);}
+  const type=Object.hasOwn(notificationIcons,event.type)?event.type:'info';
+  const box=document.createElement('div');
+  box.className='wt-fly wt-fly--'+type;
+  box.setAttribute('role',type==='warning'||type==='error'?'alert':'status');
+  box.innerHTML='<span class="wt-fly-icon" aria-hidden="true">'+notificationIcons[type]+'</span>'
+    +'<div class="wt-fly-copy"><strong>'+esc(event.title)+'</strong><small>'+esc(event.detail||'White tex • سجل التشغيل')+'</small></div>'
+    +'<button class="wt-fly-close" type="button" data-act="dismiss-toast" aria-label="إغلاق الإشعار">×</button><span class="wt-fly-timer" aria-hidden="true"></span>';
+  stack.prepend(box);
+  while(stack.children.length>3)stack.lastElementChild.remove();
+  window.setTimeout(()=>box.remove(),5700);
+}
+function toast(msg,error=false){showFlying(newNotification(error?'error':'info',msg));}
+function recordLocalNotice(event){
+  try{
+    const next=structuredClone(db);
+    appendNotifications(next,[event]);
+    localStorage.setItem(KEY,JSON.stringify(next));
+    db=next;
+    render();
+    showFlying(event);
+  }catch(error){toast(error.message||'تعذر حفظ التنبيه',true);}
+}
+function mutator(fn,success='تم الحفظ'){
+  try{
+    const d=structuredClone(db);
+    ensureFactoryState(d);ensureWholesaleState(d);ensureNotifications(d);
+    fn(d);
+    const events=(!db.demoMode&&d.demoMode)
+      ?[newNotification('info','تم تجهيز بيانات العرض','المعلومات المعروضة تجريبية ومحلية فقط')]
+      :buildNotifications(db,d);
+    appendNotifications(d,events);
+    localStorage.setItem(KEY,JSON.stringify(d));
+    db=d;modal=null;render();
+    if(events.length){
+      events.slice(0,3).forEach(showFlying);
+      if(events.length>3)toast('تم تسجيل '+events.length+' حركات في مركز الإشعارات');
+    }else toast(success);
+  }catch(e){toast(e.message||'حدث خطأ',true);}
+}
 function log(d,message){d.audit.unshift({id:id(),at:new Date().toISOString(),message});}
-function toast(msg,error=false){let e=document.getElementById('toast');e.classList.remove('hidden');e.classList.toggle('error',error);e.textContent=msg;clearTimeout(window.toastTimeout);window.toastTimeout=setTimeout(()=>e.classList.add('hidden'),4300);}
 function newStyle(d,f){let c=code(required(f.get('code'),'كود الموديل')),sizes=list(f.get('sizes')),colors=list(f.get('colors'));if(d.styles.some(x=>x.code===c))throw Error('كود الموديل موجود');if(!sizes.length||!colors.length)throw Error('أدخل مقاسات وألوان');if(sizes.length*colors.length>100)throw Error('الحد الأقصى 100 متغير');let variants=sizes.flatMap(sz=>colors.map(cl=>({id:id(),size:sz,color:cl,sku:c+'-'+code(sz)+'-'+code(cl)})));if(new Set(variants.map(x=>x.sku)).size!==variants.length)throw Error('أكواد المتغيرات متكررة');d.styles.unshift({id:id(),code:c,name:required(f.get('name'),'اسم الموديل'),season:str(f.get('season')),category:str(f.get('category'))||'ملابس',sellingPrice:nonnegative(f.get('price'),'السعر'),variants,sizes,colors,bom:[]});log(d,'إضافة موديل '+c);}
 function newMaterial(d,f){let c=code(required(f.get('code'),'كود الخامة'));if(d.materials.some(x=>x.code===c))throw Error('كود الخامة موجود');d.materials.unshift({id:id(),code:c,name:required(f.get('name'),'اسم الخامة'),category:str(f.get('category'))||'خامات',unit:str(f.get('unit')),stock:0,avgCost:0});log(d,'إضافة خامة '+c);}
 function receive(d,f){let m=d.materials.find(x=>x.id===f.get('materialId'));if(!m)throw Error('اختر خامة');let q=round(positive(f.get('quantity'),'الكمية')),cost=nonnegative(f.get('unitCost'),'السعر');m.avgCost=price((m.stock*m.avgCost+q*cost)/(m.stock+q));m.stock=round(m.stock+q);d.ledger.unshift({id:id(),at:new Date().toISOString(),materialId:m.id,qty:q,cost,kind:'receive',reference:str(f.get('reference'))||'استلام مخزن'});log(d,'استلام '+q+' '+m.unit+' من '+m.name);}
