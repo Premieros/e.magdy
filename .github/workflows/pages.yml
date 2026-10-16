@@ -32,6 +32,8 @@ jobs:
           node --check src/analytics.mjs
           node --check src/accounting.mjs
           node --check src/accounting-ui.mjs
+          node --check src/access-control.mjs
+          node --check src/access-ui.mjs
           node --check src/notifications.mjs
           node --check src/factory-ops.mjs
           node --check src/cloud-backup.mjs
@@ -45,7 +47,7 @@ jobs:
         run: |
           mkdir -p site/src
           cp index.html styles.css app.js app-icon.svg site/
-          cp src/workflow.mjs src/analytics.mjs src/accounting.mjs src/accounting-ui.mjs src/notifications.mjs src/factory-ops.mjs src/cloud-backup.mjs src/production-planning.mjs src/wholesale.mjs src/demo-data.mjs src/cloud-intake.mjs site/src/
+          cp src/workflow.mjs src/analytics.mjs src/accounting.mjs src/accounting-ui.mjs src/access-control.mjs src/access-ui.mjs src/notifications.mjs src/factory-ops.mjs src/cloud-backup.mjs src/production-planning.mjs src/wholesale.mjs src/demo-data.mjs src/cloud-intake.mjs site/src/
           touch site/.nojekyll
           test -s site/index.html
           test -s site/app-icon.svg
@@ -56,6 +58,8 @@ jobs:
           test -s site/src/analytics.mjs
           test -s site/src/accounting.mjs
           test -s site/src/accounting-ui.mjs
+          test -s site/src/access-control.mjs
+          test -s site/src/access-ui.mjs
           test -s site/src/notifications.mjs
           test -s site/src/cloud-backup.mjs
           test -s site/src/production-planning.mjs
