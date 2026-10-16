@@ -1,5 +1,6 @@
 /* PremierOS Garments | independent, browser-local prototype | no remote database */
 import { stages, labels, workStages, stageTargetQuantity, nextStageAction } from './src/workflow.mjs';
+import { readUI, setUI, translateFragment, applyDocumentUI } from './src/i18n.mjs';
 import { dashboardAnalytics } from './src/analytics.mjs';
 import { ensureAccountingState, validateAccountingState, recordFinanceEntry, accountingSummary } from './src/accounting.mjs';
 import { accountingPageMarkup, financeEntryForm } from './src/accounting-ui.mjs';
@@ -33,6 +34,7 @@ const fresh=()=>ensureAccessConfig({version:1,styles:[],materials:[],orders:[],l
 let db;
 try{db=JSON.parse(localStorage.getItem(KEY)||'null')||fresh();if(db.version!==1)throw Error('نسخة غير متوافقة');ensureFactoryState(db);ensureWholesaleState(db);ensureNotifications(db);validateAccountingState(db);validateAccessConfig(db);}
 catch(e){db=fresh();}
+let ui=readUI();applyDocumentUI(ui);
 let cloudFactoriesState=[],cloudIntakeState=[],cloudFactorySelected='',cloudIntakeMessage='';
 let notificationCenterOpen=false;
 let page=(typeof location!=='undefined'?location.hash:'#/dashboard'||'#/dashboard').replace('#/','')||'dashboard',detail=null,modal=null,search='';
@@ -77,6 +79,7 @@ function showFlying(event){
   box.innerHTML='<span class="wt-fly-icon" aria-hidden="true">'+notificationIcons[type]+'</span>'
     +'<div class="wt-fly-copy"><strong>'+esc(event.title)+'</strong><small>'+esc(event.detail||'White tex • سجل التشغيل')+'</small></div>'
     +'<button class="wt-fly-close" type="button" data-act="dismiss-toast" aria-label="إغلاق الإشعار">×</button><span class="wt-fly-timer" aria-hidden="true"></span>';
+  translateFragment(box,ui.lang);
   stack.prepend(box);
   while(stack.children.length>3)stack.lastElementChild.remove();
   window.setTimeout(()=>box.remove(),5700);
@@ -476,8 +479,11 @@ function cloudIntakePage(){
 
 function accountingPage(){return accountingPageMarkup(db,{esc,heading,btn,metric,table,td,empty,cur});}
 function usersPage(){return accessPage(db,{esc,heading,btn,table,td,empty});}
+const displayControls=()=>'<div class="wt-display-switches" role="group" aria-label="'+(ui.lang==='ar'?'المظهر واللغة':'Appearance and language')+'">'
+  +'<button type="button" class="wt-display-btn" data-act="toggle-theme" aria-label="'+(ui.theme==='dark'?(ui.lang==='ar'?'تشغيل الوضع النهاري':'Switch to light mode'):(ui.lang==='ar'?'تشغيل الوضع الليلي':'Switch to dark mode'))+'" title="'+(ui.theme==='dark'?'Light / نهاري':'Dark / ليلي')+'" aria-pressed="'+(ui.theme==='dark')+'"><span aria-hidden="true">'+(ui.theme==='dark'?'☀':'☾')+'</span><b>'+(ui.lang==='ar'?(ui.theme==='dark'?'نهاري':'ليلي'):(ui.theme==='dark'?'Light':'Dark'))+'</b></button>'
+  +'<button type="button" class="wt-display-btn wt-lang-btn" data-act="toggle-lang" aria-label="'+(ui.lang==='ar'?'Switch to English':'التبديل إلى العربية')+'" title="'+(ui.lang==='ar'?'English':'العربية')+'"><span aria-hidden="true">◎</span><b>'+(ui.lang==='ar'?'EN':'عربي')+'</b></button></div>';
 const views={users:usersPage,accounting:accountingPage,dashboard,styles:stylesPage,materials:materialsPage,rolls:rollsPage,workers:workersPage,orders:ordersPage,batches:batchesPage,'batch-detail':batchDetail,quality:qualityPage,wholesale:wholesalePage,'wholesale-detail':wholesaleDetail,'cloud-intake':cloudIntakePage,reports:reportsPage,settings:settingsPage,'style-detail':styleDetail,'order-detail':orderDetail};
-function render(){const menus=[['dashboard','⌂','الرئيسية'],['styles','◈','الموديلات والمنتجات'],['materials','▤','الأقمشة والخامات'],['rolls','◧','رولات الأقمشة'],['workers','♙','العمال والإنتاجية'],['orders','▣','أوامر الإنتاج'],['batches','◈','دفعات المقاسات'],['quality','◉','مراقبة الجودة'],['wholesale','▧','بيع الجملة والتسليم'],['cloud-intake','▣','طلبات العملاء السحابية'],['reports','▥','التقارير'],['accounting','▥','الحسابات'],['users','♙','المستخدمون والصلاحيات'],['settings','⚙','النسخ الاحتياطي']];document.getElementById('app').innerHTML='<div class="layout"><aside class="side"><div class="logo"><span class="logo-icon" aria-hidden="true">WT</span><span class="logo-name">White<span class="logo-accent">tex</span><small>TEXTILE OPERATIONS</small></span></div>'+menus.map(v=>'<button class="nav '+(page===v[0]?'on':'')+'" data-act="nav" data-id="'+v[0]+'"><span class="nav-icon">'+navIcon(v[1])+'</span><span class="nav-label">'+v[2]+'</span></button>').join('')+'<div class="side-note">● وضع محلي<br>نسخ سحابي يدوي اختياري<br>لا يوجد تزامن فوري</div></aside><main class="main"><header class="top"><span class="top-crumb"><span class="brand-mini">WHITE TEX</span> <span class="top-separator">/</span> <strong>إدارة الإنتاج</strong></span><div class="wt-header-actions">'+notificationMarkup()+'<span class="status"><span class="status-dot"></span> '+(db.demoMode?'وضع عرض تجريبي':'نسخة تجريبية · نسخ سحابي يدوي')+'</span></div></header><div class="content">'+(db.demoMode?'<div class="demo-banner"><strong>بيانات افتراضية للعرض</strong> — جميع الموديلات والعملاء والعمال والطلبات المعروضة أمثلة غير حقيقية. لتجهيز عميل فعلي، احفظ النسخة المحلية ثم امسح بيانات العرض وأنشئ بياناته منفصلة.</div>':'')+(views[page]||dashboard)()+'<p class="foot">White tex · إدارة المصنع · Powered by PremierOS Garments</p></div></main></div>'+renderModal();}
+function render(){const menus=[['dashboard','⌂','الرئيسية'],['styles','◈','الموديلات والمنتجات'],['materials','▤','الأقمشة والخامات'],['rolls','◧','رولات الأقمشة'],['workers','♙','العمال والإنتاجية'],['orders','▣','أوامر الإنتاج'],['batches','◈','دفعات المقاسات'],['quality','◉','مراقبة الجودة'],['wholesale','▧','بيع الجملة والتسليم'],['cloud-intake','▣','طلبات العملاء السحابية'],['reports','▥','التقارير'],['accounting','▥','الحسابات'],['users','♙','المستخدمون والصلاحيات'],['settings','⚙','النسخ الاحتياطي']];document.getElementById('app').innerHTML='<div class="layout"><aside class="side"><div class="logo"><span class="logo-icon" aria-hidden="true">WT</span><span class="logo-name">White<span class="logo-accent">tex</span><small>TEXTILE OPERATIONS</small></span></div>'+menus.map(v=>'<button class="nav '+(page===v[0]?'on':'')+'" data-act="nav" data-id="'+v[0]+'"><span class="nav-icon">'+navIcon(v[1])+'</span><span class="nav-label">'+v[2]+'</span></button>').join('')+'<div class="side-note">● وضع محلي<br>نسخ سحابي يدوي اختياري<br>لا يوجد تزامن فوري</div></aside><main class="main"><header class="top"><span class="top-crumb"><span class="brand-mini">WHITE TEX</span> <span class="top-separator">/</span> <strong>إدارة الإنتاج</strong></span><div class="wt-header-actions">'+displayControls()+notificationMarkup()+'<span class="status"><span class="status-dot"></span> '+(db.demoMode?'وضع عرض تجريبي':'نسخة تجريبية · نسخ سحابي يدوي')+'</span></div></header><div class="content">'+(db.demoMode?'<div class="demo-banner"><strong>بيانات افتراضية للعرض</strong> — جميع الموديلات والعملاء والعمال والطلبات المعروضة أمثلة غير حقيقية. لتجهيز عميل فعلي، احفظ النسخة المحلية ثم امسح بيانات العرض وأنشئ بياناته منفصلة.</div>':'')+(views[page]||dashboard)()+'<p class="foot">White tex · إدارة المصنع · Powered by PremierOS Garments</p></div></main></div>'+renderModal();translateFragment(document.getElementById('app'),ui.lang);}
 const inp=(label,name,type='text',value='',attrs='')=>'<label class="field">'+label+'<input name="'+name+'" type="'+type+'" value="'+esc(value)+'" '+attrs+'></label>';
 const sel=(label,name,options)=>'<label class="field">'+label+'<select name="'+name+'" required><option value="">اختر...</option>'+options.map(x=>'<option value="'+esc(x[0])+'">'+esc(x[1])+'</option>').join('')+'</select></label>';
 function renderModal(){if(!modal)return '';let kind=modal.type,t='',form='';
@@ -658,6 +664,8 @@ function handleCloudAction(action){
   }
 }
 document.addEventListener('click',e=>{let b=e.target.closest('[data-act]');if(!b){if(e.target.id==='backdrop'){modal=null;render();}else if(notificationCenterOpen&&!e.target.closest('.wt-bell-zone')){notificationCenterOpen=false;render();}return;}let a=b.dataset.act,oid=b.dataset.id;
+if(a==='toggle-theme'){ui=setUI({...ui,theme:ui.theme==='dark'?'light':'dark'});applyDocumentUI(ui);render();return;}
+if(a==='toggle-lang'){ui=setUI({...ui,lang:ui.lang==='ar'?'en':'ar'});applyDocumentUI(ui);render();return;}
 if(a==='dismiss-toast'){b.closest('.wt-fly')?.remove();return;}
 if(a==='notifications-toggle'||a==='notifications-open'){notificationCenterOpen=a==='notifications-open'?true:!notificationCenterOpen;render();return;}
 if(a==='notifications-read-all'){persistNotifications(rows=>rows.forEach(row=>{row.read=true;}));return;}
