@@ -456,7 +456,7 @@ function cloudIntakePage(){
     +btn('تسجيل الدخول','cloud-login','','primary')+'</section>';
   const factory=cloudFactoriesState.find(x=>x.id===cloudFactorySelected);
   const canCreate=['owner','manager','sales'].includes(factory?.role);
-  return heading('طلبات العملاء المركزية','حفظ طلبات جديدة مباشرة في Supabase بصلاحيات المصنع، منفصلة عن بيانات التشغيل المحلية.',
+  return heading('طلبات العملاء المركزية','تسجيل طلبات العملاء وحفظها على حساب المصنع، بعيدًا عن بيانات التشغيل على الجهاز.',
     btn('تحديث من السحابة','cloud-intake-refresh')+(canCreate&&!db.demoMode?btn('＋ طلب عميل جديد','new-cloud-intake','','primary'):''))
     +'<div class="tips">هذه شاشة استقبال الطلبات السحابية الأولية فقط. تعديل الطلب أو اعتماده أو حجز المخزون وإرساله للإنتاج لم يكتمل بعد.</div>'
     +(db.demoMode?'<div class="demo-banner">وضع العرض التجريبي مفعل؛ تم تعطيل إرسال الطلبات الحقيقية من هذا المتصفح. احفظ بيانات العرض وامسحها أولًا.</div>':'')
@@ -466,7 +466,7 @@ function cloudIntakePage(){
     +'</section><section class="card"><h3>طلبات العملاء — آخر 100 طلب</h3>'
     +(cloudIntakeState.length?table(['العميل','التواصل','القطع','القيمة','التاريخ','الحالة',''],
       cloudIntakeState.map(o=>{const t=intakeOrderTotal(o);return '<tr>'
-        +td('<b>'+esc(o.customer_name)+'</b><small class="batch-tag">'+num(o.lines.length)+' أصناف · '+esc(o.id.slice(0,8))+'</small>')
+        +td('<b>'+esc(o.customer_name)+'</b><small class="batch-tag">'+num(o.lines.length)+' أصناف'+'</small>')
         +td(esc(o.customer_contact||'—'))+td(num(t.quantity))+td(cur(t.amount))
         +td(new Date(o.created_at).toLocaleString('ar-EG'))+td('<span class="pill gold">● طلب جديد</span>')+td('<button type="button" class="rowbtn" data-act="view-cloud-intake" data-id="'+esc(o.id)+'">عرض التفاصيل</button>')+'</tr>';}).join(''))
       :empty('لا توجد طلبات محمّلة','بعد تسجيل الدخول اضغط تحديث، أو أنشئ أول طلب عميل.'))
@@ -500,23 +500,23 @@ if(kind==='view-cloud-intake'){
     +'<p class="tips">بيانات محفوظة على الخادم للعرض فقط. الاعتماد والتعديل وحجز المخزون لم تُفعّل بعد.</p>'
     +'</div><div class="modal-f">'+btn('إغلاق','close')+'</div></div></div>';
 }
-if(kind==='new-style'){t='موديل ملابس جديد';form='<div class="form-grid">'+inp('كود الموديل','code','text','','required placeholder="SH-101"')+inp('اسم الموديل','name','text','','required')+inp('التصنيف','category')+inp('الموسم','season')+inp('المقاسات بفاصلة','sizes','text','S, M, L, XL','required')+inp('الألوان بفاصلة','colors','text','أسود, أبيض','required')+inp('سعر البيع','price','number',0,'step="0.01" min="0"')+'</div>';}
-if(kind==='new-material'){t='خامة جديدة';form='<div class="form-grid">'+inp('كود الخامة','code','text','','required')+inp('اسم الخامة','name','text','','required')+inp('التصنيف','category')+sel('الوحدة','unit',['متر','كيلو','قطعة','رول'].map(x=>[x,x]))+'</div>';}
-if(kind==='new-receipt'){t='استلام خامة';form='<div class="form-grid">'+sel('الخامة','materialId',db.materials.map(m=>[m.id,m.name+' ('+m.code+')']))+inp('الكمية','quantity','number','','required min="0.0001" step="0.0001"')+inp('تكلفة الوحدة','unitCost','number','','required min="0" step="0.01"')+inp('مرجع التوريد','reference')+'</div>';}
+if(kind==='new-style'){t='موديل ملابس جديد';form='<div class="form-grid">'+inp('اسم الموديل','name','text','','required')+inp('التصنيف','category')+inp('الموسم','season')+inp('المقاسات بفاصلة','sizes','text','S, M, L, XL','required')+inp('الألوان بفاصلة','colors','text','أسود, أبيض','required')+inp('سعر البيع','price','number',0,'step="0.01" min="0"')+'</div>';}
+if(kind==='new-material'){t='خامة جديدة';form='<div class="form-grid">'+inp('اسم الخامة','name','text','','required')+inp('التصنيف','category')+sel('الوحدة','unit',['متر','كيلو','قطعة','رول'].map(x=>[x,x]))+'</div>';}
+if(kind==='new-receipt'){t='استلام خامة';form='<div class="form-grid">'+sel('الخامة','materialId',db.materials.map(m=>[m.id,m.name]))+inp('الكمية','quantity','number','','required min="0.0001" step="0.0001"')+inp('تكلفة الوحدة','unitCost','number','','required min="0" step="0.01"')+inp('مرجع التوريد','reference')+'</div>';}
 if(kind==='new-worker'){t='عامل جديد';form='<div class="form-grid">'
-  +inp('كود العامل','code','text','','required')+inp('الاسم','name','text','','required')
+  +inp('الاسم','name','text','','required')
   +inp('التخصص','role','text','خياطة')+inp('أجر القطعة','rate','number',0,'required min="0" step="0.01"')+'</div>';}
 if(kind==='new-roll'){t='استلام رول قماش';form='<div class="form-grid">'
-  +sel('القماش','materialId',db.materials.filter(m=>m.unit==='متر').map(m=>[m.id,m.name+' ('+m.code+')']))
-  +inp('رقم الرول','rollNo','text','','required')+inp('درجة الصبغة / اللون','shade')
+  +sel('القماش','materialId',db.materials.filter(m=>m.unit==='متر').map(m=>[m.id,m.name]))
+  +inp('علامة الرول (اختياري)','rollNo')+inp('درجة الصبغة / اللون','shade')
   +inp('عرض القماش (سم)','width','number','','min="0.01" step="0.01"')
   +inp('الطول (متر)','quantity','number','','required min="0.0001" step="0.0001"')
   +inp('تكلفة المتر','unitCost','number',0,'required min="0" step="0.01"')+'</div>';}
 if(kind==='stage-work'){let o=order(modal.id);t='تسجيل دفعة: '+esc(labels[o?.status]);
   form='<input type="hidden" name="orderId" value="'+esc(o?.id)+'"><div class="form-grid">'
-  +sel('العامل','workerId',db.workers.filter(w=>w.active).map(w=>[w.id,w.name+' ('+w.code+')']))
+  +sel('العامل','workerId',db.workers.filter(w=>w.active).map(w=>[w.id,w.name]))
   +inp('عدد القطع','quantity','number','','required min="1" step="1"')
-  +inp('مرجع دفعة المرحلة','batchRef')+'</div>'
+  +inp('اسم مجموعة التشغيل (اختياري)','batchRef')+'</div>'
   +'<p class="tips">تم تسجيل '+num(stageProgress(db,o.id,o.status).quantity)+' من '+num(stageTargetQuantity(o))
   +' قطعة، والتكلفة تحسب من أجر القطعة المحدد للعامل.</p>';}
 if(kind==='matrix-order'){
@@ -537,10 +537,10 @@ if(kind==='matrix-order'){
 if(kind==='new-bundle'){
   const o=order(modal.id);
   const progress=o?cuttingBundleStats(db,o.id):{total:0};
-  t='إضافة حزمة قص — '+esc(o?.ref);
+  t='إضافة مجموعة قص — '+esc(style(o?.styleId)?.name||'منتج');
   form='<input type="hidden" name="orderId" value="'+esc(o?.id)+'">'
     +'<p class="tips">الإجمالي '+num(progress.total)+' من '+num(o?.qty)+' قطعة. يجب استكمال حزم القص قبل بدء صرف الخامات.</p>'
-    +'<div class="form-grid">'+inp('رقم الحزمة','bundleNo','text','','required maxlength="50"')
+    +'<div class="form-grid">'+inp('اسم الحزمة (اختياري)','bundleNo','text','','maxlength="50"')
     +inp('عدد القطع','quantity','number','','required min="1" step="1"')
     +inp('ملاحظات','notes')+'</div>';
 }
@@ -565,10 +565,10 @@ if(kind==='ship-wholesale'){
   const o=db.wholesaleOrders.find(x=>x.id===modal.id);
   if(!o)return '';
   const p=wholesaleProgress(db,o);
-  t='إذن تسليم — '+esc(o.ref);
+  t='تسليم منتجات — '+esc(o.customer);
   form='<input type="hidden" name="orderId" value="'+esc(o.id)+'">'
     +'<p class="tips">كل كمية تُخصم من مخزون التام بعد الحفظ. لا تتجاوز المتبقي من الطلب أو المتاح من الصنف.</p>'
-    +inp('مرجع إذن التسليم','reference','text','','required maxlength="60"')
+    +'<input type="hidden" name="reference" value="'+('DEL-'+id().slice(0,8))+'">'
     +'<div class="table-wrap matrix-scroll"><table><thead><tr><th>SKU</th><th>المتبقي من الطلب</th><th>المتاح بالمخزن</th><th>الكمية المسلمة</th></tr></thead><tbody>'
     +p.lines.filter(l=>l.remaining>0).map(l=>'<tr>'
       +td('<span class="mono">'+esc(l.sku)+'</span>')
@@ -586,9 +586,9 @@ if(kind==='new-cloud-intake'){
     +'<label class="field">بنود الطلب<textarea name="linesRaw" rows="6" class="intake-lines" required placeholder="SH-100-M-BLACK | M | أسود | 12 | 350\nSH-100-L-BLACK | L | أسود | 8 | 350"></textarea></label>'
     +'<label class="field">ملاحظات<textarea name="notes" rows="3" class="intake-lines" maxlength="1000"></textarea></label>';
 }
-if(kind==='new-order'){t='أمر إنتاج جديد';form='<div class="form-grid">'+sel('الموديل','styleId',db.styles.map(s=>[s.id,s.code+' - '+s.name]))+sel('المقاس واللون','variantId',[])+inp('عدد القطع','quantity','number','','required min="1" step="1"')+inp('العميل','customer')+inp('موعد التسليم','due','date')+'</div><p class="tips">لا يتم صرف الخامات إلا عند بدء القص.</p>';}
-if(kind==='bom'){let s=style(modal.id);t='مكونات BOM - '+s.code;form='<p class="notes">أدخل الاستهلاك المطلوب لكل قطعة</p>'+db.materials.map(m=>'<label class="bom-line"><span>'+esc(m.name)+' · '+esc(m.unit)+'</span><input type="number" name="bom_'+m.id+'" step="0.0001" min="0" value="'+(s.bom.find(b=>b.materialId===m.id)?.qty||'')+'"></label>').join('');}
-if(kind==='quality'){let o=order(modal.id);t='فحص جودة - '+o.ref;form='<p class="tips">كمية الأمر '+num(o.qty)+' قطعة. لا يكتمل إلا بمساواة المقبول + المرفوض للكمية.</p><div class="form-grid">'+inp('مقبول','good','number',o.good,'min="0" step="1" required')+inp('مرفوض','reject','number',o.reject,'min="0" step="1" required')+inp('أجور تشغيل إضافية','labor','number',o.labor,'min="0" step="0.01"')+inp('تكاليف إضافية','overhead','number',o.overhead,'min="0" step="0.01"')+'</div>';}
+if(kind==='new-order'){t='أمر إنتاج جديد';form='<div class="form-grid">'+sel('الموديل','styleId',db.styles.map(s=>[s.id,s.name]))+sel('المقاس واللون','variantId',[])+inp('عدد القطع','quantity','number','','required min="1" step="1"')+inp('العميل','customer')+inp('موعد التسليم','due','date')+'</div><p class="tips">لا يتم صرف الخامات إلا عند بدء القص.</p>';}
+if(kind==='bom'){let s=style(modal.id);t='الخامات المستخدمة — '+s.name;form='<p class="notes">أدخل الاستهلاك المطلوب لكل قطعة</p>'+db.materials.map(m=>'<label class="bom-line"><span>'+esc(m.name)+' · '+esc(m.unit)+'</span><input type="number" name="bom_'+m.id+'" step="0.0001" min="0" value="'+(s.bom.find(b=>b.materialId===m.id)?.qty||'')+'"></label>').join('');}
+if(kind==='quality'){let o=order(modal.id);t='فحص جودة — '+(style(o.styleId)?.name||'منتج');form='<p class="tips">كمية الأمر '+num(o.qty)+' قطعة. لا يكتمل إلا بمساواة المقبول + المرفوض للكمية.</p><div class="form-grid">'+inp('مقبول','good','number',o.good,'min="0" step="1" required')+inp('مرفوض','reject','number',o.reject,'min="0" step="1" required')+inp('أجور تشغيل إضافية','labor','number',o.labor,'min="0" step="0.01"')+inp('تكاليف إضافية','overhead','number',o.overhead,'min="0" step="0.01"')+'</div>';}
 return '<div class="modal-bg" id="backdrop"><div class="modal" role="dialog" aria-modal="true"><div class="modal-h"><h2>'+t+'</h2>'+btn('×','close')+'</div><form id="entry"><div class="modal-b">'+form+'</div><div class="modal-f">'+btn('إلغاء','close')+'<button type="submit" class="btn primary">حفظ البيانات</button></div></form></div></div>';}
 function navigate(id){page=id;detail=null;modal=null;search='';location.hash='#/'+id;render();}
 function open(type,oid=''){modal={type,id:oid};render();if(type==='new-order')setVariants();if(type==='new-receipt'&&oid){let field=document.querySelector('[name=materialId]');if(field)field.value=oid;}}
