@@ -1,6 +1,6 @@
 /* PremierOS Garments | independent, browser-local prototype | no remote database */
 import { stages, labels, workStages, stageTargetQuantity, nextStageAction } from './src/workflow.mjs';
-import { readUI, setUI, translateFragment, applyDocumentUI } from './src/i18n.mjs';
+import { readUI, setUI, translateText, translateFragment, applyDocumentUI } from './src/i18n.mjs';
 import { dashboardAnalytics } from './src/analytics.mjs';
 import { ensureAccountingState, validateAccountingState, recordFinanceEntry, accountingSummary } from './src/accounting.mjs';
 import { accountingPageMarkup, financeEntryForm } from './src/accounting-ui.mjs';
@@ -35,6 +35,7 @@ let db;
 try{db=JSON.parse(localStorage.getItem(KEY)||'null')||fresh();if(db.version!==1)throw Error('نسخة غير متوافقة');ensureFactoryState(db);ensureWholesaleState(db);ensureNotifications(db);validateAccountingState(db);validateAccessConfig(db);}
 catch(e){db=fresh();}
 let ui=readUI();applyDocumentUI(ui);
+const ask=message=>globalThis.confirm(translateText(message,ui.lang));
 let cloudFactoriesState=[],cloudIntakeState=[],cloudFactorySelected='',cloudIntakeMessage='';
 let notificationCenterOpen=false;
 let page=(typeof location!=='undefined'?location.hash:'#/dashboard'||'#/dashboard').replace('#/','')||'dashboard',detail=null,modal=null,search='';
@@ -605,7 +606,7 @@ function open(type,oid=''){modal={type,id:oid};render();if(type==='new-order')se
 function setVariants(){let sid=document.querySelector('[name=styleId]')?.value;let e=document.querySelector('[name=variantId]');if(e)e.innerHTML='<option value="">اختر المقاس واللون...</option>'+(style(sid)?.variants||[]).map(v=>'<option value="'+v.id+'">'+esc(v.size)+' / '+esc(v.color)+'</option>').join('');}
 function seed(){
   if(!isDemoEligible(db)){toast('بيانات العرض لا تُضاف إلا إلى متصفح فارغ؛ احفظ بياناتك ولا تخلطها بالتجربة.',true);return;}
-  if(!confirm('سيتم إنشاء بيانات افتراضية مترابطة لكل شاشات المصنع على هذا المتصفح فقط. لا تستخدمها كبيانات فعلية للعميل. متابعة؟'))return;
+  if(!ask('سيتم إنشاء بيانات افتراضية مترابطة لكل شاشات المصنع على هذا المتصفح فقط. لا تستخدمها كبيانات فعلية للعميل. متابعة؟'))return;
   mutator(d=>populateDemoData(d,{newMaterial,newStyle,receive,setBom,newOrder,advance,quality}),
     'تم تجهيز بيانات تجريبية تغطي جميع شاشات المصنع');
 }
@@ -642,7 +643,7 @@ function handleCloudAction(action){
   }
   if(action==='cloud-save'){
     if(db.demoMode){toast('النسخ السحابي معطّل لبيانات العرض. استخدم تصدير JSON المحلي فقط.',true);return;}
-    if(!confirm('سيتم استبدال النسخة السحابية الخاصة بحسابك ببيانات هذا الجهاز. هل تريد المتابعة؟'))return;
+    if(!ask('سيتم استبدال النسخة السحابية الخاصة بحسابك ببيانات هذا الجهاز. هل تريد المتابعة؟'))return;
     const snapshot=structuredClone(db);
     cloudSave(snapshot)
       .then(()=>toast('تم تأكيد حفظ النسخة السحابية'))
@@ -652,7 +653,7 @@ function handleCloudAction(action){
   if(action==='cloud-restore'){
     cloudLoad().then(snapshot=>{
       if(!snapshot) {toast('لا توجد نسخة سحابية لهذا الحساب');return;}
-      if(!confirm('سيتم استبدال بيانات هذا الجهاز بالنسخة السحابية. سيتم تنزيل ملف احتياطي من بيانات الجهاز قبل الاستبدال. متابعة؟'))return;
+      if(!ask('سيتم استبدال بيانات هذا الجهاز بالنسخة السحابية. سيتم تنزيل ملف احتياطي من بيانات الجهاز قبل الاستبدال. متابعة؟'))return;
       const next=validateCloudSnapshot(snapshot.data);
       validateWholesaleLedger(next);
       validateAccountingState(next);
@@ -665,12 +666,12 @@ function handleCloudAction(action){
 }
 document.addEventListener('click',e=>{let b=e.target.closest('[data-act]');if(!b){if(e.target.id==='backdrop'){modal=null;render();}else if(notificationCenterOpen&&!e.target.closest('.wt-bell-zone')){notificationCenterOpen=false;render();}return;}let a=b.dataset.act,oid=b.dataset.id;
 if(a==='toggle-theme'){ui=setUI({...ui,theme:ui.theme==='dark'?'light':'dark'});applyDocumentUI(ui);render();return;}
-if(a==='toggle-lang'){ui=setUI({...ui,lang:ui.lang==='ar'?'en':'ar'});applyDocumentUI(ui);render();return;}
+if(a==='toggle-lang'){ui=setUI({...ui,lang:ui.lang==='ar'?'en':'ar'});applyDocumentUI(ui);document.getElementById('wt-toast-stack')?.replaceChildren();render();return;}
 if(a==='dismiss-toast'){b.closest('.wt-fly')?.remove();return;}
 if(a==='notifications-toggle'||a==='notifications-open'){notificationCenterOpen=a==='notifications-open'?true:!notificationCenterOpen;render();return;}
 if(a==='notifications-read-all'){persistNotifications(rows=>rows.forEach(row=>{row.read=true;}));return;}
 if(a==='notifications-clear'){
-  if(confirm('مسح سجل الإشعارات فقط؟ لن تُحذف أوامر الإنتاج أو المخزون أو سجل العمليات.'))
+  if(ask('مسح سجل الإشعارات فقط؟ لن تُحذف أوامر الإنتاج أو المخزون أو سجل العمليات.'))
     persistNotifications(rows=>rows.splice(0));
   return;
 }
@@ -684,9 +685,9 @@ if(notificationCenterOpen)notificationCenterOpen=false;
 if(a==='access-new-user'||a==='access-edit-user'){open('access-user',a==='access-edit-user'?oid:'');return;}
 if(a==='access-new-role'||a==='access-edit-role'){open('access-role',a==='access-edit-role'?oid:'');return;}
 if(a==='access-toggle-user'){mutator(d=>toggleUser(d,oid),'تم تحديث حالة المستخدم');return;}
-if(a==='access-remove-role'){if(confirm('حذف الدور المخصص؟ يجب ألا يكون مرتبطًا بأي مستخدم.'))mutator(d=>removeRole(d,oid),'تم حذف الدور');return;}
-if(a==='nav'){navigate(oid);if(oid==='cloud-intake'&&cloudIdentity())refreshCloudIntake();}else if(a==='cloud-intake-refresh')refreshCloudIntake();else if(['new-style','new-material','new-receipt','new-roll','new-worker','stage-work','new-order','matrix-order','new-bundle','new-wholesale','ship-wholesale','new-cloud-intake','view-cloud-intake','new-finance','bom','quality'].includes(a))open(a,oid);else if(a==='receipt-for')open('new-receipt',oid);else if(a==='close'){modal=null;render();}else if(a==='show-style'){detail=oid;page='style-detail';render();}else if(a==='show-order'){detail=oid;page='order-detail';render();}else if(a==='show-batch'){detail=oid;page='batch-detail';render();}else if(a==='show-wholesale'){detail=oid;page='wholesale-detail';render();}else if(a==='advance'){if(confirm(order(oid).status==='planned'?'سيتم خصم الخامات الآن، هل تؤكد؟':'تأكيد الانتقال للمرحلة التالية؟'))mutator(d=>advance(d,oid),'تم تحديث مرحلة الإنتاج');}else if(['cloud-login','cloud-logout','cloud-save','cloud-restore'].includes(a))handleCloudAction(a);else if(a==='seed')seed();else if(a==='reset'){if(confirm('سيتم حذف كل البيانات المحلية، هل تؤكد؟')&&confirm('تأكيد نهائي لحذف كل البيانات؟'))mutator(d=>{Object.assign(d,fresh());},'تم مسح البيانات');}else if(a==='export'){downloadSnapshot(db,'premieros-garments-backup.json');toast('تم بدء تنزيل نسخة البيانات');}});
-document.addEventListener('change',async e=>{if(e.target.matches('[name=styleId]')&&modal?.type==='new-order')setVariants();if(e.target.matches('[name=styleId]')&&['matrix-order','new-wholesale'].includes(modal?.type)){modal.id=e.target.value;render();}if(e.target.id==='import'&&e.target.files[0]){try{let value=JSON.parse(await e.target.files[0].text());if(value.version!==1||!['styles','materials','orders','ledger','finished','audit'].every(k=>Array.isArray(value[k])))throw Error('ملف غير متوافق');ensureFactoryState(value);ensureWholesaleState(value);validateWholesaleLedger(value);validateAccountingState(value);validateAccessConfig(value);if(value.materials.some(m=>!Number.isFinite(m.stock)||m.stock<0)||value.fabricRolls.some(r=>!Number.isFinite(r.remaining)||r.remaining<0||r.remaining>r.received))throw Error('النسخة تحتوي على أرصدة غير صحيحة');if(confirm('استبدال جميع البيانات الحالية من النسخة الاحتياطية؟')){localStorage.setItem(KEY,JSON.stringify(value));db=ensureNotifications(value);notificationCenterOpen=false;render();toast('تم الاستيراد');}}catch(err){toast(err.message,true);}}});
+if(a==='access-remove-role'){if(ask('حذف الدور المخصص؟ يجب ألا يكون مرتبطًا بأي مستخدم.'))mutator(d=>removeRole(d,oid),'تم حذف الدور');return;}
+if(a==='nav'){navigate(oid);if(oid==='cloud-intake'&&cloudIdentity())refreshCloudIntake();}else if(a==='cloud-intake-refresh')refreshCloudIntake();else if(['new-style','new-material','new-receipt','new-roll','new-worker','stage-work','new-order','matrix-order','new-bundle','new-wholesale','ship-wholesale','new-cloud-intake','view-cloud-intake','new-finance','bom','quality'].includes(a))open(a,oid);else if(a==='receipt-for')open('new-receipt',oid);else if(a==='close'){modal=null;render();}else if(a==='show-style'){detail=oid;page='style-detail';render();}else if(a==='show-order'){detail=oid;page='order-detail';render();}else if(a==='show-batch'){detail=oid;page='batch-detail';render();}else if(a==='show-wholesale'){detail=oid;page='wholesale-detail';render();}else if(a==='advance'){if(ask(order(oid).status==='planned'?'سيتم خصم الخامات الآن، هل تؤكد؟':'تأكيد الانتقال للمرحلة التالية؟'))mutator(d=>advance(d,oid),'تم تحديث مرحلة الإنتاج');}else if(['cloud-login','cloud-logout','cloud-save','cloud-restore'].includes(a))handleCloudAction(a);else if(a==='seed')seed();else if(a==='reset'){if(ask('سيتم حذف كل البيانات المحلية، هل تؤكد؟')&&ask('تأكيد نهائي لحذف كل البيانات؟'))mutator(d=>{Object.assign(d,fresh());},'تم مسح البيانات');}else if(a==='export'){downloadSnapshot(db,'premieros-garments-backup.json');toast('تم بدء تنزيل نسخة البيانات');}});
+document.addEventListener('change',async e=>{if(e.target.matches('[name=styleId]')&&modal?.type==='new-order')setVariants();if(e.target.matches('[name=styleId]')&&['matrix-order','new-wholesale'].includes(modal?.type)){modal.id=e.target.value;render();}if(e.target.id==='import'&&e.target.files[0]){try{let value=JSON.parse(await e.target.files[0].text());if(value.version!==1||!['styles','materials','orders','ledger','finished','audit'].every(k=>Array.isArray(value[k])))throw Error('ملف غير متوافق');ensureFactoryState(value);ensureWholesaleState(value);validateWholesaleLedger(value);validateAccountingState(value);validateAccessConfig(value);if(value.materials.some(m=>!Number.isFinite(m.stock)||m.stock<0)||value.fabricRolls.some(r=>!Number.isFinite(r.remaining)||r.remaining<0||r.remaining>r.received))throw Error('النسخة تحتوي على أرصدة غير صحيحة');if(ask('استبدال جميع البيانات الحالية من النسخة الاحتياطية؟')){localStorage.setItem(KEY,JSON.stringify(value));db=ensureNotifications(value);notificationCenterOpen=false;render();toast('تم الاستيراد');}}catch(err){toast(err.message,true);}}});
 document.addEventListener('submit',e=>{if(e.target.id!=='entry')return;e.preventDefault();let f=new FormData(e.target),type=modal.type,oid=modal.id;if(type==='new-cloud-intake'){
   try{
     if(db.demoMode)throw Error('عطّل بيانات العرض المحلية قبل إدخال طلبات فعلية');
