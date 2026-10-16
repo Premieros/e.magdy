@@ -3,6 +3,17 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#F5F7FA">
+<script>
+/* Apply saved display settings before styles load; business data stays untouched. */
+try{
+  const p=JSON.parse(localStorage.getItem('white-tex-display-v1')||'{}');
+  const lang=p.lang==='en'?'en':'ar',theme=p.theme==='dark'?'dark':'light';
+  document.documentElement.lang=lang;
+  document.documentElement.dir=lang==='en'?'ltr':'rtl';
+  document.documentElement.dataset.theme=theme;
+  document.documentElement.style.colorScheme=theme;
+}catch{document.documentElement.dataset.theme='light';}
+</script>
 <meta name="description" content="White tex — نظام إدارة مراحل إنتاج وتصنيع الملابس">
 <link rel="icon" type="image/svg+xml" href="./app-icon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
