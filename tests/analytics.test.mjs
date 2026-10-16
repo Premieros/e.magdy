@@ -98,3 +98,13 @@ test('charts are sourced from repository data and shipped on GitHub Pages',()=>{
   assert.match(css,/\.wt-analytics-grid/);
   assert.match(pages,/cp src\/workflow\.mjs src\/analytics\.mjs/);
 });
+
+test('a fully rejected inspection is a real zero-percent quality outcome',()=>{
+  const db=g.fresh();
+  db.orders.push({status:'quality',qty:10,good:0,reject:10,history:[]});
+  const x=dashboardAnalytics(db,localDay);
+  assert.equal(x.inspected,10);
+  assert.equal(x.good,0);
+  assert.equal(x.rejected,10);
+  assert.equal(x.qualityRate,0);
+});
