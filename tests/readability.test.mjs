@@ -57,3 +57,16 @@ test('central cloud order list opens readable read-only SKU details',()=>{
   assert.match(css,/\.intake-detail\{width:min\(850px,100%\)\}/);
   assert.match(css,/\.order-detail-summary/);
 });
+
+
+test('global White tex header stays at top on every page without blocking dialogs or alerts',()=>{
+  const css=readFileSync(new URL('../styles.css',import.meta.url),'utf8');
+  const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+  assert.match(css,/\.top\{position:sticky;top:0;z-index:60;overflow:visible/);
+  assert.doesNotMatch(css,/\.top\{position:relative;z-index:45/);
+  assert.match(css,/\.modal-bg\{[^}]*z-index:90/);
+  assert.match(css,/\.wt-toast-stack\{[^}]*z-index:180/);
+  assert.match(app,/<header class="top">/);
+  assert.match(app,/displayControls\(\)\+notificationMarkup\(\)/);
+  assert.match(app,/sidebarToggle\(\)/);
+});
