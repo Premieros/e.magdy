@@ -466,7 +466,8 @@ a:hover{text-decoration:underline}
 
 
 /* WHITE TEX LIVE COMMAND CENTER — local, accessible, game-inspired microinteractions */
-.top{position:relative;z-index:45;overflow:visible}
+/* Keep all global header controls visible while the page scrolls. */
+.top{position:sticky;top:0;z-index:60;overflow:visible;box-shadow:0 3px 15px rgba(15,30,53,.07)}
 .wt-header-actions{display:flex;align-items:center;gap:12px;min-width:0}
 .wt-bell-zone{position:relative;display:flex;align-items:center}
 .wt-bell{position:relative;display:grid;place-items:center;width:46px;height:46px;
