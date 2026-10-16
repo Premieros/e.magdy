@@ -1,3 +1,4 @@
+import { labels, workStages, stageTargetQuantity } from './workflow.mjs';
 /* Offline factory controls: scoped to one browser, never synced or authenticated. */
 const serial = () => globalThis.crypto?.randomUUID?.() ?? ('w-' + Date.now() + '-' + Math.random().toString(36).slice(2));
 const text = value => String(value ?? '').trim();
@@ -39,15 +40,15 @@ export function stageProgress(db, orderId, stage) {
 export function registerStageWork(db, f) {
   ensureFactoryState(db);
   const order = db.orders.find(x => x.id === f.get('orderId'));
-  if (!order || !['cutting', 'sewing', 'finishing'].includes(order.status)) {
-    throw Error('تسجيل الإنتاج متاح فقط في القص أو الخياطة أو التشطيب');
+  if (!order || !workStages.includes(order.status)) {
+    throw Error('تسجيل الإنتاج متاح فقط في مراحل التشغيل');
   }
   const worker = db.workers.find(x => x.id === f.get('workerId') && x.active);
   if (!worker) throw Error('اختر عاملًا نشطًا');
   const qty = number(f.get('quantity'), 'عدد القطع');
   if (!Number.isSafeInteger(qty)) throw Error('عدد القطع يجب أن يكون صحيحًا');
   const progress = stageProgress(db, order.id, order.status);
-  if (progress.quantity + qty > order.qty) throw Error('إنتاج المرحلة يتجاوز كمية أمر التصنيع');
+  if (progress.quantity + qty > stageTargetQuantity(order)) throw Error('إنتاج المرحلة يتجاوز كمية أمر التصنيع');
   const batchRef = text(f.get('batchRef'));
   if (batchRef && db.workLogs.some(x => x.orderId === order.id && x.stage === order.status && x.batchRef === batchRef)) {
     throw Error('رقم الدفعة مسجل بالفعل لهذه المرحلة');
@@ -55,15 +56,15 @@ export function registerStageWork(db, f) {
   const rate = worker.rate;
   db.workLogs.unshift({ id: serial(), orderId: order.id, workerId: worker.id,
     stage: order.status, qty, rate, cost: money(qty * rate), batchRef, at: stamp() });
-  db.audit.unshift({ id: serial(), at: stamp(), message: 'إنتاج ' + qty + ' قطعة في ' + order.status + ' للأمر ' + order.ref });
+  db.audit.unshift({ id: serial(), at: stamp(), message: 'إنتاج ' + qty + ' قطعة في ' + labels[order.status] + ' للأمر ' + order.ref });
 }
 export function checkStageBeforeAdvance(db, order) {
-  if (!['cutting', 'sewing', 'finishing'].includes(order.status)) return;
+  if (!workStages.includes(order.status)) return;
   const progress = stageProgress(db, order.id, order.status);
   // Legacy orders without work logs retain their existing streamlined workflow.
   // Once tracking starts, the entire stage must be reconciled.
-  if (progress.records && progress.quantity !== order.qty) {
-    throw Error('يجب تسجيل كامل إنتاج المرحلة: المسجل ' + progress.quantity + ' من ' + order.qty);
+  if (progress.records && progress.quantity !== stageTargetQuantity(order)) {
+    throw Error('يجب تسجيل كامل إنتاج المرحلة: المسجل ' + progress.quantity + ' من ' + stageTargetQuantity(order));
   }
 }
 export function receiveFabricRoll(db, f) {
