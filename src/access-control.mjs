@@ -34,7 +34,10 @@ export function ensureAccessConfig(db){
   // Upgrade legacy owners when new permission categories are added without editing custom roles.
   const owner=db.appRoles.find(r=>r?.id==='owner');
   if(owner&&owner.locked&&Array.isArray(owner.permissions)){
-    for(const key of pkeys())if(!owner.permissions.includes(key))owner.permissions.push(key);
+    const newRights=['suppliers.view','suppliers.manage'];
+    const legacyRights=pkeys().filter(key=>!newRights.includes(key));
+    if(legacyRights.every(key=>owner.permissions.includes(key)))
+      for(const key of newRights)if(!owner.permissions.includes(key))owner.permissions.push(key);
   }
   return db;
 }
