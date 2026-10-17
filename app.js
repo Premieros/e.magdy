@@ -643,7 +643,7 @@ if(kind==='stage-work'){let o=order(modal.id);t='تسجيل دفعة: '+esc(labe
 if(kind==='matrix-order'){
   const chosen=db.styles.find(s=>s.id===(modal.id||db.styles[0]?.id))||db.styles[0];
   t='دفعة إنتاج للمقاسات والألوان';
-  form='<label class="field">الموديل<select name="styleId" required><option value="">اختر...</option>'
+  form='<input type="hidden" name="smartWorkflow" value="1"><label class="field">الموديل<select name="styleId" required><option value="">اختر...</option>'
     +db.styles.map(s=>'<option value="'+esc(s.id)+'" '+(s.id===chosen?.id?'selected':'')+'>'+esc(s.name)+'</option>').join('')
     +'</select></label>'
     +'<p class="tips">حدد كمية كل مقاس ولون. الخانات الفارغة أو الصفرية لا تنشئ أوامر. تُنشأ أوامر مستقلة مرتبطة بدفعة واحدة.</p>'
@@ -705,7 +705,7 @@ if(kind==='new-cloud-intake'){
     +'<label class="field">بنود الطلب<textarea name="linesRaw" rows="6" class="intake-lines" required placeholder="قميص رجالي | M | أسود | 12 | 350\nقميص رجالي | L | أسود | 8 | 350"></textarea></label>'
     +'<label class="field">ملاحظات<textarea name="notes" rows="3" class="intake-lines" maxlength="1000"></textarea></label>';
 }
-if(kind==='new-order'){t='أمر إنتاج جديد';form='<div class="form-grid">'+sel('الموديل','styleId',db.styles.map(s=>[s.id,s.name]))+sel('المقاس واللون','variantId',[])+inp('عدد القطع','quantity','number','','required min="1" step="1"')+inp('العميل','customer')+inp('موعد التسليم','due','date')+'</div><p class="tips">لا يتم صرف الخامات إلا عند بدء القص.</p>';}
+if(kind==='new-order'){t='أمر إنتاج جديد';form='<input type="hidden" name="smartWorkflow" value="1"><div class="form-grid">'+sel('الموديل','styleId',db.styles.map(s=>[s.id,s.name]))+sel('المقاس واللون','variantId',[])+inp('عدد القطع','quantity','number','','required min="1" step="1"')+inp('العميل','customer')+inp('موعد التسليم','due','date')+'</div><p class="tips">لا يتم صرف الخامات إلا عند بدء القص.</p>';}
 if(kind==='bom'){let s=style(modal.id);t='الخامات المستخدمة — '+s.name;form='<p class="notes">أدخل الاستهلاك المطلوب لكل قطعة</p>'+db.materials.map(m=>'<label class="bom-line"><span>'+esc(m.name)+' · '+esc(m.unit)+'</span><input type="number" name="bom_'+m.id+'" step="0.0001" min="0" value="'+(s.bom.find(b=>b.materialId===m.id)?.qty||'')+'"></label>').join('');}
 if(kind==='quality'){let o=order(modal.id);t='فحص جودة — '+(style(o.styleId)?.name||'منتج');form='<p class="tips">كمية الأمر '+num(o.qty)+' قطعة. لا يكتمل إلا بمساواة المقبول + المرفوض للكمية.</p><div class="form-grid">'+inp('مقبول','good','number',o.good,'min="0" step="1" required')+inp('مرفوض','reject','number',o.reject,'min="0" step="1" required')+inp('أجور تشغيل إضافية','labor','number',o.labor,'min="0" step="0.01"')+inp('تكاليف إضافية','overhead','number',o.overhead,'min="0" step="0.01"')+'</div>';}
 return '<div class="modal-bg" id="backdrop"><div class="modal" role="dialog" aria-modal="true"><div class="modal-h"><h2>'+t+'</h2>'+btn('×','close')+'</div><form id="entry"><div class="modal-b">'+form+'</div><div class="modal-f">'+btn('إلغاء','close')+'<button type="submit" class="btn primary">حفظ البيانات</button></div></form></div></div>';}
@@ -794,7 +794,19 @@ if(a==='event-order'){
   return;
 }
 if(notificationCenterOpen)notificationCenterOpen=false;
-if(a==='new-supplier'||a==='edit-supplier'){open('supplier',a==='edit-supplier'?oid:'');return;}
+if(a==='open-station'){
+   if(!STATION_STAGES.includes(oid)){toast('القسم غير معروف',true);return;}
+   page='station-'+oid;detail=null;modal=null;location.hash='#/station-'+oid;render();return;
+ }
+ if(a==='smart-handoff'){
+   const current=order(oid);
+   if(!current||!STATION_STAGES.includes(current.status)){toast('أمر التشغيل غير موجود',true);return;}
+   if(!stageChecklist(db,current).complete){toast('أكمل قائمة مهام المرحلة أولًا',true);return;}
+   if(ask('هل تم استكمال المهام والكمية وتسليم الأمر إلى '+labels[stages[stages.indexOf(current.status)+1]]+'؟'))
+     mutator(d=>advance(d,oid),'تم تسليم المرحلة للقسم التالي');
+   return;
+ }
+ if(a==='new-supplier'||a==='edit-supplier'){open('supplier',a==='edit-supplier'?oid:'');return;}
 if(a==='toggle-supplier'){mutator(d=>toggleSupplier(d,oid),'تم تحديث حالة المورد');return;}
 if(a==='pay-supplier'){open('new-finance',oid);return;}
 if(a==='access-new-user'||a==='access-edit-user'){open('access-user',a==='access-edit-user'?oid:'');return;}
@@ -802,7 +814,12 @@ if(a==='access-new-role'||a==='access-edit-role'){open('access-role',a==='access
 if(a==='access-toggle-user'){mutator(d=>toggleUser(d,oid),'تم تحديث حالة المستخدم');return;}
 if(a==='access-remove-role'){if(ask('حذف الدور المخصص؟ يجب ألا يكون مرتبطًا بأي مستخدم.'))mutator(d=>removeRole(d,oid),'تم حذف الدور');return;}
 if(a==='nav'){navigate(oid);if(oid==='cloud-intake'&&cloudIdentity())refreshCloudIntake();}else if(a==='cloud-intake-refresh')refreshCloudIntake();else if(['new-style','new-material','new-receipt','new-roll','new-worker','stage-work','new-order','matrix-order','new-bundle','new-wholesale','ship-wholesale','new-cloud-intake','view-cloud-intake','new-finance','bom','quality'].includes(a))open(a,oid);else if(a==='receipt-for')open('new-receipt',oid);else if(a==='close'){modal=null;render();}else if(a==='show-style'){detail=oid;page='style-detail';render();}else if(a==='show-order'){detail=oid;page='order-detail';render();}else if(a==='show-batch'){detail=oid;page='batch-detail';render();}else if(a==='show-wholesale'){detail=oid;page='wholesale-detail';render();}else if(a==='advance'){if(ask(order(oid).status==='planned'?'سيتم خصم الخامات الآن، هل تؤكد؟':'تأكيد الانتقال للمرحلة التالية؟'))mutator(d=>advance(d,oid),'تم تحديث مرحلة الإنتاج');}else if(['cloud-login','cloud-logout','cloud-save','cloud-restore'].includes(a))handleCloudAction(a);else if(a==='seed')seed();else if(a==='reset'){if(syncWanted){toast('أوقف المزامنة قبل حذف البيانات، حتى لا يُحذف المحتوى من الأجهزة الأخرى',true);return;}if(ask('سيتم حذف كل البيانات المحلية، هل تؤكد؟')&&ask('تأكيد نهائي لحذف كل البيانات؟'))mutator(d=>{Object.assign(d,fresh());},'تم مسح البيانات');}else if(a==='export'){downloadSnapshot(db,'premieros-garments-backup.json');toast('تم بدء تنزيل نسخة البيانات');}});
-document.addEventListener('change',async e=>{if(e.target.matches('[name=styleId]')&&modal?.type==='new-order')setVariants();if(e.target.matches('[name=styleId]')&&['matrix-order','new-wholesale'].includes(modal?.type)){modal.id=e.target.value;render();}if(e.target.id==='import'&&e.target.files[0]){try{if(syncWanted)throw Error('أوقف المزامنة قبل استيراد بيانات من ملف جديد');let value=JSON.parse(await e.target.files[0].text());if(value.version!==1||!['styles','materials','orders','ledger','finished','audit'].every(k=>Array.isArray(value[k])))throw Error('ملف غير متوافق');ensureFactoryState(value);ensureWholesaleState(value);validateWholesaleLedger(value);validateAccountingState(value);validateAccessConfig(value);validateSupplierState(value);if(value.materials.some(m=>!Number.isFinite(m.stock)||m.stock<0)||value.fabricRolls.some(r=>!Number.isFinite(r.remaining)||r.remaining<0||r.remaining>r.received))throw Error('النسخة تحتوي على أرصدة غير صحيحة');if(ask('استبدال جميع البيانات الحالية من النسخة الاحتياطية؟')){localStorage.setItem(KEY,JSON.stringify(value));db=ensureNotifications(value);notificationCenterOpen=false;render();toast('تم الاستيراد');}}catch(err){toast(err.message,true);}}});
+document.addEventListener('change',async e=>{
+  if(e.target.matches('[data-smart-task]')){
+    const orderId=e.target.dataset.order,taskId=e.target.dataset.task,checked=e.target.checked;
+    mutator(d=>toggleStageTask(d,orderId,taskId,checked),'تم تحديث مهمة القسم',true);
+    return;
+  }if(e.target.matches('[name=styleId]')&&modal?.type==='new-order')setVariants();if(e.target.matches('[name=styleId]')&&['matrix-order','new-wholesale'].includes(modal?.type)){modal.id=e.target.value;render();}if(e.target.id==='import'&&e.target.files[0]){try{if(syncWanted)throw Error('أوقف المزامنة قبل استيراد بيانات من ملف جديد');let value=JSON.parse(await e.target.files[0].text());if(value.version!==1||!['styles','materials','orders','ledger','finished','audit'].every(k=>Array.isArray(value[k])))throw Error('ملف غير متوافق');ensureFactoryState(value);ensureWholesaleState(value);validateWholesaleLedger(value);validateAccountingState(value);validateAccessConfig(value);validateSupplierState(value);validateStationState(value);if(value.materials.some(m=>!Number.isFinite(m.stock)||m.stock<0)||value.fabricRolls.some(r=>!Number.isFinite(r.remaining)||r.remaining<0||r.remaining>r.received))throw Error('النسخة تحتوي على أرصدة غير صحيحة');if(ask('استبدال جميع البيانات الحالية من النسخة الاحتياطية؟')){localStorage.setItem(KEY,JSON.stringify(value));db=ensureNotifications(value);notificationCenterOpen=false;render();toast('تم الاستيراد');}}catch(err){toast(err.message,true);}}});
 document.addEventListener('submit',e=>{if(e.target.id!=='entry')return;e.preventDefault();let f=new FormData(e.target),type=modal.type,oid=modal.id;if(type==='new-cloud-intake'){
   try{
     if(db.demoMode)throw Error('عطّل بيانات العرض المحلية قبل إدخال طلبات فعلية');
@@ -825,4 +842,4 @@ window.addEventListener('hashchange',()=>{let newPage=location.hash.replace('#/'
 render();
 }
 
-export const __test={ACCESS_ENFORCED,ensureAccessConfig,validateAccessConfig,ensureSupplierState,validateSupplierState,saveSupplier,toggleSupplier,suppliersSummary,saveUser,toggleUser,saveRole,removeRole,ensureWholesaleState,createWholesaleOrder,dispatchWholesaleOrder,availableFinishedStock,wholesaleProgress,wholesaleOverview,validateWholesaleLedger,fresh,newStyle,newMaterial,receive,setBom,newOrder,advance,quality,ensureFactoryState,ensureAccountingState,validateAccountingState,recordFinanceEntry,accountingSummary,addWorker,registerStageWork,pieceworkCost,stageProgress,receiveFabricRoll,allocateFabricRolls,createProductionMatrix,productionBatches,addCuttingBundle,cuttingBundleStats,requireCuttingBundleBalance};
+export const __test={ACCESS_ENFORCED,ensureAccessConfig,validateAccessConfig,ensureSupplierState,validateSupplierState,saveSupplier,toggleSupplier,suppliersSummary,saveUser,toggleUser,saveRole,removeRole,ensureWholesaleState,createWholesaleOrder,dispatchWholesaleOrder,availableFinishedStock,wholesaleProgress,wholesaleOverview,validateWholesaleLedger,fresh,newStyle,newMaterial,receive,setBom,newOrder,advance,quality,ensureFactoryState,ensureAccountingState,validateAccountingState,recordFinanceEntry,accountingSummary,addWorker,registerStageWork,pieceworkCost,stageProgress,enableSmartWorkflow,toggleStageTask,stageChecklist,validateStationState,receiveFabricRoll,allocateFabricRolls,createProductionMatrix,productionBatches,addCuttingBundle,cuttingBundleStats,requireCuttingBundleBalance};
