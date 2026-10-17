@@ -53,6 +53,7 @@ function afterSyncCommit(){
   }
 }
 function receiveRemoteData(data){
+  if(modal)throw Error('هناك تحديث من جهاز آخر. احفظ النموذج المفتوح أو أغلقه أولًا، ثم أعد المزامنة');
   const next=validateCloudSnapshot(data);
   validateWholesaleLedger(next);
   if(JSON.stringify(db)===JSON.stringify(next))return;
