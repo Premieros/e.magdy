@@ -31,6 +31,7 @@ export function createCloudSync({getLocal,applyRemote,load,save,onState=()=>{}})
     inFlight=true;update('checking');
     try{
       const initial=current(),remote=await load();
+      if(remote&&(typeof remote.updatedAt!=='string'||!remote.updatedAt))throw Error('النسخة السحابية لا تحتوي على تاريخ تحديث صالح');
       if(current()!==initial){pending=remote;return update('conflict','تغيرت بيانات الجهاز أثناء التحقق؛ أعد المحاولة');}
       if(remote&&serializeSnapshot(remote.data)===initial){
         return activate(remote.updatedAt,remote.data);
