@@ -18,7 +18,7 @@ export function createCloudSync({getLocal,applyRemote,load,save,onState=()=>{}})
   const state=()=>({mode,revision,lastSynced,error,hasRemote:!!pending,
     remoteUpdatedAt:pending?.updatedAt||null,hasLocalData:hasBusinessData(getLocal())});
   const notify=()=>{onState(state());return state();};
-  const update=(next,reason='')=>{mode=next;error=reason;return notify();};
+  const update=(next,reason='')=>{const changed=mode!==next||error!==reason;mode=next;error=reason;return changed?notify():state();};
   const current=()=>serializeSnapshot(getLocal());
   const activate=(rev,data)=>{
     revision=rev;baseline=serializeSnapshot(data);
