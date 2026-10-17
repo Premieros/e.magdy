@@ -11,7 +11,7 @@ export const serializeSnapshot=db=>JSON.stringify(db);
 export const hasBusinessData=db=>([
   'styles','materials','orders','ledger','finished','audit',
   'workers','workLogs','fabricRolls','cuttingBundles','wholesaleOrders',
-  'finishedDispatches','financeEntries','appUsers'
+  'finishedDispatches','financeEntries','appUsers','suppliers'
 ]).some(key=>Array.isArray(db?.[key])&&db[key].length>0);
 export function createCloudSync({getLocal,applyRemote,load,save,onState=()=>{}}){
   let mode='off',revision=null,baseline=null,pending=null,inFlight=false,error='',lastSynced='';
