@@ -46,6 +46,7 @@ jobs:
           node --check src/production-planning.mjs
           node --check src/wholesale.mjs
           node --check src/demo-data.mjs
+          node --check src/demo-onboarding.mjs
           node --check src/cloud-intake.mjs
       - name: Run production and cloud-backup tests
         run: npm test
@@ -53,7 +54,7 @@ jobs:
         run: |
           mkdir -p site/src
           cp index.html styles.css app.js app-icon.svg site/
-          cp src/workflow.mjs src/smart-workflow.mjs src/smart-workflow-ui.mjs src/analytics.mjs src/accounting.mjs src/accounting-ui.mjs src/suppliers.mjs src/suppliers-ui.mjs src/access-control.mjs src/access-ui.mjs src/i18n.mjs src/notifications.mjs src/factory-ops.mjs src/cloud-backup.mjs src/cloud-sync.mjs src/production-planning.mjs src/wholesale.mjs src/demo-data.mjs src/cloud-intake.mjs site/src/
+          cp src/workflow.mjs src/smart-workflow.mjs src/smart-workflow-ui.mjs src/analytics.mjs src/accounting.mjs src/accounting-ui.mjs src/suppliers.mjs src/suppliers-ui.mjs src/access-control.mjs src/access-ui.mjs src/i18n.mjs src/notifications.mjs src/factory-ops.mjs src/cloud-backup.mjs src/cloud-sync.mjs src/production-planning.mjs src/wholesale.mjs src/demo-data.mjs src/demo-onboarding.mjs src/cloud-intake.mjs site/src/
           touch site/.nojekyll
           test -s site/index.html
           test -s site/app-icon.svg
@@ -77,6 +78,7 @@ jobs:
           test -s site/src/production-planning.mjs
           test -s site/src/wholesale.mjs
           test -s site/src/demo-data.mjs
+          test -s site/src/demo-onboarding.mjs
           test -s site/src/cloud-intake.mjs
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

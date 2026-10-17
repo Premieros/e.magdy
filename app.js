@@ -17,6 +17,7 @@ import { createCloudSync, SYNC_INTERVAL_MS } from './src/cloud-sync.mjs';
 import { createProductionMatrix, productionBatches, addCuttingBundle, cuttingBundleStats, requireCuttingBundleBalance } from './src/production-planning.mjs';
 import { ensureWholesaleState, createWholesaleOrder, dispatchWholesaleOrder, availableFinishedStock, wholesaleProgress, wholesaleOverview, validateWholesaleLedger } from './src/wholesale.mjs';
 import { populateDemoData, isDemoEligible, demoCoverage } from './src/demo-data.mjs';
+import { initializeFirstVisitDemo } from './src/demo-onboarding.mjs';
 import { ensureFactoryState, addWorker, registerStageWork, pieceworkCost, stageProgress,
   checkStageBeforeAdvance, receiveFabricRoll, allocateFabricRolls } from './src/factory-ops.mjs';
 const KEY='premieros-garments-local-v1';
@@ -37,7 +38,11 @@ const navIcon=token=>'<svg viewBox="0 0 24 24" width="20" height="20" aria-hidde
 
 const fresh=()=>ensureAccessConfig({version:1,styles:[],materials:[],orders:[],ledger:[],finished:[],audit:[],workers:[],workLogs:[],fabricRolls:[],cuttingBundles:[],wholesaleOrders:[],finishedDispatches:[],notifications:[],financeEntries:[],suppliers:[],stageChecklists:[]});
 let db;
-try{db=JSON.parse(localStorage.getItem(KEY)||'null')||fresh();if(db.version!==1)throw Error('نسخة غير متوافقة');ensureFactoryState(db);ensureWholesaleState(db);ensureNotifications(db);validateAccountingState(db);validateAccessConfig(db);validateSupplierState(db);validateStationState(db);}
+try{
+  const firstVisit=initializeFirstVisitDemo({storage:localStorage,key:KEY,createFresh:fresh,
+    populate:d=>populateDemoData(d,{newMaterial,newStyle,receive,setBom,newOrder,advance,quality})});
+  db=firstVisit||JSON.parse(localStorage.getItem(KEY)||'null')||fresh();
+  if(db.version!==1)throw Error('نسخة غير متوافقة');ensureFactoryState(db);ensureWholesaleState(db);ensureNotifications(db);validateAccountingState(db);validateAccessConfig(db);validateSupplierState(db);validateStationState(db);}
 catch(e){db=fresh();}
 let ui=readUI();applyDocumentUI(ui);
 let sidebarCollapsed=readSidebarCollapsed();
