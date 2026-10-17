@@ -1,4 +1,5 @@
 import { validateAccountingState } from './accounting.mjs';
+import { validateSupplierState } from './suppliers.mjs';
 import { ensureAccessConfig, validateAccessConfig } from './access-control.mjs';
 /* PremierOS Garments manual cloud backup only.
  * AMMCO is a shared Supabase instance; no access to AMMCO business tables.
@@ -10,7 +11,7 @@ const PUBLISHABLE_KEY = 'sb_publishable_ktXP7ss_qK6hZFmKybHw8A_89guYEK9';
 let session = null; // Deliberately memory-only: credentials/tokens are not persisted in localStorage.
 
 const REQUIRED_ARRAYS = ['styles', 'materials', 'orders', 'ledger', 'finished', 'audit'];
-const OPTIONAL_ARRAYS = ['workers', 'workLogs', 'fabricRolls', 'cuttingBundles', 'wholesaleOrders', 'finishedDispatches', 'notifications', 'financeEntries', 'appRoles', 'appUsers'];
+const OPTIONAL_ARRAYS = ['workers', 'workLogs', 'fabricRolls', 'cuttingBundles', 'wholesaleOrders', 'finishedDispatches', 'notifications', 'financeEntries', 'appRoles', 'appUsers', 'suppliers'];
 
 export function validateCloudSnapshot(payload) {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload) || payload.version !== 1) {
@@ -37,6 +38,7 @@ export function validateCloudSnapshot(payload) {
   }
   validateAccountingState(parsed);
   validateAccessConfig(parsed);
+  validateSupplierState(parsed);
   return parsed;
 }
 
