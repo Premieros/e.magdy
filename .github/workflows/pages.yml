@@ -29,6 +29,8 @@ jobs:
         run: |
           node --check app.js
           node --check src/workflow.mjs
+          node --check src/smart-workflow.mjs
+          node --check src/smart-workflow-ui.mjs
           node --check src/analytics.mjs
           node --check src/accounting.mjs
           node --check src/accounting-ui.mjs
@@ -51,7 +53,7 @@ jobs:
         run: |
           mkdir -p site/src
           cp index.html styles.css app.js app-icon.svg site/
-          cp src/workflow.mjs src/analytics.mjs src/accounting.mjs src/accounting-ui.mjs src/suppliers.mjs src/suppliers-ui.mjs src/access-control.mjs src/access-ui.mjs src/i18n.mjs src/notifications.mjs src/factory-ops.mjs src/cloud-backup.mjs src/cloud-sync.mjs src/production-planning.mjs src/wholesale.mjs src/demo-data.mjs src/cloud-intake.mjs site/src/
+          cp src/workflow.mjs src/smart-workflow.mjs src/smart-workflow-ui.mjs src/analytics.mjs src/accounting.mjs src/accounting-ui.mjs src/suppliers.mjs src/suppliers-ui.mjs src/access-control.mjs src/access-ui.mjs src/i18n.mjs src/notifications.mjs src/factory-ops.mjs src/cloud-backup.mjs src/cloud-sync.mjs src/production-planning.mjs src/wholesale.mjs src/demo-data.mjs src/cloud-intake.mjs site/src/
           touch site/.nojekyll
           test -s site/index.html
           test -s site/app-icon.svg
@@ -59,6 +61,8 @@ jobs:
           grep -q 'family=Inter' site/index.html
           grep -q 'PREMIEROS DESIGN LANGUAGE' site/styles.css
           test -s site/src/workflow.mjs
+          test -s site/src/smart-workflow.mjs
+          test -s site/src/smart-workflow-ui.mjs
           test -s site/src/analytics.mjs
           test -s site/src/accounting.mjs
           test -s site/src/accounting-ui.mjs
