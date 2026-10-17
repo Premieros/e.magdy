@@ -13,6 +13,8 @@ jobs:
           node-version: '22'
       - run: node --check app.js
       - run: node --check src/analytics.mjs
+      - run: node --check src/smart-workflow.mjs
+      - run: node --check src/smart-workflow-ui.mjs
       - run: node --check src/accounting.mjs
       - run: node --check src/accounting-ui.mjs
       - run: node --check src/suppliers.mjs
