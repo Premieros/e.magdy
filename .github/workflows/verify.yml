@@ -21,6 +21,7 @@ jobs:
       - run: node --check src/notifications.mjs
       - run: node --check src/factory-ops.mjs
       - run: node --check src/cloud-backup.mjs
+      - run: node --check src/cloud-sync.mjs
       - run: node --check src/production-planning.mjs
       - run: node --check src/wholesale.mjs
       - run: node --check src/demo-data.mjs

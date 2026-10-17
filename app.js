@@ -7,8 +7,9 @@ import { accountingPageMarkup, financeEntryForm } from './src/accounting-ui.mjs'
 import { ensureAccessConfig, validateAccessConfig, saveUser, toggleUser, saveRole, removeRole, ACCESS_ENFORCED } from './src/access-control.mjs';
 import { accessPage, accessUserForm, accessRoleForm } from './src/access-ui.mjs';
 import { buildNotifications, newNotification, ensureNotifications, appendNotifications, unreadCount, notificationIcons, LOW_STOCK_LEVEL } from './src/notifications.mjs';
-import { cloudIdentity, cloudLogin, cloudLogout, cloudSave, cloudLoad, validateCloudSnapshot, cloudFactoryList, cloudIntakeOrders, cloudCreateIntakeOrder } from './src/cloud-backup.mjs';
+import { cloudIdentity, cloudLogin, cloudLogout, cloudSave, cloudLoad, cloudSaveIfUnchanged, validateCloudSnapshot, cloudFactoryList, cloudIntakeOrders, cloudCreateIntakeOrder } from './src/cloud-backup.mjs';
 import { buildIntakeOrder, intakeOrderTotal } from './src/cloud-intake.mjs';
+import { createCloudSync, SYNC_INTERVAL_MS } from './src/cloud-sync.mjs';
 import { createProductionMatrix, productionBatches, addCuttingBundle, cuttingBundleStats, requireCuttingBundleBalance } from './src/production-planning.mjs';
 import { ensureWholesaleState, createWholesaleOrder, dispatchWholesaleOrder, availableFinishedStock, wholesaleProgress, wholesaleOverview, validateWholesaleLedger } from './src/wholesale.mjs';
 import { populateDemoData, isDemoEligible, demoCoverage } from './src/demo-data.mjs';
@@ -40,6 +41,101 @@ const ask=message=>globalThis.confirm(translateText(message,ui.lang));
 let cloudFactoriesState=[],cloudIntakeState=[],cloudFactorySelected='',cloudIntakeMessage='';
 let notificationCenterOpen=false;
 let page=(typeof location!=='undefined'?location.hash:'#/dashboard'||'#/dashboard').replace('#/','')||'dashboard',detail=null,modal=null,search='';
+
+const SYNC_WANTED_KEY='white-tex-sync-opt-in-v1';
+let syncWanted=false;
+try{syncWanted=localStorage.getItem(SYNC_WANTED_KEY)==='1';}catch{}
+let syncTimer=null;
+function afterSyncCommit(){
+  if(syncWanted&&cloudIdentity()&&sync.state().mode==='active'){
+    clearTimeout(syncTimer);
+    syncTimer=window.setTimeout(()=>sync.tick(),1200);
+  }
+}
+function receiveRemoteData(data){
+  if(modal)throw Error('هناك تحديث من جهاز آخر. احفظ النموذج المفتوح أو أغلقه أولًا، ثم أعد المزامنة');
+  const next=validateCloudSnapshot(data);
+  validateWholesaleLedger(next);
+  if(JSON.stringify(db)===JSON.stringify(next))return;
+  localStorage.setItem(KEY,JSON.stringify(next));
+  db=next;modal=null;detail=null;notificationCenterOpen=false;
+  render();
+  toast('تم تحديث بيانات الجهاز من النسخة السحابية');
+}
+const sync=createCloudSync({
+  getLocal:()=>db,applyRemote:receiveRemoteData,load:cloudLoad,save:cloudSaveIfUnchanged,
+  onState:()=>{if((page==='settings'||page==='dashboard')&&!modal)render();}
+});
+function setSyncWanted(value){
+  syncWanted=Boolean(value);
+  try{localStorage.setItem(SYNC_WANTED_KEY,syncWanted?'1':'0');}catch{}
+  if(!syncWanted)sync.stop();
+}
+async function runSyncAction(action){
+  if(!cloudIdentity()){toast('لربط الأجهزة، وصّل الحساب السحابي من صفحة إدارة البيانات أولًا',true);return;}
+  if(db.demoMode&&action!=='sync-cloud'&&action!=='sync-stop'){
+    toast('أوقف بيانات العرض التجريبية قبل مزامنة بيانات العمل',true);return;
+  }
+  try{
+    if(action==='sync-start'){
+      setSyncWanted(true);
+      const state=await sync.begin();
+      if(state.mode==='choose')toast('اختر نسخة السحابة أو بيانات هذا الجهاز لبدء المزامنة');
+      if(state.mode==='offline')toast(state.error,true);
+    }else if(action==='sync-cloud'){
+      if(!ask('استبدال بيانات هذا الجهاز بالنسخة السحابية؟ سننزّل نسخة احتياطية قبل الاستبدال.'))return;
+      if(db.styles.length||db.materials.length||db.orders.length||db.financeEntries.length)downloadSnapshot(db,'white-tex-before-device-sync.json');
+      const state=await sync.useCloud();
+      if(state.mode!=='active')toast(state.error||'لم تبدأ المزامنة بعد',true);
+    }else if(action==='sync-local'){
+      if(!ask('استبدال بيانات السحابة ببيانات هذا الجهاز؟ ستُحفظ النسخة السحابية القديمة في ملف احتياطي قبل التغيير.'))return;
+      const remote=await cloudLoad();
+      if(remote)downloadSnapshot(remote.data,'white-tex-remote-before-overwrite.json');
+      const state=await sync.useLocal();
+      if(state.mode!=='active')toast(state.error||'لم يتم تحديث السحابة',true);
+    }else if(action==='sync-now'){
+      const state=await sync.tick();
+      if(state.mode==='conflict')toast(state.error,true);
+      else if(state.mode==='offline')toast('تعذر الاتصال؛ البيانات محفوظة على هذا الجهاز',true);
+      else toast('تم فحص المزامنة');
+    }else if(action==='sync-recheck'){
+      const state=await sync.begin();
+      if(state.mode==='offline')toast(state.error,true);
+    }else if(action==='sync-stop'){
+      setSyncWanted(false);
+      toast('أُوقفت المزامنة على هذا الجهاز فقط');
+    }
+  }catch(error){toast(error.message||'تعذر إكمال المزامنة',true);}
+  render();
+}
+function syncPanel(){
+  const state=sync.state();
+  const account=cloudIdentity();
+  const connected=!!account;
+  const mode=connected?state.mode:'off';
+  const active=connected&&syncWanted&&mode==='active';
+  const labels={
+    active:'متصل — مزامنة تلقائية',checking:'جارٍ فحص النسخ',
+    choose:'اختر النسخة التي تريد اعتمادها',conflict:'تعارض: توجد تحديثات مختلفة',
+    offline:'تعذر الاتصال حاليًا',off:'المزامنة غير مفعلة'
+  };
+  const message=!connected?'للمزامنة تحتاج ربط الحساب السحابي الموجود، مرة على كل جهاز. الموقع نفسه يظل مفتوحًا للجميع دون تسجيل دخول.'
+    :active?'تُراجع التغييرات تلقائيًا كل 20 ثانية وعند العودة إلى الصفحة. لا تحتاج إلى نقل الملفات بين الأجهزة.'
+    :mode==='choose'||mode==='conflict'?'هناك نسختان محتملتان للبيانات؛ لن نبدّل أيًا منهما دون اختيارك.'
+    :'يمكنك بدء المزامنة بين أجهزتك التي تستخدم الحساب السحابي نفسه.';
+  return '<section class="card wt-sync-card"><div class="wt-sync-head"><div><h3>مزامنة البيانات بين الأجهزة</h3>'
+    +'<p>'+esc(message)+'</p></div><span class="wt-sync-state '+(active?'wt-sync-active':'')+'">'+esc(labels[mode])+'</span></div>'
+    +(state.error&&connected?'<p class="wt-sync-error">'+esc(state.error)+'</p>':'')
+    +(connected?'<div class="actions">'
+      +(mode==='off'?btn('تفعيل المزامنة','sync-start','','primary'):'')
+      +(mode==='choose'||mode==='conflict'?btn('استخدام بيانات السحابة','sync-cloud','','primary')+btn('رفع بيانات هذا الجهاز','sync-local')+btn('إعادة الفحص','sync-recheck'):'')
+      +(active?btn('مزامنة الآن','sync-now','','primary'):'')
+      +(mode==='offline'?btn('إعادة المحاولة','sync-recheck','','primary'):'')
+      +(syncWanted?btn('إيقاف المزامنة','sync-stop'):'')
+      +'</div>':'<p class="wt-sync-hint">اذهب إلى قسم النسخ السحابي أدناه، ثم أدخل بيانات الحساب المخوّل بالدخول إلى Supabase. لا يلزم تسجيل دخول لتصفح الموقع.</p>')
+    +'<p class="wt-sync-hint">مهم: لا تتم المزامنة بين حسابات سحابية مختلفة، ولا أثناء إغلاق الموقع أو انتهاء جلسة السحابة. إذا عدّل جهازان البيانات في الوقت نفسه ستتوقف المزامنة لحماية البيانات من الاستبدال.</p></section>';
+}
+
 const friendlyText=value=>String(value??'').replace(/\bWO-[A-Z0-9-]+\b/gi,'أمر تصنيع').replace(/\bSO-[A-Z0-9-]+\b/gi,'طلب جملة').replace(/\bDEL-[A-Z0-9-]+\b/gi,'إذن تسليم');
 const esc=x=>String(x??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
 const id=()=>crypto.randomUUID();
@@ -67,7 +163,7 @@ function persistNotifications(change){
     change(next.notifications);
     localStorage.setItem(KEY,JSON.stringify(next));
     db=next;
-    render();
+    render();afterSyncCommit();
   }catch(error){toast(error.message||'تعذر حفظ حالة الإشعارات',true);}
 }
 function showFlying(event){
@@ -93,7 +189,7 @@ function recordLocalNotice(event){
     appendNotifications(next,[event]);
     localStorage.setItem(KEY,JSON.stringify(next));
     db=next;
-    render();
+    render();afterSyncCommit();
     showFlying(event);
   }catch(error){toast(error.message||'تعذر حفظ التنبيه',true);}
 }
@@ -108,7 +204,7 @@ function mutator(fn,success='تم الحفظ'){
       :buildNotifications(db,d);
     appendNotifications(d,events);
     localStorage.setItem(KEY,JSON.stringify(d));
-    db=d;modal=null;render();
+    db=d;modal=null;render();afterSyncCommit();
     if(events.length){
       events.slice(0,2).forEach(showFlying);
       if(events.length>2)toast('تم تسجيل '+events.length+' حركات في مركز الإشعارات');
@@ -212,6 +308,7 @@ function dashboard(){
   const qualityLabel=stats.qualityRate===null?'—':num(stats.qualityRate)+'٪';
   return heading('لوحة تحكم White tex','الأرقام والرسوم البيانية تشرح أداء المصنع ببساطة، دون تفاصيل تقنية.',
       btn('＋ أمر تصنيع','new-order','','primary'))
+    +'<div class="wt-sync-banner"><div><strong>'+(syncWanted&&cloudIdentity()&&sync.state().mode==='active'?'المزامنة بين أجهزتك مفعلة':'شاهد بياناتك على أجهزتك المختلفة')+'</strong><p>'+(syncWanted&&cloudIdentity()&&sync.state().mode==='active'?'تنتقل التغييرات عبر الحساب السحابي المرتبط، مع مراجعة التحديثات كل 20 ثانية.':'ربط الجهاز بالحساب السحابي يجعل الإنتاج والمخزون والحسابات تظهر على أجهزتك الأخرى بعد تفعيل المزامنة.')+'</p></div>'+btn('إعداد المزامنة','nav','settings','primary')+'</div>'
     +'<section class="wt-command-hero"><div class="wt-command-main">'
     +'<span class="wt-command-kicker"><i aria-hidden="true"></i> WHITE TEX · PRODUCTION CONTROL</span>'
     +'<h2>صورة واضحة عن أداء مصنعك<span class="wt-command-dot">.</span></h2>'
@@ -253,7 +350,7 @@ function dashboard(){
     +'<button class="wt-text-button" data-act="nav" data-id="materials">عرض المخزون ↗</button></div>'
     +(low.length?low.slice(0,8).map(m=>'<div class="wt-stock-warning"><span aria-hidden="true">⚠</span><strong>'+esc(m.name)+'</strong><b>'+num(m.stock)+' '+esc(m.unit)+'</b></div>').join('')
       :'<div class="wt-inventory-ok">✓ لا توجد خامات تحت مستوى التنبيه</div>')
-    +'<p class="wt-small-note">تُحسب الرسوم والمؤشرات من بيانات هذا المتصفح فقط، ولا تعني وجود مزامنة مباشرة مع الأجهزة الأخرى.</p></section>';
+    +'<p class="wt-small-note">'+(syncWanted&&cloudIdentity()&&sync.state().mode==='active'?'هذه المؤشرات مأخوذة من آخر نسخة تمت مزامنتها لهذا الجهاز.':'هذه المؤشرات من بيانات هذا الجهاز فقط. فعّل المزامنة الآمنة لعرض آخر التغييرات على أجهزتك الأخرى.')+'</p></section>';
 }
 function stylesPage(){let rows=db.styles.filter(s=>(s.name+s.code+s.category).toLowerCase().includes(search.toLowerCase()));return heading('الموديلات والمنتجات','كل موديل مرتب حسب المقاس واللون.',btn('＋ إضافة موديل','new-style','','primary'))+'<div class="toolbar"><input id="search" value="'+esc(search)+'" placeholder="ابحث باسم المنتج..."><span class="muted">'+num(db.styles.length)+' موديل</span></div>'+(rows.length?'<div class="products">'+rows.map(s=>'<article class="product"><div class="product-head">♧</div><div class="product-body"><small class="eyebrow">'+esc(s.category)+'</small><h3>'+esc(s.name)+'</h3><p>'+num(s.variants.length)+' متغير · '+esc(s.season)+'</p><div class="product-footer"><strong>'+cur(s.sellingPrice)+'</strong>'+btn('التفاصيل','show-style',s.id)+'</div></div></article>').join('')+'</div>':empty('لا توجد موديلات','أضف أول موديل للتصنيع.'));}
 function materialsPage(){return heading('الأقمشة والخامات','تتبع مخزون الخام والاستلام وتكلفة الوحدة.',btn('＋ استلام خامات','new-receipt')+btn('＋ إضافة خامة','new-material','','primary'))+'<section class="card">'+(db.materials.length?table(['الخامة','النوع','الكمية المتوفرة','تكلفة الوحدة','قيمة المخزون',''],db.materials.map(m=>'<tr>'+td('<b>'+esc(m.name)+'</b>')+td(esc(m.category))+td('<b class="'+(m.stock<25?'bad':'good')+'">'+num(m.stock)+' '+esc(m.unit)+'</b>')+td(cur(m.avgCost))+td(cur(m.stock*m.avgCost))+td('<button class="rowbtn" data-act="receipt-for" data-id="'+m.id+'">استلام</button>')+'</tr>').join('')):empty('لا توجد خامات','ابدأ بتعريف قماش أو خامة.'))+'</section>';}
@@ -263,10 +360,10 @@ function reportsPage(){let data=db.styles.flatMap(s=>s.variants.map(v=>({...v,na
 function settingsPage(){
   const account=cloudIdentity();
   const cloud=account
-    ? '<p class="notes">مسجّل بحساب <b>'+esc(account.email)+'</b>. النسخ السحابي يدوي وليس مزامنة فورية بين الأجهزة.</p>'
-      +'<div class="actions">'+(db.demoMode?'<p class="tips">نسخة عرض: رفع بيانات التجربة إلى السحابة معطّل لمنع خلطها بالبيانات الحقيقية.</p>':btn('رفع نسخة الجهاز إلى السحابة','cloud-save','','primary'))
-      +btn('استرجاع نسخة السحابة','cloud-restore')+btn('تسجيل الخروج','cloud-logout')+'</div>'
-    : '<p class="notes">يمكن استخدام بريد وكلمة مرور لحساب موجود في Supabase الخاص بمشروع AMMCO. لا يُنشئ هذا النظام حسابات جديدة، ولا يقرأ بيانات AMMCO.</p>'
+    ? '<p class="notes">مسجّل بالحساب السحابي <b>'+esc(account.email)+'</b>. يمكنك تفعيل مزامنة الأجهزة في القسم التالي أو استخدام النسخ اليدوي.</p>'
+      +'<div class="actions">'+(db.demoMode?'<p class="tips">نسخة عرض: رفع بيانات التجربة إلى السحابة معطّل لمنع خلطها بالبيانات الحقيقية.</p>':syncWanted?'':btn('رفع نسخة الجهاز إلى السحابة','cloud-save','','primary'))
+      +(syncWanted?'':btn('استرجاع نسخة السحابة','cloud-restore'))+btn('تسجيل الخروج','cloud-logout')+'</div>'
+    : '<p class="notes">وصّل حساب Supabase المخوّل في مشروع White tex الحالي، لتتمكن من مزامنة بيانات العمل بين أجهزتك. يبقى استخدام الموقع دون تسجيل دخول.</p>'
       +'<div class="form-grid"><label class="field">البريد الإلكتروني<input id="cloud-email" type="email" autocomplete="username" required></label>'
       +'<label class="field">كلمة المرور<input id="cloud-password" type="password" autocomplete="current-password" required></label></div>'
       +btn('تسجيل الدخول للسحابة','cloud-login','','primary');
@@ -276,9 +373,9 @@ function settingsPage(){
     +btn('↓ تنزيل نسخة JSON','export','','primary')
     +'<p><input id="import" type="file" accept=".json,application/json"></p></section>'
     +'<section class="card"><h3>النسخ الاحتياطي السحابي — Supabase</h3>'
-    +'<p class="notes">نسخة مستقلة لكل مستخدم داخل جدول خاص بالملابس. الحفظ والاسترجاع يتمان يدويًا فقط.</p>'
+    +'<p class="notes">النسخ اليدوي متاح، ويمكن تفعيل المزامنة الاختيارية في القسم الموجود أدناه. لكل حساب سحابي نسخته المستقلة.</p>'
     +cloud+'</section>'
-    +'<section class="card"><h3>بيانات عرض شاملة لجميع الشاشات</h3>'
+    +syncPanel()+'<section class="card"><h3>بيانات عرض شاملة لجميع الشاشات</h3>'
     +'<p class="notes">موديلات وخامات ورولات وعمّال ودفعات قص وأوامر إنتاج في كل مرحلة ونتائج جودة ومخزون تام وطلبات جملة وتسليمات وتقارير. جميعها <b>افتراضية</b> وتُحمّل فقط عندما لا توجد بيانات في المتصفح.</p>'
     +(isDemoEligible(db)?btn('تحميل بيانات تجربة شاملة','seed','','primary'):'<p class="tips">توجد بيانات حاليًا؛ للحفاظ عليها لا يمكن خلطها ببيانات العرض. يمكنك تنزيل نسخة JSON ثم إعادة ضبط المتصفح إن أردت تجربة جديدة.</p>')+'</section>'
     +'<section class="card"><h3>حذف البيانات</h3>'
@@ -486,7 +583,7 @@ const displayControls=()=>'<div class="wt-display-switches" role="group" aria-la
   +'<button type="button" class="wt-display-btn wt-lang-btn" data-act="toggle-lang" aria-label="'+(ui.lang==='ar'?'Switch to English':'التبديل إلى العربية')+'" title="'+(ui.lang==='ar'?'English':'العربية')+'"><span aria-hidden="true">◎</span><b>'+(ui.lang==='ar'?'EN':'عربي')+'</b></button></div>';
 const sidebarToggle=()=>'<button type="button" class="wt-sidebar-toggle" data-act="toggle-sidebar" aria-controls="wt-sidebar" aria-expanded="'+(!sidebarCollapsed)+'" aria-label="'+(sidebarCollapsed?(ui.lang==='ar'?'فتح القائمة الجانبية':'Expand sidebar'):(ui.lang==='ar'?'طي القائمة الجانبية':'Collapse sidebar'))+'" title="'+(sidebarCollapsed?(ui.lang==='ar'?'فتح القائمة':'Expand menu'):(ui.lang==='ar'?'طي القائمة':'Collapse menu'))+'"><svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span class="wt-sidebar-toggle-text">'+(sidebarCollapsed?(ui.lang==='ar'?'فتح القائمة':'Expand'):(ui.lang==='ar'?'طي القائمة':'Collapse'))+'</span></button>';
 const views={users:usersPage,accounting:accountingPage,dashboard,styles:stylesPage,materials:materialsPage,rolls:rollsPage,workers:workersPage,orders:ordersPage,batches:batchesPage,'batch-detail':batchDetail,quality:qualityPage,wholesale:wholesalePage,'wholesale-detail':wholesaleDetail,'cloud-intake':cloudIntakePage,reports:reportsPage,settings:settingsPage,'style-detail':styleDetail,'order-detail':orderDetail};
-function render(){const menus=[['dashboard','⌂','الرئيسية'],['styles','◈','الموديلات والمنتجات'],['materials','▤','الأقمشة والخامات'],['rolls','◧','رولات الأقمشة'],['workers','♙','العمال والإنتاجية'],['orders','▣','أوامر الإنتاج'],['batches','◈','دفعات المقاسات'],['quality','◉','مراقبة الجودة'],['wholesale','▧','بيع الجملة والتسليم'],['cloud-intake','▣','طلبات العملاء السحابية'],['reports','▥','التقارير'],['accounting','▥','الحسابات'],['users','♙','المستخدمون والصلاحيات'],['settings','⚙','النسخ الاحتياطي']];document.getElementById('app').innerHTML='<div class="layout '+(sidebarCollapsed?'sidebar-collapsed':'')+'"><aside id="wt-sidebar" class="side" aria-label="'+(ui.lang==='ar'?'القائمة الرئيسية':'Main navigation')+'"><div class="logo"><span class="logo-icon" aria-hidden="true">WT</span><span class="logo-name">White<span class="logo-accent">tex</span><small>TEXTILE OPERATIONS</small></span></div>'+menus.map(v=>'<button class="nav '+(page===v[0]?'on':'')+'" data-act="nav" data-id="'+v[0]+'" title="'+esc(ui.lang==='en'?translateText(v[2],ui.lang):v[2])+'" aria-label="'+esc(ui.lang==='en'?translateText(v[2],ui.lang):v[2])+'" '+(page===v[0]?'aria-current="page"':'')+'><span class="nav-icon">'+navIcon(v[1])+'</span><span class="nav-label">'+v[2]+'</span></button>').join('')+'<div class="side-note">● وضع محلي<br>نسخ سحابي يدوي اختياري<br>لا يوجد تزامن فوري</div></aside><main class="main"><header class="top"><div class="wt-top-leading">'+sidebarToggle()+'<span class="top-crumb"><span class="brand-mini">WHITE TEX</span> <span class="top-separator">/</span> <strong>إدارة الإنتاج</strong></span></div><div class="wt-header-actions">'+displayControls()+notificationMarkup()+'<span class="status"><span class="status-dot"></span> '+(db.demoMode?'وضع عرض تجريبي':'نسخة تجريبية · نسخ سحابي يدوي')+'</span></div></header><div class="content">'+(db.demoMode?'<div class="demo-banner"><strong>بيانات افتراضية للعرض</strong> — جميع الموديلات والعملاء والعمال والطلبات المعروضة أمثلة غير حقيقية. لتجهيز عميل فعلي، احفظ النسخة المحلية ثم امسح بيانات العرض وأنشئ بياناته منفصلة.</div>':'')+(views[page]||dashboard)()+'<p class="foot">White tex · إدارة المصنع · Powered by PremierOS Garments</p></div></main></div>'+renderModal();translateFragment(document.getElementById('app'),ui.lang);}
+function render(){const menus=[['dashboard','⌂','الرئيسية'],['styles','◈','الموديلات والمنتجات'],['materials','▤','الأقمشة والخامات'],['rolls','◧','رولات الأقمشة'],['workers','♙','العمال والإنتاجية'],['orders','▣','أوامر الإنتاج'],['batches','◈','دفعات المقاسات'],['quality','◉','مراقبة الجودة'],['wholesale','▧','بيع الجملة والتسليم'],['cloud-intake','▣','طلبات العملاء السحابية'],['reports','▥','التقارير'],['accounting','▥','الحسابات'],['users','♙','المستخدمون والصلاحيات'],['settings','⚙','النسخ الاحتياطي']];document.getElementById('app').innerHTML='<div class="layout '+(sidebarCollapsed?'sidebar-collapsed':'')+'"><aside id="wt-sidebar" class="side" aria-label="'+(ui.lang==='ar'?'القائمة الرئيسية':'Main navigation')+'"><div class="logo"><span class="logo-icon" aria-hidden="true">WT</span><span class="logo-name">White<span class="logo-accent">tex</span><small>TEXTILE OPERATIONS</small></span></div>'+menus.map(v=>'<button class="nav '+(page===v[0]?'on':'')+'" data-act="nav" data-id="'+v[0]+'" title="'+esc(ui.lang==='en'?translateText(v[2],ui.lang):v[2])+'" aria-label="'+esc(ui.lang==='en'?translateText(v[2],ui.lang):v[2])+'" '+(page===v[0]?'aria-current="page"':'')+'><span class="nav-icon">'+navIcon(v[1])+'</span><span class="nav-label">'+v[2]+'</span></button>').join('')+'<div class="side-note">● وضع محلي<br>نسخ سحابي يدوي اختياري<br>لا يوجد تزامن فوري</div></aside><main class="main"><header class="top"><div class="wt-top-leading">'+sidebarToggle()+'<span class="top-crumb"><span class="brand-mini">WHITE TEX</span> <span class="top-separator">/</span> <strong>إدارة الإنتاج</strong></span></div><div class="wt-header-actions">'+displayControls()+notificationMarkup()+'<span class="status"><span class="status-dot"></span> '+(db.demoMode?'وضع عرض تجريبي':(syncWanted&&cloudIdentity()&&sync.state().mode==='active'?'المزامنة مفعلة':'البيانات المحلية · ربط سحابي اختياري'))+'</span></div></header><div class="content">'+(db.demoMode?'<div class="demo-banner"><strong>بيانات افتراضية للعرض</strong> — جميع الموديلات والعملاء والعمال والطلبات المعروضة أمثلة غير حقيقية. لتجهيز عميل فعلي، احفظ النسخة المحلية ثم امسح بيانات العرض وأنشئ بياناته منفصلة.</div>':'')+(views[page]||dashboard)()+'<p class="foot">White tex · إدارة المصنع · Powered by PremierOS Garments</p></div></main></div>'+renderModal();translateFragment(document.getElementById('app'),ui.lang);}
 const inp=(label,name,type='text',value='',attrs='')=>'<label class="field">'+label+'<input name="'+name+'" type="'+type+'" value="'+esc(value)+'" '+attrs+'></label>';
 const sel=(label,name,options)=>'<label class="field">'+label+'<select name="'+name+'" required><option value="">اختر...</option>'+options.map(x=>'<option value="'+esc(x[0])+'">'+esc(x[1])+'</option>').join('')+'</select></label>';
 function renderModal(){if(!modal)return '';let kind=modal.type,t='',form='';
@@ -633,17 +730,18 @@ async function refreshCloudIntake(){
 }
 function handleCloudAction(action){
   if(action==='cloud-logout'){
-    cloudLogout();cloudFactoriesState=[];cloudIntakeState=[];cloudFactorySelected='';cloudIntakeMessage='';render();toast('تم تسجيل الخروج من النسخ السحابي');return;
+    sync.stop();cloudLogout();cloudFactoriesState=[];cloudIntakeState=[];cloudFactorySelected='';cloudIntakeMessage='';render();toast('تم تسجيل الخروج من النسخ السحابي');return;
   }
   if(action==='cloud-login'){
     const email=document.getElementById('cloud-email')?.value;
     const password=document.getElementById('cloud-password')?.value;
     cloudLogin(email,password)
-      .then(()=>{render();toast('تم تسجيل الدخول للحساب السحابي');if(page==='cloud-intake')refreshCloudIntake();})
+      .then(()=>{render();toast('تم تسجيل الدخول للحساب السحابي');if(syncWanted)sync.begin();if(page==='cloud-intake')refreshCloudIntake();})
       .catch(err=>toast(err.message||'تعذر تسجيل الدخول',true));
     return;
   }
   if(action==='cloud-save'){
+    if(syncWanted){toast('أوقف المزامنة أولًا قبل استخدام النسخ اليدوي',true);return;}
     if(db.demoMode){toast('النسخ السحابي معطّل لبيانات العرض. استخدم تصدير JSON المحلي فقط.',true);return;}
     if(!ask('سيتم استبدال النسخة السحابية الخاصة بحسابك ببيانات هذا الجهاز. هل تريد المتابعة؟'))return;
     const snapshot=structuredClone(db);
@@ -653,6 +751,7 @@ function handleCloudAction(action){
     return;
   }
   if(action==='cloud-restore'){
+    if(syncWanted){toast('أوقف المزامنة أولًا قبل الاسترجاع اليدوي',true);return;}
     cloudLoad().then(snapshot=>{
       if(!snapshot) {toast('لا توجد نسخة سحابية لهذا الحساب');return;}
       if(!ask('سيتم استبدال بيانات هذا الجهاز بالنسخة السحابية. سيتم تنزيل ملف احتياطي من بيانات الجهاز قبل الاستبدال. متابعة؟'))return;
@@ -667,6 +766,7 @@ function handleCloudAction(action){
   }
 }
 document.addEventListener('click',e=>{let b=e.target.closest('[data-act]');if(!b){if(e.target.id==='backdrop'){modal=null;render();}else if(notificationCenterOpen&&!e.target.closest('.wt-bell-zone')){notificationCenterOpen=false;render();}return;}let a=b.dataset.act,oid=b.dataset.id;
+if(['sync-start','sync-cloud','sync-local','sync-now','sync-recheck','sync-stop'].includes(a)){runSyncAction(a);return;}
 if(a==='toggle-sidebar'){sidebarCollapsed=saveSidebarCollapsed(!sidebarCollapsed);render();return;}
 if(a==='toggle-theme'){ui=setUI({...ui,theme:ui.theme==='dark'?'light':'dark'});applyDocumentUI(ui);render();return;}
 if(a==='toggle-lang'){ui=setUI({...ui,lang:ui.lang==='ar'?'en':'ar'});applyDocumentUI(ui);document.getElementById('wt-toast-stack')?.replaceChildren();render();return;}
@@ -689,8 +789,8 @@ if(a==='access-new-user'||a==='access-edit-user'){open('access-user',a==='access
 if(a==='access-new-role'||a==='access-edit-role'){open('access-role',a==='access-edit-role'?oid:'');return;}
 if(a==='access-toggle-user'){mutator(d=>toggleUser(d,oid),'تم تحديث حالة المستخدم');return;}
 if(a==='access-remove-role'){if(ask('حذف الدور المخصص؟ يجب ألا يكون مرتبطًا بأي مستخدم.'))mutator(d=>removeRole(d,oid),'تم حذف الدور');return;}
-if(a==='nav'){navigate(oid);if(oid==='cloud-intake'&&cloudIdentity())refreshCloudIntake();}else if(a==='cloud-intake-refresh')refreshCloudIntake();else if(['new-style','new-material','new-receipt','new-roll','new-worker','stage-work','new-order','matrix-order','new-bundle','new-wholesale','ship-wholesale','new-cloud-intake','view-cloud-intake','new-finance','bom','quality'].includes(a))open(a,oid);else if(a==='receipt-for')open('new-receipt',oid);else if(a==='close'){modal=null;render();}else if(a==='show-style'){detail=oid;page='style-detail';render();}else if(a==='show-order'){detail=oid;page='order-detail';render();}else if(a==='show-batch'){detail=oid;page='batch-detail';render();}else if(a==='show-wholesale'){detail=oid;page='wholesale-detail';render();}else if(a==='advance'){if(ask(order(oid).status==='planned'?'سيتم خصم الخامات الآن، هل تؤكد؟':'تأكيد الانتقال للمرحلة التالية؟'))mutator(d=>advance(d,oid),'تم تحديث مرحلة الإنتاج');}else if(['cloud-login','cloud-logout','cloud-save','cloud-restore'].includes(a))handleCloudAction(a);else if(a==='seed')seed();else if(a==='reset'){if(ask('سيتم حذف كل البيانات المحلية، هل تؤكد؟')&&ask('تأكيد نهائي لحذف كل البيانات؟'))mutator(d=>{Object.assign(d,fresh());},'تم مسح البيانات');}else if(a==='export'){downloadSnapshot(db,'premieros-garments-backup.json');toast('تم بدء تنزيل نسخة البيانات');}});
-document.addEventListener('change',async e=>{if(e.target.matches('[name=styleId]')&&modal?.type==='new-order')setVariants();if(e.target.matches('[name=styleId]')&&['matrix-order','new-wholesale'].includes(modal?.type)){modal.id=e.target.value;render();}if(e.target.id==='import'&&e.target.files[0]){try{let value=JSON.parse(await e.target.files[0].text());if(value.version!==1||!['styles','materials','orders','ledger','finished','audit'].every(k=>Array.isArray(value[k])))throw Error('ملف غير متوافق');ensureFactoryState(value);ensureWholesaleState(value);validateWholesaleLedger(value);validateAccountingState(value);validateAccessConfig(value);if(value.materials.some(m=>!Number.isFinite(m.stock)||m.stock<0)||value.fabricRolls.some(r=>!Number.isFinite(r.remaining)||r.remaining<0||r.remaining>r.received))throw Error('النسخة تحتوي على أرصدة غير صحيحة');if(ask('استبدال جميع البيانات الحالية من النسخة الاحتياطية؟')){localStorage.setItem(KEY,JSON.stringify(value));db=ensureNotifications(value);notificationCenterOpen=false;render();toast('تم الاستيراد');}}catch(err){toast(err.message,true);}}});
+if(a==='nav'){navigate(oid);if(oid==='cloud-intake'&&cloudIdentity())refreshCloudIntake();}else if(a==='cloud-intake-refresh')refreshCloudIntake();else if(['new-style','new-material','new-receipt','new-roll','new-worker','stage-work','new-order','matrix-order','new-bundle','new-wholesale','ship-wholesale','new-cloud-intake','view-cloud-intake','new-finance','bom','quality'].includes(a))open(a,oid);else if(a==='receipt-for')open('new-receipt',oid);else if(a==='close'){modal=null;render();}else if(a==='show-style'){detail=oid;page='style-detail';render();}else if(a==='show-order'){detail=oid;page='order-detail';render();}else if(a==='show-batch'){detail=oid;page='batch-detail';render();}else if(a==='show-wholesale'){detail=oid;page='wholesale-detail';render();}else if(a==='advance'){if(ask(order(oid).status==='planned'?'سيتم خصم الخامات الآن، هل تؤكد؟':'تأكيد الانتقال للمرحلة التالية؟'))mutator(d=>advance(d,oid),'تم تحديث مرحلة الإنتاج');}else if(['cloud-login','cloud-logout','cloud-save','cloud-restore'].includes(a))handleCloudAction(a);else if(a==='seed')seed();else if(a==='reset'){if(syncWanted){toast('أوقف المزامنة قبل حذف البيانات، حتى لا يُحذف المحتوى من الأجهزة الأخرى',true);return;}if(ask('سيتم حذف كل البيانات المحلية، هل تؤكد؟')&&ask('تأكيد نهائي لحذف كل البيانات؟'))mutator(d=>{Object.assign(d,fresh());},'تم مسح البيانات');}else if(a==='export'){downloadSnapshot(db,'premieros-garments-backup.json');toast('تم بدء تنزيل نسخة البيانات');}});
+document.addEventListener('change',async e=>{if(e.target.matches('[name=styleId]')&&modal?.type==='new-order')setVariants();if(e.target.matches('[name=styleId]')&&['matrix-order','new-wholesale'].includes(modal?.type)){modal.id=e.target.value;render();}if(e.target.id==='import'&&e.target.files[0]){try{if(syncWanted)throw Error('أوقف المزامنة قبل استيراد بيانات من ملف جديد');let value=JSON.parse(await e.target.files[0].text());if(value.version!==1||!['styles','materials','orders','ledger','finished','audit'].every(k=>Array.isArray(value[k])))throw Error('ملف غير متوافق');ensureFactoryState(value);ensureWholesaleState(value);validateWholesaleLedger(value);validateAccountingState(value);validateAccessConfig(value);if(value.materials.some(m=>!Number.isFinite(m.stock)||m.stock<0)||value.fabricRolls.some(r=>!Number.isFinite(r.remaining)||r.remaining<0||r.remaining>r.received))throw Error('النسخة تحتوي على أرصدة غير صحيحة');if(ask('استبدال جميع البيانات الحالية من النسخة الاحتياطية؟')){localStorage.setItem(KEY,JSON.stringify(value));db=ensureNotifications(value);notificationCenterOpen=false;render();toast('تم الاستيراد');}}catch(err){toast(err.message,true);}}});
 document.addEventListener('submit',e=>{if(e.target.id!=='entry')return;e.preventDefault();let f=new FormData(e.target),type=modal.type,oid=modal.id;if(type==='new-cloud-intake'){
   try{
     if(db.demoMode)throw Error('عطّل بيانات العرض المحلية قبل إدخال طلبات فعلية');
@@ -706,6 +806,9 @@ document.addEventListener('submit',e=>{if(e.target.id!=='entry')return;e.prevent
 }else if(type==='access-user')mutator(d=>saveUser(d,f,oid),'تم حفظ المستخدم');else if(type==='access-role')mutator(d=>saveRole(d,f,oid),'تم حفظ الدور والصلاحيات');else if(type==='new-finance')mutator(d=>recordFinanceEntry(d,f),'تم تسجيل الحركة المالية');else if(type==='new-style')mutator(d=>newStyle(d,f),'تم إنشاء الموديل');else if(type==='new-material')mutator(d=>newMaterial(d,f),'تم تعريف الخامة');else if(type==='new-receipt')mutator(d=>receive(d,f),'تم استلام الخامات');else if(type==='new-order')mutator(d=>newOrder(d,f),'تم إنشاء أمر التصنيع');else if(type==='matrix-order')mutator(d=>createProductionMatrix(d,f),'تم إنشاء دفعة المقاسات والألوان');else if(type==='new-bundle')mutator(d=>addCuttingBundle(d,f),'تم تسجيل حزمة القص');else if(type==='new-wholesale')mutator(d=>createWholesaleOrder(d,f),'تم إنشاء طلب الجملة');else if(type==='ship-wholesale')mutator(d=>dispatchWholesaleOrder(d,f),'تم تسجيل إذن التسليم وخصم مخزون التام');else if(type==='bom')mutator(d=>setBom(d,oid,f),'تم حفظ قائمة المكونات');else if(type==='quality')mutator(d=>quality(d,oid,f),'تم تسجيل الجودة');else if(type==='new-worker')mutator(d=>addWorker(d,f),'تم تسجيل العامل');else if(type==='new-roll')mutator(d=>receiveFabricRoll(d,f),'تم استلام الرول');else if(type==='stage-work')mutator(d=>registerStageWork(d,f),'تم تسجيل إنتاج العامل');});
 document.addEventListener('input',e=>{if(e.target.id==='search'){let pos=e.target.selectionStart;search=e.target.value;render();let input=document.getElementById('search');input.focus();input.setSelectionRange(pos,pos);}});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&notificationCenterOpen){notificationCenterOpen=false;render();}});
+window.addEventListener('focus',()=>{if(syncWanted&&cloudIdentity())sync.tick();});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&syncWanted&&cloudIdentity())sync.tick();});
+window.setInterval(()=>{if(syncWanted&&cloudIdentity())sync.tick();},SYNC_INTERVAL_MS);
 window.addEventListener('hashchange',()=>{let newPage=location.hash.replace('#/','');if(newPage!==page&&views[newPage]){page=newPage;detail=null;render();}});
 render();
 }

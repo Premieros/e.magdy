@@ -127,6 +127,7 @@ test('existing Pages deployment packages notifications for every page and stays 
   assert.match(styles,/prefers-reduced-motion/);
   assert.match(styles,/\.wt-command-hero/);
   assert.match(pages,/cp src\/workflow\.mjs src\/analytics\.mjs src\/accounting\.mjs src\/accounting-ui\.mjs src\/access-control\.mjs src\/access-ui\.mjs src\/i18n\.mjs src\/notifications\.mjs/);
+  assert.match(pages,/src\/cloud-backup\.mjs src\/cloud-sync\.mjs/);
   assert.match(client,/yumeijsyiphzdsulsubf\.supabase\.co/);
 });
 

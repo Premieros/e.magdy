@@ -1074,3 +1074,29 @@ html[data-theme="dark"] .wt-sidebar-toggle:hover{background:#304967;color:#fff}
 @media(prefers-reduced-motion:reduce){
  .layout .side,.wt-sidebar-toggle{transition:none}
 }
+
+
+/* WHITE TEX — OPTIONAL CROSS-DEVICE CLOUD DATA SYNCHRONIZATION */
+.wt-sync-card{border:1px solid #bed4ec;background:linear-gradient(130deg,#f6fbff,#fff);margin-top:17px}
+.wt-sync-head{display:flex;align-items:start;justify-content:space-between;gap:17px;margin-bottom:16px}
+.wt-sync-head h3{color:#173a6c;font-size:18px;margin:0 0 7px}
+.wt-sync-head p{color:#486582;font-size:13px;line-height:1.85;margin:0;max-width:660px}
+.wt-sync-state{flex:none;background:#e7eefb;color:#264b82;font-size:12px;font-weight:800;
+  padding:8px 12px;border-radius:20px;line-height:1.55}
+.wt-sync-active{background:#e5f7eb;color:#166534}
+.wt-sync-error{color:#ab2833;background:#fff1f1;border:1px solid #f3c8cd;padding:10px 13px;
+  border-radius:10px;font-size:13px;line-height:1.8}
+.wt-sync-hint{font-size:12px;color:#59708c;line-height:1.85;margin:12px 0 0}
+.wt-sync-banner{display:flex;justify-content:space-between;align-items:center;gap:10px;
+  background:#eff6ff;border:1px solid #c4d9f9;border-radius:14px;padding:12px 15px;margin-bottom:18px}
+.wt-sync-banner strong{display:block;font-size:13px;color:#23476f;line-height:1.7}
+.wt-sync-banner p{font-size:12px;color:#45617f;line-height:1.8;margin:0}
+html[data-theme="dark"] .wt-sync-card{background:#17273d;border-color:#425a78}
+html[data-theme="dark"] .wt-sync-head h3,html[data-theme="dark"] .wt-sync-banner strong{color:#e6f1ff}
+html[data-theme="dark"] .wt-sync-head p,html[data-theme="dark"] .wt-sync-banner p,
+html[data-theme="dark"] .wt-sync-hint{color:#bed1eb}
+html[data-theme="dark"] .wt-sync-banner{background:#1c2c45;border-color:#425a78}
+html[data-theme="dark"] .wt-sync-state{background:#243b5e;color:#c6dfff}
+html[data-theme="dark"] .wt-sync-active{background:#123b30;color:#a2efc6}
+html[data-theme="dark"] .wt-sync-error{background:#4c2534;border-color:#784151;color:#ffd1d1}
+@media(max-width:700px){.wt-sync-head,.wt-sync-banner{flex-direction:column;align-items:stretch}.wt-sync-state{align-self:flex-start}}
