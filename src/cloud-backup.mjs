@@ -92,7 +92,7 @@ export async function cloudSave(currentDb) {
   const payload = validateCloudSnapshot(currentDb);
   const result = await callApi('/rest/v1/garment_cloud_snapshots?on_conflict=owner_id', {
     method: 'POST', token: identity.token, prefer: 'resolution=merge-duplicates,return=representation',
-    body: [{ owner_id: identity.userId, payload }],
+    body: [{ owner_id: identity.userId, payload, updated_at: new Date().toISOString() }],
   });
   if (!Array.isArray(result) || result.length !== 1 || result[0].owner_id !== identity.userId) {
     throw Error('لم يتم تأكيد حفظ النسخة السحابية');
