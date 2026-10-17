@@ -136,3 +136,21 @@ test('existing GitHub Pages site packages the sync module and keeps all business
   assert.match(pages,/src\/cloud-sync\.mjs/);
   assert.doesNotMatch(cloud,/['\"](?:service_role|sb_secret_[^'\"]+)['\"]/i);
 });
+
+test('polling unchanged data does not repeatedly re-render the interface',async()=>{
+  let local=entry('same'),updates=0;
+  const cloud={data:copy(local),updatedAt:'rev1'};
+  const c=createCloudSync({getLocal:()=>local,applyRemote:data=>{local=copy(data);},
+    load:async()=>copy(cloud),save:async()=>{throw Error('no write expected');},
+    onState:()=>updates++});
+  await c.begin();
+  const before=updates;
+  await c.tick();
+  await c.tick();
+  assert.equal(updates,before);
+  assert.equal(c.state().mode,'active');
+});
+test('never create a shared snapshot without the existing Supabase identity',async()=>{
+  cloudLogout();
+  await assert.rejects(cloudSaveIfUnchanged(fresh(),null),/الجلسة/);
+});
