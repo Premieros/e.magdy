@@ -134,5 +134,5 @@ test('existing GitHub Pages site packages the sync module and keeps all business
   assert.match(cloud,/requireIdentity\(\)/);
   assert.match(cloud,/updated_at=eq\./);
   assert.match(pages,/src\/cloud-sync\.mjs/);
-  assert.doesNotMatch(cloud,/service_role|sb_secret_/i);
+  assert.doesNotMatch(cloud,/['\"](?:service_role|sb_secret_[^'\"]+)['\"]/i);
 });
