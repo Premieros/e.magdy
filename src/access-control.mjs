@@ -8,7 +8,7 @@ const now=()=>new Date().toISOString();
 export const PERMISSION_GROUPS=Object.freeze([
   {name:'لوحة التحكم والتقارير',items:[['dashboard.view','عرض لوحة التحكم'],['reports.view','عرض التقارير']]},
   {name:'الإنتاج',items:[['products.manage','إدارة الموديلات والخامات المستخدمة'],['production.view','عرض أوامر الإنتاج'],['production.manage','إنشاء أوامر الإنتاج ونقل المراحل'],['workers.manage','إدارة العمال وتسجيل الإنتاج']]},
-  {name:'المخزون والجودة',items:[['inventory.view','عرض المخزون'],['inventory.manage','استلام وصرف الخامات'],['quality.manage','تسجيل نتائج الجودة']]},
+  {name:'المخزون والجودة',items:[['inventory.view','عرض المخزون'],['inventory.manage','استلام وصرف الخامات'],['suppliers.view','عرض الموردين'],['suppliers.manage','إدارة الموردين والتوريدات'],['quality.manage','تسجيل نتائج الجودة']]},
   {name:'المبيعات والعملاء',items:[['sales.view','عرض طلبات الجملة'],['sales.manage','إنشاء طلبات الجملة والتسليم'],['customers.view','عرض طلبات العملاء'],['customers.manage','إضافة طلبات العملاء']]},
   {name:'الحسابات والإدارة',items:[['accounting.view','عرض الحسابات'],['accounting.manage','إضافة حركات مالية'],['users.manage','إدارة المستخدمين والأدوار'],['backup.manage','إدارة النسخ الاحتياطية']]}
 ]);
@@ -20,10 +20,10 @@ export const DEFAULT_ROLES=Object.freeze([
   {id:'owner',name:'مالك النظام',description:'كامل صلاحيات النظام عند تفعيل تسجيل الدخول',permissions:pkeys(),locked:true},
   {id:'manager',name:'مدير',description:'متابعة وإدارة التشغيل والمبيعات والتقارير',permissions:pkeys().filter(p=>!['users.manage','backup.manage'].includes(p)),locked:false},
   {id:'production',name:'مسؤول إنتاج',description:'الطلبات والمراحل والعاملون',permissions:merge(['dashboard.view','reports.view','products.manage','production.view','production.manage','workers.manage','inventory.view','quality.manage']),locked:false},
-  {id:'warehouse',name:'مسؤول مخزن',description:'الخامات والأرصدة وحركة المخزون',permissions:['dashboard.view','inventory.view','inventory.manage','production.view','reports.view'],locked:false},
+  {id:'warehouse',name:'مسؤول مخزن',description:'الخامات والأرصدة وحركة المخزون',permissions:['dashboard.view','inventory.view','inventory.manage','suppliers.view','suppliers.manage','production.view','reports.view'],locked:false},
   {id:'quality',name:'مسؤول جودة',description:'مراجعة الأوامر وتسجيل نتائج الجودة',permissions:['dashboard.view','production.view','quality.manage','reports.view'],locked:false},
   {id:'sales',name:'مسؤول مبيعات',description:'طلبات الجملة والتسليم والعملاء',permissions:['dashboard.view','sales.view','sales.manage','customers.view','customers.manage'],locked:false},
-  {id:'accountant',name:'محاسب',description:'المبيعات والحسابات والتقارير',permissions:['dashboard.view','reports.view','accounting.view','accounting.manage','sales.view'],locked:false},
+  {id:'accountant',name:'محاسب',description:'المبيعات والحسابات والتقارير',permissions:['dashboard.view','reports.view','accounting.view','accounting.manage','suppliers.view','sales.view'],locked:false},
   {id:'viewer',name:'مشاهد فقط',description:'عرض المعلومات دون تعديلها',permissions:['dashboard.view','reports.view','production.view','inventory.view','sales.view'],locked:false}
 ]);
 const cloneRoles=()=>DEFAULT_ROLES.map(r=>({...r,permissions:[...r.permissions]}));
@@ -31,6 +31,14 @@ export function ensureAccessConfig(db){
   if(db.appRoles===undefined)db.appRoles=cloneRoles();
   if(db.appUsers===undefined)db.appUsers=[];
   if(!Array.isArray(db.appRoles)||!Array.isArray(db.appUsers))throw Error('بيانات المستخدمين والأدوار غير متوافقة');
+  // Upgrade legacy owners when new permission categories are added without editing custom roles.
+  const owner=db.appRoles.find(r=>r?.id==='owner');
+  if(owner&&owner.locked&&Array.isArray(owner.permissions)){
+    const newRights=['suppliers.view','suppliers.manage'];
+    const legacyRights=pkeys().filter(key=>!newRights.includes(key));
+    if(legacyRights.every(key=>owner.permissions.includes(key)))
+      for(const key of newRights)if(!owner.permissions.includes(key))owner.permissions.push(key);
+  }
   return db;
 }
 export function validateAccessConfig(db){

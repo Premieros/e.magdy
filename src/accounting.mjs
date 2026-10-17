@@ -3,6 +3,7 @@
  * Supplier payments are cash movements, NOT purchases/expenses again.
  * Profit is an estimate based on receipt average costs, not certified accounts.
  */
+import { chooseSupplier } from './suppliers.mjs';
 const uuid=()=>globalThis.crypto?.randomUUID?.()||'ACC-'+Date.now()+'-'+Math.random().toString(36).slice(2);
 const rows=(db,key)=>Array.isArray(db?.[key])?db[key]:[];
 const amount=n=>Math.round((n+Number.EPSILON)*100)/100;
@@ -33,6 +34,7 @@ export function validateAccountingState(db){
       typeof entry.date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(entry.date)||
       !validDay(entry.date)||typeof entry.note!=='string'||
       typeof entry.customer!=='string'||typeof entry.category!=='string'||
+      (entry.supplierId!==undefined&&(entry.kind!=='supplier-payment'||typeof entry.supplierId!=='string'))||
       entry.note.length>200||entry.customer.length>120||
       (entry.kind==='operating-expense'&&!EXPENSE_CATEGORIES.includes(entry.category)))
       throw Error('سجل الحسابات يحتوي على حركة غير صحيحة أو مكررة');
@@ -65,7 +67,9 @@ export function recordFinanceEntry(db,form){
     throw Error('اختر نوع المصروف');
   const note=text(form.get('note'));
   if(note.length>200)throw Error('الملاحظة أطول من المسموح');
-  const entry={id:uuid(),kind,amount:amount(value),date,customer,category,note,createdAt:new Date().toISOString()};
+  const supplier=kind==='supplier-payment'?chooseSupplier(db,form.get('supplierId')):null;
+  const entry={id:uuid(),kind,amount:amount(value),date,customer,category,note,createdAt:new Date().toISOString(),
+    ...(supplier?{supplierId:supplier.id}:{})};
   db.financeEntries.unshift(entry);
   if(Array.isArray(db.audit))
     db.audit.unshift({id:uuid(),at:entry.createdAt,message:'حركة حسابات: '+definition.label+' بقيمة '+entry.amount+' جنيه'});
