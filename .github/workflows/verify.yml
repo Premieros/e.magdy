@@ -15,6 +15,8 @@ jobs:
       - run: node --check src/analytics.mjs
       - run: node --check src/accounting.mjs
       - run: node --check src/accounting-ui.mjs
+      - run: node --check src/suppliers.mjs
+      - run: node --check src/suppliers-ui.mjs
       - run: node --check src/access-control.mjs
       - run: node --check src/access-ui.mjs
       - run: node --check src/i18n.mjs
