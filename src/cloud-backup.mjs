@@ -149,3 +149,42 @@ export async function cloudCreateIntakeOrder(factoryId,data) {
   }
   return rows[0];
 }
+
+/** Optimistic locking for two devices using the existing owner-scoped snapshot table.
+ * PATCH is allowed only if updated_at still equals the revision last observed.
+ * A missing row is created, never silently overwritten.
+ */
+export class CloudConflictError extends Error {
+  constructor(message='هناك تحديث أحدث من جهاز آخر؛ لم نستبدل أي بيانات') {
+    super(message); this.name='CloudConflictError';
+  }
+}
+export async function cloudSaveIfUnchanged(currentDb, expectedUpdatedAt) {
+  const identity=requireIdentity();
+  const payload=validateCloudSnapshot(currentDb);
+  const updatedAt=new Date().toISOString();
+  let rows;
+  if (expectedUpdatedAt===null) {
+    try {
+      rows=await callApi('/rest/v1/garment_cloud_snapshots?select=owner_id,updated_at', {
+        method:'POST',token:identity.token,prefer:'return=representation',
+        body:[{owner_id:identity.userId,payload,updated_at:updatedAt}]
+      });
+    } catch (error) {
+      if(/409|23505|duplicate|مكرر/i.test(String(error.message)))throw new CloudConflictError();
+      throw error;
+    }
+  } else {
+    if(typeof expectedUpdatedAt!=='string'||!expectedUpdatedAt)throw Error('نسخة المقارنة غير صالحة');
+    rows=await callApi('/rest/v1/garment_cloud_snapshots?owner_id=eq.'
+      +encodeURIComponent(identity.userId)+'&updated_at=eq.'
+      +encodeURIComponent(expectedUpdatedAt)+'&select=owner_id,updated_at',{
+      method:'PATCH',token:identity.token,prefer:'return=representation',
+      body:{payload,updated_at:updatedAt}
+    });
+    if(Array.isArray(rows)&&rows.length===0)throw new CloudConflictError();
+  }
+  if(!Array.isArray(rows)||rows.length!==1||rows[0].owner_id!==identity.userId
+    ||typeof rows[0].updated_at!=='string')throw Error('لم يتم تأكيد مزامنة البيانات');
+  return rows[0].updated_at;
+}
