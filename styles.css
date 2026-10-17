@@ -1100,3 +1100,36 @@ html[data-theme="dark"] .wt-sync-state{background:#243b5e;color:#c6dfff}
 html[data-theme="dark"] .wt-sync-active{background:#123b30;color:#a2efc6}
 html[data-theme="dark"] .wt-sync-error{background:#4c2534;border-color:#784151;color:#ffd1d1}
 @media(max-width:700px){.wt-sync-head,.wt-sync-banner{flex-direction:column;align-items:stretch}.wt-sync-state{align-self:flex-start}}
+
+
+/* WHITE TEX — SUPPLIER DIRECTORY AND PAYMENT SUMMARY */
+.sup-hero{display:flex;justify-content:space-between;align-items:center;gap:18px;border-radius:18px;
+  background:linear-gradient(125deg,#153459,#246a8d);color:#fff;padding:21px 26px;margin-bottom:17px}
+.sup-hero small{font-size:12px;letter-spacing:.8px;font-weight:800;color:#d0e8ff}
+.sup-hero h2{color:#fff;font-size:22px;line-height:1.6;margin:5px 0}
+.sup-hero p{font-size:13px;color:#e0f1ff;line-height:1.8;margin:0}
+.sup-hero-icon{display:grid;place-items:center;flex:none;width:67px;height:67px;font-size:32px;
+  border-radius:15px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.11)}
+.sup-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin-bottom:20px}
+.sup-kpis .stat{min-width:0;border-radius:14px}
+.sup-kpis .stat:nth-child(1){border-top:3px solid #2563eb}
+.sup-kpis .stat:nth-child(2){border-top:3px solid #0d9488}
+.sup-kpis .stat:nth-child(3){border-top:3px solid #8b5cf6}
+.sup-kpis .stat:nth-child(4){border-top:3px solid #f59e0b}
+.sup-kpis .stat strong{font-size:22px;overflow-wrap:anywhere}
+.sup-section-title{display:flex;align-items:center;justify-content:space-between;gap:13px;margin-bottom:16px}
+.sup-section-title h3{font-size:17px;margin:0 0 5px}
+.sup-section-title p{font-size:12px;color:#5e718b;margin:0;line-height:1.7}
+.sup-detail{display:block;font-size:12px;line-height:1.7;color:#607590;margin-top:4px}
+.sup-phone{color:#1e5fab;font-weight:800;text-decoration:none;white-space:nowrap}
+.sup-phone:hover{text-decoration:underline}
+.sup-hint{margin:15px 0 0;padding:12px 14px;background:#fff5df;border:1px solid #ebd9ad;
+  border-radius:10px;font-size:12px;color:#745526;line-height:1.9}
+html[data-theme="dark"] .sup-hero{background:linear-gradient(125deg,#12253d,#194962)}
+html[data-theme="dark"] .sup-section-title p,html[data-theme="dark"] .sup-detail{color:#b6c8e3}
+html[data-theme="dark"] .sup-phone{color:#a8d0ff}
+html[data-theme="dark"] .sup-hint{background:#372d1e;border-color:#675638;color:#f6dcad}
+@media(max-width:1050px){.sup-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:550px){.sup-hero{padding:17px 15px}.sup-hero h2{font-size:18px}.sup-hero-icon{width:46px;height:46px;font-size:23px}
+ .sup-kpis{gap:9px}.sup-kpis .stat{padding:12px}.sup-kpis .stat strong{font-size:19px}
+ .sup-section-title{flex-direction:column;align-items:flex-start}}
