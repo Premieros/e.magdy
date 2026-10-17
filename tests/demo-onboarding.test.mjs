@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {__test as app} from '../app.js';
-import {initializeFirstVisitDemo} from '../src/demo-onboarding.mjs';
+import {initializeFirstVisitDemo,DEFAULT_DEMO_ENABLED,DEMO_OPT_OUT_KEY,optedOutOfDemo,preferRealData} from '../src/demo-onboarding.mjs';
 import {populateDemoData,demoCoverage} from '../src/demo-data.mjs';
 import {validateCloudSnapshot} from '../src/cloud-backup.mjs';
 import {STATION_STAGES} from '../src/smart-workflow.mjs';
@@ -104,4 +104,59 @@ test('page entrypoint includes auto-demo and GitHub Pages ships helper without c
   assert.match(workflow,/src\/demo-data\.mjs src\/demo-onboarding\.mjs src\/cloud-intake\.mjs site\/src/);
   assert.match(workflow,/test -s site\/src\/demo-onboarding\.mjs/);
   assert.doesNotMatch(helper,/fetch\(|cloudSave|cloudLogin|supabase/i);
+});
+
+
+test('temporary default demo stays enabled for new visitors and can be disabled centrally later',()=>{
+  assert.equal(DEFAULT_DEMO_ENABLED,true);
+  const storage=memory();
+  const disabled=initializeFirstVisitDemo({
+    storage,key,createFresh:app.fresh,enabled:false,
+    populate:db=>populateDemoData(db,ops)
+  });
+  assert.equal(disabled,null);
+  assert.equal(storage.getItem(key),null);
+  assert.equal(storage.writes.length,0);
+  const demo=init(storage);
+  assert.equal(demo.demoMode,true);
+});
+
+test('choosing real work persists opt-out and never creates fake business records again',()=>{
+  const storage=memory();
+  const preview=init(storage);
+  assert.equal(preview.demoMode,true);
+  assert.equal(preferRealData(storage),true);
+  assert.equal(storage.getItem(DEMO_OPT_OUT_KEY),'1');
+  assert.equal(optedOutOfDemo(storage),true);
+  // Clearing demo data leaves a safe, user-controlled blank dataset.
+  storage.setItem(key,JSON.stringify(app.fresh()));
+  const saved=storage.getItem(key);
+  assert.equal(init(storage),null);
+  assert.equal(storage.getItem(key),saved);
+  // Even if the data key gets removed, the real-work preference is honored.
+  storage.data.delete(key);
+  assert.equal(init(storage),null);
+  assert.equal(storage.getItem(key),null);
+});
+
+test('real mode switching is guarded and visible in both Arabic and English',()=>{
+  const appSrc=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+  const ui=readFileSync(new URL('../src/i18n.mjs',import.meta.url),'utf8');
+  const css=readFileSync(new URL('../styles.css',import.meta.url),'utf8');
+  assert.match(appSrc,/else if\(a==='start-real'\)startRealWork\(\)/);
+  assert.match(appSrc,/if\(!db\.demoMode\)/);
+  assert.match(appSrc,/if\(syncWanted\)\{toast\('أوقف المزامنة أولًا قبل تغيير بيانات الجهاز'/);
+  assert.match(appSrc,/preferRealData\(localStorage\)/);
+  assert.match(appSrc,/mutator\(d=>\{Object\.assign\(d,fresh\(\)\);\},'بدأت نسخة عمل/);
+  assert.match(appSrc,/DEFAULT_DEMO_ENABLED/);
+  assert.match(appSrc,/wt-demo-default-banner/);
+  assert.match(ui,/Start real work/);
+  assert.match(css,/\.wt-demo-default-banner/);
+});
+
+test('opt-out cannot silently fail and then pretend the visitor chose real mode',()=>{
+  assert.throws(()=>preferRealData({
+    setItem(){throw Error('QuotaExceeded');}
+  }),/QuotaExceeded/);
+  assert.equal(optedOutOfDemo({getItem(){throw Error('blocked')}}),false);
 });

@@ -1249,3 +1249,20 @@ html[data-theme="dark"] .wt-smart-issues p{color:#f8d9a5}
  .wt-smart-order-facts strong{font-size:12px}.wt-smart-check{padding:11px 8px}}
 @media(prefers-reduced-motion:reduce){.wt-smart-ping,.wt-smart-order{animation:none}
  .wt-smart-progress span,.wt-smart-stage-tile,.wt-smart-checkmark,.wt-smart-check{transition:none}}
+
+
+/* White tex temporary default demonstration — safe exit to real work */
+.wt-demo-default-banner{display:flex;align-items:center;justify-content:space-between;
+  gap:14px;padding:14px 18px;margin-bottom:20px}
+.wt-demo-default-banner>div{min-width:0;flex:1;line-height:1.8}
+.wt-demo-default-banner strong{display:block;font-size:14px}
+.wt-demo-default-banner span{font-size:13px}
+.wt-demo-default-banner .btn{flex:none;border-color:#d19a39;background:#fff;
+  color:#784d14;font-weight:800;font-size:12px;white-space:normal}
+.wt-demo-default-banner .btn:hover{background:#fff3ce}
+html[data-theme="dark"] .wt-demo-default-banner{background:#302719;border-color:#86632f;color:#fae5bf}
+html[data-theme="dark"] .wt-demo-default-banner strong{color:#ffe9ba}
+html[data-theme="dark"] .wt-demo-default-banner .btn{background:#43301c;color:#ffdf9e;border-color:#8c6a37}
+html[data-theme="dark"] .wt-demo-default-banner .btn:hover{background:#554024}
+@media(max-width:680px){.wt-demo-default-banner{flex-direction:column;align-items:stretch}
+  .wt-demo-default-banner .btn{align-self:flex-start}}
