@@ -56,8 +56,6 @@ function receiveRemoteData(data){
   const next=validateCloudSnapshot(data);
   validateWholesaleLedger(next);
   if(JSON.stringify(db)===JSON.stringify(next))return;
-  if(db.styles.length||db.materials.length||db.orders.length||db.financeEntries.length)
-    downloadSnapshot(db,'white-tex-before-device-sync.json');
   localStorage.setItem(KEY,JSON.stringify(next));
   db=next;modal=null;detail=null;notificationCenterOpen=false;
   render();
@@ -85,6 +83,7 @@ async function runSyncAction(action){
       if(state.mode==='offline')toast(state.error,true);
     }else if(action==='sync-cloud'){
       if(!ask('استبدال بيانات هذا الجهاز بالنسخة السحابية؟ سننزّل نسخة احتياطية قبل الاستبدال.'))return;
+      if(db.styles.length||db.materials.length||db.orders.length||db.financeEntries.length)downloadSnapshot(db,'white-tex-before-device-sync.json');
       const state=await sync.useCloud();
       if(state.mode!=='active')toast(state.error||'لم تبدأ المزامنة بعد',true);
     }else if(action==='sync-local'){
