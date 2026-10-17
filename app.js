@@ -423,7 +423,7 @@ function orderDetail() {
   const next = nextStageAction[o.status];
   const labor = pieceworkCost(db, o.id);
   const progress = stageProgress(db, o.id, o.status);
-  let output = heading('تصنيع: ' + esc(style(o.styleId)?.name||'منتج ملابس'), esc(variant(o)?.size)+' · '+esc(variant(o)?.color), (o.batchId ? btn('فتح الدفعة','show-batch',o.batchId) : '') + btn('شاشة القسم', 'open-station', o.status)+btn('رجوع', 'nav', 'orders'))
+  let output = heading('تصنيع: ' + esc(style(o.styleId)?.name||'منتج ملابس'), esc(variant(o)?.size)+' · '+esc(variant(o)?.color), (o.batchId ? btn('فتح الدفعة','show-batch',o.batchId) : '') + (STATION_STAGES.includes(o.status)?btn('شاشة القسم', 'open-station', o.status):'')+btn('رجوع', 'nav', 'orders'))
     + '<div class="steps">' + stages.map((s, i) => '<div class="step ' + (i < current ? 'done' : i === current ? 'current' : '') + '">' + esc(labels[s]) + '</div>').join('') + '</div>'
     + '<div class="stats">' + metric('كمية الأمر', num(o.qty), 'قطعة')
     + metric('تكلفة الخامات', cur(o.materialCost), 'بعد بدء القص')
