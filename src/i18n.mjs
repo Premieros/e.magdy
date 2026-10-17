@@ -872,6 +872,18 @@ Object.assign(EN,{
   "مطابقة عدد العبوات والقطع": "Check packages and piece count",
   "اعتماد استلام مخزن التام": "Approve receipt into finished goods stock"
 });
+Object.assign(EN,{
+  "الوضع التجريبي الافتراضي — مؤقتًا": "Default demo mode — temporarily",
+  "بيانات افتراضية للعرض فقط؛ جميع الموديلات والعملاء والأوامر ليست بيانات حقيقية. يمكنك التجربة بحرية أو البدء ببيانات عمل جديدة.": "Fictional data for preview only. Models, customers and orders are not real. Explore freely or start a new real workspace.",
+  "بدء العمل الحقيقي": "Start real work",
+  "بدء العمل ببيانات حقيقية": "Start with real data",
+  "بيانات العرض التجريبي هي الوضع الافتراضي مؤقتًا للزائر الجديد فقط. يمكنك تشغيل كل الشاشات بالتجربة، أو بدء عمل حقيقي على هذا الجهاز متى شئت. لن نستبدل بيانات موجودة مطلقًا.": "Demo data is the temporary default for new visitors only. You can explore all screens or start working with real data on this device. Existing records are never overwritten.",
+  "سيتم مسح جميع بيانات العرض التجريبية من هذا الجهاز وبدء نظام فارغ للعمل الحقيقي. يمكنك تنزيل نسخة JSON قبل المتابعة. هل أنت متأكد؟": "All fictional demo data on this device will be cleared to start with a blank real workspace. You can download a JSON backup first. Continue?",
+  "أنت بالفعل تستخدم بيانات العمل على هذا الجهاز": "This device is already using real work data",
+  "أوقف المزامنة أولًا قبل تغيير بيانات الجهاز": "Stop device sync before changing local data",
+  "بدأت نسخة عمل جديدة بدون بيانات تجريبية": "New real workspace started without demo data",
+  "تعذر حفظ اختيار بيانات العمل": "Could not save the real-work preference"
+});
 const substitutions=Object.entries(EN).filter(([ar])=>/[؀-ۿ]/.test(ar)&&ar.length>=3).sort((a,b)=>b[0].length-a[0].length);
 const arabic=/[\u0600-\u06FF]/;
 export function readUI(storage=globalThis.localStorage){
