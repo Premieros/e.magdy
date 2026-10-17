@@ -312,7 +312,7 @@ function dashboard(){
   const completionLabel=stats.completionRate===null?'—':num(stats.completionRate)+'٪';
   const qualityLabel=stats.qualityRate===null?'—':num(stats.qualityRate)+'٪';
   return heading('لوحة تحكم White tex','الأرقام والرسوم البيانية تشرح أداء المصنع ببساطة، دون تفاصيل تقنية.',
-      btn('＋ أمر تصنيع','new-order','','primary'))
+      btn('غرفة العمليات التفاعلية','nav','operations')+btn('＋ أمر تصنيع','new-order','','primary'))
     +'<div class="wt-sync-banner"><div><strong>'+(syncWanted&&cloudIdentity()&&sync.state().mode==='active'?'المزامنة بين أجهزتك مفعلة':'شاهد بياناتك على أجهزتك المختلفة')+'</strong><p>'+(syncWanted&&cloudIdentity()&&sync.state().mode==='active'?'تنتقل التغييرات عبر الحساب السحابي المرتبط، مع مراجعة التحديثات كل 20 ثانية.':'ربط الجهاز بالحساب السحابي يجعل الإنتاج والمخزون والحسابات تظهر على أجهزتك الأخرى بعد تفعيل المزامنة.')+'</p></div>'+btn('إعداد المزامنة','nav','settings','primary')+'</div>'
     +'<section class="wt-command-hero"><div class="wt-command-main">'
     +'<span class="wt-command-kicker"><i aria-hidden="true"></i> WHITE TEX · PRODUCTION CONTROL</span>'
