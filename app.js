@@ -308,6 +308,7 @@ function dashboard(){
   const qualityLabel=stats.qualityRate===null?'—':num(stats.qualityRate)+'٪';
   return heading('لوحة تحكم White tex','الأرقام والرسوم البيانية تشرح أداء المصنع ببساطة، دون تفاصيل تقنية.',
       btn('＋ أمر تصنيع','new-order','','primary'))
+    +'<div class="wt-sync-banner"><div><strong>'+(syncWanted&&cloudIdentity()&&sync.state().mode==='active'?'المزامنة بين أجهزتك مفعلة':'شاهد بياناتك على أجهزتك المختلفة')+'</strong><p>'+(syncWanted&&cloudIdentity()&&sync.state().mode==='active'?'تنتقل التغييرات عبر الحساب السحابي المرتبط، مع مراجعة التحديثات كل 20 ثانية.':'ربط الجهاز بالحساب السحابي يجعل الإنتاج والمخزون والحسابات تظهر على أجهزتك الأخرى بعد تفعيل المزامنة.')+'</p></div>'+btn('إعداد المزامنة','nav','settings','primary')+'</div>'
     +'<section class="wt-command-hero"><div class="wt-command-main">'
     +'<span class="wt-command-kicker"><i aria-hidden="true"></i> WHITE TEX · PRODUCTION CONTROL</span>'
     +'<h2>صورة واضحة عن أداء مصنعك<span class="wt-command-dot">.</span></h2>'
@@ -359,10 +360,10 @@ function reportsPage(){let data=db.styles.flatMap(s=>s.variants.map(v=>({...v,na
 function settingsPage(){
   const account=cloudIdentity();
   const cloud=account
-    ? '<p class="notes">مسجّل بحساب <b>'+esc(account.email)+'</b>. النسخ السحابي يدوي وليس مزامنة فورية بين الأجهزة.</p>'
-      +'<div class="actions">'+(db.demoMode?'<p class="tips">نسخة عرض: رفع بيانات التجربة إلى السحابة معطّل لمنع خلطها بالبيانات الحقيقية.</p>':btn('رفع نسخة الجهاز إلى السحابة','cloud-save','','primary'))
-      +btn('استرجاع نسخة السحابة','cloud-restore')+btn('تسجيل الخروج','cloud-logout')+'</div>'
-    : '<p class="notes">يمكن استخدام بريد وكلمة مرور لحساب موجود في Supabase الخاص بمشروع AMMCO. لا يُنشئ هذا النظام حسابات جديدة، ولا يقرأ بيانات AMMCO.</p>'
+    ? '<p class="notes">مسجّل بالحساب السحابي <b>'+esc(account.email)+'</b>. يمكنك تفعيل مزامنة الأجهزة في القسم التالي أو استخدام النسخ اليدوي.</p>'
+      +'<div class="actions">'+(db.demoMode?'<p class="tips">نسخة عرض: رفع بيانات التجربة إلى السحابة معطّل لمنع خلطها بالبيانات الحقيقية.</p>':syncWanted?'':btn('رفع نسخة الجهاز إلى السحابة','cloud-save','','primary'))
+      +(syncWanted?'':btn('استرجاع نسخة السحابة','cloud-restore'))+btn('تسجيل الخروج','cloud-logout')+'</div>'
+    : '<p class="notes">وصّل حساب Supabase المخوّل في مشروع White tex الحالي، لتتمكن من مزامنة بيانات العمل بين أجهزتك. يبقى استخدام الموقع دون تسجيل دخول.</p>'
       +'<div class="form-grid"><label class="field">البريد الإلكتروني<input id="cloud-email" type="email" autocomplete="username" required></label>'
       +'<label class="field">كلمة المرور<input id="cloud-password" type="password" autocomplete="current-password" required></label></div>'
       +btn('تسجيل الدخول للسحابة','cloud-login','','primary');
@@ -372,7 +373,7 @@ function settingsPage(){
     +btn('↓ تنزيل نسخة JSON','export','','primary')
     +'<p><input id="import" type="file" accept=".json,application/json"></p></section>'
     +'<section class="card"><h3>النسخ الاحتياطي السحابي — Supabase</h3>'
-    +'<p class="notes">نسخة مستقلة لكل مستخدم داخل جدول خاص بالملابس. الحفظ والاسترجاع يتمان يدويًا فقط.</p>'
+    +'<p class="notes">النسخ اليدوي متاح، ويمكن تفعيل المزامنة الاختيارية في القسم الموجود أدناه. لكل حساب سحابي نسخته المستقلة.</p>'
     +cloud+'</section>'
     +syncPanel()+'<section class="card"><h3>بيانات عرض شاملة لجميع الشاشات</h3>'
     +'<p class="notes">موديلات وخامات ورولات وعمّال ودفعات قص وأوامر إنتاج في كل مرحلة ونتائج جودة ومخزون تام وطلبات جملة وتسليمات وتقارير. جميعها <b>افتراضية</b> وتُحمّل فقط عندما لا توجد بيانات في المتصفح.</p>'
