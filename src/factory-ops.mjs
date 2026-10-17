@@ -68,6 +68,8 @@ export function checkStageBeforeAdvance(db, order) {
   }
 }
 export function receiveFabricRoll(db, f) {
+  const supplierId=String(f.get('supplierId')||'').trim();
+  if(supplierId){const supplier=db.suppliers?.find(s=>s.id===supplierId&&s.active);if(!supplier)throw Error('اختر موردًا نشطًا');}
   ensureFactoryState(db);
   const material = db.materials.find(x => x.id === f.get('materialId'));
   if (!material || material.unit !== 'متر') throw Error('اختر خامة قماش بوحدة متر');
@@ -81,10 +83,10 @@ export function receiveFabricRoll(db, f) {
   material.avgCost = money((previous + received * unitCost) / (material.stock + received));
   material.stock = units(material.stock + received);
   const roll = { id: serial(), materialId: material.id, rollNo, shade: text(f.get('shade')),
-    width, received, remaining: received, unitCost, at: stamp() };
+    width, received, remaining: received, unitCost, at: stamp(),...(supplierId?{supplierId}:{}) };
   db.fabricRolls.unshift(roll);
   db.ledger.unshift({ id: serial(), at: stamp(), materialId: material.id,
-    qty: received, cost: unitCost, kind: 'receive', reference: 'رول ' + rollNo, rollId: roll.id });
+    qty: received, cost: unitCost, kind: 'receive', reference: 'رول ' + rollNo, rollId: roll.id,...(supplierId?{supplierId}:{}) });
   db.audit.unshift({ id: serial(), at: stamp(), message: 'استلام رول ' + rollNo + ' (' + received + ' متر)' });
 }
 export function allocateFabricRolls(db, materialId, quantity, orderId) {
