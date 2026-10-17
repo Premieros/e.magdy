@@ -47,6 +47,7 @@ export function buildNotifications(before, after) {
   const orders = new Map(items(after,'orders').map(o=>[o.id,o]));
   const oldOrders = new Map(items(before,'orders').map(o=>[o.id,o]));
   const mats = new Map(items(after,'materials').map(m=>[m.id,m]));
+  const suppliers=new Map(items(after,'suppliers').map(s=>[s.id,s]));
 
   for (const movement of added(before,after,'ledger')) {
     const mat = mats.get(movement.materialId);
@@ -57,7 +58,7 @@ export function buildNotifications(before, after) {
     const ref = text(movement.reference);
     push(issued?'stock':'success',
       issued?'خصم من مخزون الخامات':'استلام خامات بالمخزن',
-      qty+' '+measure+' • '+name+(ref?' • '+ref:''),
+      qty+' '+measure+' • '+name+(movement.supplierId?' • المورد: '+(suppliers.get(movement.supplierId)?.name||'—'):'')+(ref?' • '+ref:''),
       movement.orderId||null,ref);
   }
   for (const o of items(after,'orders')) {
@@ -103,7 +104,7 @@ export function buildNotifications(before, after) {
       'owner-withdrawal':'سحب من الصندوق'
     };
     push('finance',types[row.kind]||'حركة مالية',
-      row.amount+' ج.م'+(row.customer?' • '+row.customer:row.category?' • '+row.category:''));
+      row.amount+' ج.م'+(row.supplierId?' • '+(suppliers.get(row.supplierId)?.name||'مورد'):row.customer?' • '+row.customer:row.category?' • '+row.category:''));
   }
   const previousMaterials = new Map(items(before,'materials').map(m=>[m.id,m]));;
   for (const mat of items(after,'materials')) {
