@@ -36,7 +36,8 @@ export function createProductionMatrix(db,form) {
   const newOrders=selections.map(({variant,qty})=>{
     const oid=makeId();
     return {id:oid,ref:'WO-'+at.slice(0,10).replaceAll('-','')+'-'+oid.slice(0,6).toUpperCase(),
-      batchId:uid,batchRef,styleId:s.id,variantId:variant.id,qty,customer,due,status:'planned',
+      batchId:uid,batchRef,styleId:s.id,variantId:variant.id,qty,customer,due,
+      smartWorkflow:form.get('smartWorkflow')==='1',status:'planned',
       materialCost:0,labor:0,overhead:0,good:0,reject:0,
       history:[{at,stage:'planned'}],used:[]};
   });
